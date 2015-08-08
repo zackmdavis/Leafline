@@ -1,0 +1,4 @@
+[package]
+name = "Leafline_Chess_Engine"
+version = "0.0.1"
+authors = ["Zack M. Davis <code@zackmdavis.net>"]
