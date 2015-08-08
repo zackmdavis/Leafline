@@ -1,8 +1,4 @@
-
-#[derive(Eq,PartialEq,Debug)]
-struct Bitboard(u64);
-
-#[derive(Eq,PartialEq,Debug)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone)]
 struct Locale {
     rank: u8,
     file: u8
@@ -18,6 +14,45 @@ impl Locale {
     }
 }
 
+#[derive(Eq,PartialEq,Debug)]
+struct Bitboard(u64);
+
+impl Bitboard {
+    fn union(&self, other: Bitboard) -> Bitboard {
+        let Bitboard(our_bits) = *self;
+        let Bitboard(their_bits) = other;
+        Bitboard(our_bits | their_bits)
+    }
+
+    fn intersection(&self, other: Bitboard) -> Bitboard {
+        let Bitboard(our_bits) = *self;
+        let Bitboard(their_bits) = other;
+        Bitboard(our_bits & their_bits)
+    }
+
+    fn invert(&self) -> Bitboard {
+        let Bitboard(our_bits) = *self;
+        Bitboard(our_bits ^ our_bits)
+    }
+
+    fn alight(&self, station: Locale) -> Bitboard {
+        // classic `|= (1 << n)` would probably be more efficient, huh &c.
+        self.union(station.pinpoint())
+    }
+
+    fn quench(&self, station: Locale) -> Bitboard {
+        self.intersection(station.pinpoint().invert())
+    }
+
+    fn query(&self, station: Locale) -> bool {
+        let Bitboard(our_bits) = *self;
+        let Bitboard(beacon_bits) = station.pinpoint();
+        (our_bits & beacon_bits) != 0
+    }
+}
+
+
+
 #[test]
 fn test_locale() {
     let a1 = Locale { rank: 0, file: 0 };
@@ -25,4 +60,24 @@ fn test_locale() {
 
     let c4 = Locale { rank: 2, file: 3 };
     assert_eq!(Bitboard(524288u64), c4.pinpoint());
+}
+
+#[test]
+fn test_empty_board_is_empty() {
+    let empty_board = Bitboard(0);
+    for rank in 0..8 {
+        for file in 0..8 {
+            assert!(!empty_board.query(Locale { rank: rank, file: file }));
+        }
+    }
+}
+
+#[test]
+fn test_alight_and_quench() {
+    let mut stage = Bitboard(0);
+    let b5 = Locale { rank: 1, file: 4 };
+    stage = stage.alight(b5);
+    assert!(stage.query(b5));
+    stage = stage.quench(b5);
+    assert!(!stage.query(b5));
 }
