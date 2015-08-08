@@ -51,6 +51,22 @@ impl Bitboard {
     }
 }
 
+enum Teams { Blue, Orange }
+
+struct GameState {
+    blue_servants: Bitboard,
+    blue_ponies: Bitboard,
+    blue_scholars: Bitboard,
+    blue_cops: Bitboard,
+    blue_princesses: Bitboard,
+    blue_figurehead: Bitboard,
+    orange_servants: Bitboard,
+    orange_ponies: Bitboard,
+    orange_scholars: Bitboard,
+    orange_cops: Bitboard,
+    orange_princesses: Bitboard,
+    orange_figurehead: Bitboard,
+}
 
 
 #[test]
