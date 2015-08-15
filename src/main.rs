@@ -17,7 +17,28 @@ impl Locale {
     pub fn pinpoint(&self) -> Bitboard {
         Bitboard(2u64.pow(self.bit_index()))
     }
+
+    pub fn is_legal(&self) -> bool {
+        self.rank >= 0 && self.rank < 8 && self.file >= 0 && self.file < 8
+    }
+
+    pub fn displace(&self, offset: (i8, i8)) -> Option<Self> {
+        let (rank_offset, file_offset) = offset;
+        let potential_locale = Locale {
+            // why is this legal? What happens when you coerce a
+            // negative number to unsigned?
+            rank: (self.rank as i8 + rank_offset) as u8,
+            file: (self.file as i8 + file_offset) as u8
+        };
+        if potential_locale.is_legal() {
+            Some(potential_locale)
+        } else {
+            None
+        }
+    }
 }
+
+
 
 #[derive(Eq,PartialEq,Debug,Copy,Clone)]
 struct Bitboard(u64);
@@ -65,6 +86,19 @@ impl Bitboard {
         let Bitboard(our_bits) = *self;
         let Bitboard(beacon_bits) = station.pinpoint();
         (our_bits & beacon_bits) != 0
+    }
+
+    pub fn to_locales(&self) -> Vec<Locale> {
+        let mut locales = Vec::new();
+        for rank in 0..8 {
+            for file in 0..8 {
+                let potential_locale = Locale { rank: rank, file: file };
+                if self.query(potential_locale) {
+                    locales.push(potential_locale);
+                }
+            }
+        }
+        locales
     }
 
     pub fn display(&self) {
@@ -267,20 +301,68 @@ impl GameState {
         }
     }
 
+    pub fn occupied_by(&self, team: Team) -> Bitboard {
+        match team {
+            Team::Orange => self.orange_servants.union(
+                self.orange_ponies).union(
+                    self.orange_scholars).union(self.orange_cops).union(
+                        self.orange_princesses).union(self.orange_figurehead),
+            Team::Blue => self.blue_servants.union(self.blue_ponies).union(
+                    self.blue_scholars).union(self.blue_cops).union(
+                            self.blue_princesses).union(self.blue_figurehead)
+        }
+    }
+
     pub fn occupied(&self) -> Bitboard {
-        // Sooo ... maybe this should be a loop
-        // although this does have a certain visual appeal
-        self.orange_servants.union(self.orange_ponies).union(
-            self.orange_scholars).union(self.orange_cops).union(
-                self.orange_princesses).union(self.orange_figurehead).union(
-                    self.blue_servants).union(self.blue_ponies).union(
-                        self.blue_scholars).union(self.blue_cops).union(
-                            self.blue_princesses).union(
-                                self.blue_figurehead)
+        self.occupied_by(Team::Orange).union(self.occupied_by(Team::Blue))
     }
 
     pub fn unoccupied(&self) -> Bitboard {
         self.occupied().invert()
+    }
+
+    fn servant_lookahead(&self, team: Team) -> Vec<GameState> {
+        let initial_rank;
+        let standard_offset;
+        let boost_offset;
+        let stun_offsets;
+        match team {
+            Team::Orange => {
+                initial_rank = 1;
+                standard_offset = (0, 1);
+                boost_offset = (0, 2);
+                stun_offsets = [(1, -1), (1, 1)];
+            },
+            Team::Blue => {
+                initial_rank = 6;
+                standard_offset = (0, -1);
+                boost_offset = (0, -2);
+                stun_offsets = [(-1, -1), (-1, 1)];
+            }
+        }
+        let mut possibilities = Vec::new();
+        let positional_chart: &Bitboard = self.agent_to_bitboard_ref(
+            Agent { team: team, job_description: JobDescription::Servant });
+        for start_locale in positional_chart.to_locales().iter() {
+            // TODO can move one square
+            if start_locale.rank == initial_rank {
+                // TODO can move with the two-square "boost offset"
+            }
+            // TODO can move diagonally
+        }
+        possibilities
+    }
+
+    pub fn lookahead(&self) -> Vec<Self> {
+        let possibilities = Vec::new();
+        let moving_team = self.to_move;
+        for agent_class in Agent::dramatis_personae(moving_team) {
+            let positional_chart: &Bitboard = self.agent_to_bitboard_ref(
+                agent_class);
+            // for each agent class, compute possible moves ... somehow
+        }
+        // TODO work in progress
+        possibilities
     }
 
     pub fn display(&self) {
@@ -307,19 +389,6 @@ impl GameState {
             println!("");
         }
     }
-
-    pub fn lookahead(&self) -> Vec<Self> {
-        let possibilities = Vec::new();
-        let moving_team = self.to_move;
-        for agent_class in Agent::dramatis_personae(moving_team) {
-            let positional_chart: &Bitboard = self.agent_to_bitboard_ref(
-                agent_class);
-            // for each agent class, compute possible moves ... somehow
-        }
-        // TODO work in progress
-        possibilities
-    }
-
 }
 
 
@@ -343,6 +412,18 @@ mod test {
 
         let c4 = Locale { rank: 2, file: 3 };
         assert_eq!(Bitboard(524288u64), c4.pinpoint());
+    }
+
+    #[test]
+    fn test_displace_locale() {
+        assert_eq!(
+            Some(Locale { rank: 3, file: 5 }),
+            Locale { rank: 4, file: 4 }.displace((-1, 1))
+        );
+        assert_eq!(
+            None,
+            Locale { rank: 0, file: 0 }.displace((-1, 1))
+        )
     }
 
     #[test]
@@ -393,6 +474,16 @@ mod test {
                             job_description: JobDescription::Princess };
         let blue_princess_realm = state.agent_to_bitboard_ref(agent);
         assert!(blue_princess_realm.query(Locale { rank: 7, file: 3 }));
+    }
+
+    #[test]
+    fn test_orange_servants_to_locales_from_new_gamestate() {
+        let state = GameState::new();
+        let mut expected = Vec::new();
+        for file in 0..8 {
+            expected.push(Locale { rank: 1, file: file });
+        }
+        assert_eq!(expected, state.orange_servants.to_locales());
     }
 
 }
