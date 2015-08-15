@@ -1,3 +1,8 @@
+extern crate ansi_term;
+
+use ansi_term::Colour as Color;  // this is America
+
+
 #[derive(Eq,PartialEq,Debug,Copy,Clone)]
 struct Locale {
     rank: u8,
@@ -112,6 +117,33 @@ impl Agent {
              Agent{ team: Team::Blue,
                     job_description: JobDescription::Figurehead }]
     }
+
+    pub fn render_caricature(&self) {
+        let caricature = match self {
+            &Agent { team: Team::Orange, .. } => {
+                match self.job_description {
+                    JobDescription::Servant => Color::Yellow.paint("♙"),
+                    JobDescription::Pony => Color::Yellow.paint("♘"),
+                    JobDescription::Scholar => Color::Yellow.paint("♗"),
+                    JobDescription::Cop => Color::Yellow.paint("♖"),
+                    JobDescription::Princess => Color::Yellow.paint("♕"),
+                    JobDescription::Figurehead => Color::Yellow.paint("♔"),
+                }
+            },
+            &Agent { team: Team::Blue, .. } => {
+                match self.job_description {
+                    JobDescription::Servant => Color::Cyan.paint("♟"),
+                    JobDescription::Pony => Color::Cyan.paint("♞"),
+                    JobDescription::Scholar => Color::Cyan.paint("♝"),
+                    JobDescription::Cop => Color::Cyan.paint("♜"),
+                    JobDescription::Princess => Color::Cyan.paint("♛"),
+                    JobDescription::Figurehead => Color::Cyan.paint("♚"),
+                }
+            }
+        };
+        print!("{}", caricature);
+    }
+
 }
 
 
@@ -137,8 +169,8 @@ impl GameState {
         let mut orange_servant_locales = Vec::new();
         let mut blue_servant_locales = Vec::new();
         for f in 0..8 {
-            orange_servant_locales.push(Locale { rank: 6, file: f });
-            blue_servant_locales.push(Locale { rank: 1, file: f });
+            orange_servant_locales.push(Locale { rank: 1, file: f });
+            blue_servant_locales.push(Locale { rank: 6, file: f });
         }
         GameState {
             orange_servants: Bitboard::init(&orange_servant_locales),
@@ -220,13 +252,16 @@ impl GameState {
     }
 
     pub fn display(&self) {
+        println!("  a b c d e f g h");
         for rank in 0..8 {
+            print!("{} ", rank+1);
             for file in 0..8 {
-                for &figurine in Agent::dramatis_personae().iter() {
-                    if self.agent_to_bitboard_ref(figurine).query(
+                for &figurine_class in Agent::dramatis_personae().iter() {
+                    if self.agent_to_bitboard_ref(figurine_class).query(
                         Locale { rank: rank, file: file }
                     ) {
-                        print!("X");
+                        figurine_class.render_caricature();
+                        print!(" ");
                     }
                 }
             }
