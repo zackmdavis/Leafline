@@ -49,7 +49,7 @@ impl Bitboard {
 
     pub fn invert(&self) -> Bitboard {
         let Bitboard(our_bits) = *self;
-        Bitboard(our_bits ^ our_bits)
+        Bitboard(!our_bits)
     }
 
     pub fn alight(&self, station: Locale) -> Bitboard {
@@ -65,6 +65,21 @@ impl Bitboard {
         let Bitboard(our_bits) = *self;
         let Bitboard(beacon_bits) = station.pinpoint();
         (our_bits & beacon_bits) != 0
+    }
+
+    pub fn display(&self) {
+        let Bitboard(debug) = *self;
+        println!("{}", debug);
+        for rank in 0..8 {
+            for file in 0..8 {
+                if self.query(Locale { rank: rank, file: file }) {
+                    print!("• ");
+                } else {
+                    print!("_ ");
+                }
+            }
+            println!("");
+        }
     }
 }
 
@@ -252,19 +267,39 @@ impl GameState {
         }
     }
 
+    pub fn occupied(&self) -> Bitboard {
+        // Sooo ... maybe this should be a loop
+        // although this does have a certain visual appeal
+        self.orange_servants.union(self.orange_ponies).union(
+            self.orange_scholars).union(self.orange_cops).union(
+                self.orange_princesses).union(self.orange_figurehead).union(
+                    self.blue_servants).union(self.blue_ponies).union(
+                        self.blue_scholars).union(self.blue_cops).union(
+                            self.blue_princesses).union(
+                                self.blue_figurehead)
+    }
+
+    pub fn unoccupied(&self) -> Bitboard {
+        self.occupied().invert()
+    }
+
     pub fn display(&self) {
         println!("  a b c d e f g h");
         for rank in 0..8 {
             print!("{} ", rank+1);
             for file in 0..8 {
-                for &team in [Team::Orange, Team::Blue].iter() {
-                    for &figurine_class in
-                        Agent::dramatis_personae(team).iter() {
-                        if self.agent_to_bitboard_ref(figurine_class).query(
-                            Locale { rank: rank, file: file }
-                            ) {
-                            figurine_class.render_caricature();
-                            print!(" ");
+                let locale = Locale { rank: rank, file: file };
+                if self.occupied().invert().query(locale) {
+                    print!("_ ");
+                } else {
+                    for &team in [Team::Orange, Team::Blue].iter() {
+                        for &figurine_class in
+                            Agent::dramatis_personae(team).iter() {
+                                if self.agent_to_bitboard_ref(
+                                    figurine_class).query(locale) {
+                                        figurine_class.render_caricature();
+                                        print!(" ");
+                                }
                         }
                     }
                 }
@@ -291,6 +326,9 @@ impl GameState {
 fn main() {
     let arena = GameState::new();
     arena.display();
+    println!("");
+    arena.occupied().display();
+    arena.occupied().invert().display();
 }
 
 
@@ -313,6 +351,16 @@ mod test {
         for rank in 0..8 {
             for file in 0..8 {
                 assert!(!empty_board.query(Locale { rank: rank, file: file }));
+            }
+        }
+    }
+
+    #[test]
+    fn test_inverted_empty_board_is_full() {
+        let full_board = Bitboard::new().invert();
+        for rank in 0..8 {
+            for file in 0..8 {
+                assert!(full_board.query(Locale { rank: rank, file: file }));
             }
         }
     }
