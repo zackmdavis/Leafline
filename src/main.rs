@@ -64,17 +64,56 @@ impl Bitboard {
 }
 
 
-#[derive(Eq,PartialEq,Debug)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone)]
 enum Team { Orange, Blue }
 
-#[derive(Eq,PartialEq,Debug)]
-enum JobDescription { Servant, Pony, Scholar, Cop, Princess, Figurehead }
+#[derive(Eq,PartialEq,Debug,Copy,Clone)]
+enum JobDescription {
+    Servant,  // ♂
+    Pony,  // ♀
+    Scholar,  // ♀
+    Cop,  // ♂
+    Princess,  // ♀
+    Figurehead  // ♂
+}
 
-#[derive(Eq,PartialEq,Debug)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone)]
 struct Agent {
     team: Team,
     job_description: JobDescription
 }
+
+impl Agent {
+    // I wanted to call it `dramatis_personæ`, but "non-ascii idents
+    // are not fully supported" 🙀
+    pub fn dramatis_personae() -> Vec<Agent> {
+        vec![Agent{ team: Team::Orange,
+                    job_description: JobDescription::Servant },
+             Agent{ team: Team::Orange,
+                    job_description: JobDescription::Pony },
+             Agent{ team: Team::Orange,
+                    job_description: JobDescription::Scholar },
+             Agent{ team: Team::Orange,
+                    job_description: JobDescription::Cop },
+             Agent{ team: Team::Orange,
+                    job_description: JobDescription::Princess },
+             Agent{ team: Team::Orange,
+                    job_description: JobDescription::Figurehead },
+             Agent{ team: Team::Blue,
+                    job_description: JobDescription::Servant },
+             Agent{ team: Team::Blue,
+                    job_description: JobDescription::Pony },
+             Agent{ team: Team::Blue,
+                    job_description: JobDescription::Scholar },
+             Agent{ team: Team::Blue,
+                    job_description: JobDescription::Cop },
+             Agent{ team: Team::Blue,
+                    job_description: JobDescription::Princess },
+             Agent{ team: Team::Blue,
+                    job_description: JobDescription::Figurehead }]
+    }
+}
+
 
 #[derive(Eq,PartialEq,Debug)]
 struct GameState {
@@ -139,27 +178,67 @@ impl GameState {
         }
     }
 
-    pub fn agent_to_bitboard_ref(&self, agent: Agent) ->
-        // I'm actually going to return a Bitboard from this function,
-        // but am writing something different first as an experiment to see if
-        // I understand how `match` works.
-        &str {
+    pub fn agent_to_bitboard_ref(&self, agent: Agent) -> &Bitboard {
         match agent {
-            Agent{ team: Team::Orange, .. } => "orange!",
-            Agent{ team: Team::Blue, .. } => "blue!"
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Servant } =>
+                &self.orange_servants,
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Pony } =>
+                &self.orange_ponies,
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Scholar } =>
+                &self.orange_scholars,
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Cop } =>
+                &self.orange_cops,
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Princess } =>
+                &self.orange_princesses,
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Figurehead } =>
+                &self.orange_figurehead,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Servant } =>
+                &self.blue_servants,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Pony } =>
+                &self.blue_ponies,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Scholar } =>
+                &self.blue_scholars,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Cop } =>
+                &self.blue_cops,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Princess } =>
+                &self.blue_princesses,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Figurehead } =>
+                &self.blue_figurehead,
         }
-        // TOOD
     }
 
     pub fn display(&self) {
         for rank in 0..8 {
             for file in 0..8 {
-                // TODO
+                for &figurine in Agent::dramatis_personae().iter() {
+                    if self.agent_to_bitboard_ref(figurine).query(
+                        Locale { rank: rank, file: file }
+                    ) {
+                        print!("X");
+                    }
+                }
             }
+            println!("");
         }
-
     }
+}
 
+
+fn main() {
+    let arena = GameState::new();
+    arena.display();
 }
 
 
@@ -208,11 +287,12 @@ mod test {
     }
 
     #[test]
-    fn test_agent_to_bitboard_ref_on_new_stage() {
-        let stage = GameState::new();
+    fn test_agent_to_bitboard_ref_on_new_gamestate() {
+        let state = GameState::new();
         let agent = Agent { team: Team::Blue,
                             job_description: JobDescription::Princess };
-        assert_eq!("blue!", stage.agent_to_bitboard_ref(agent));
+        let blue_princess_realm = state.agent_to_bitboard_ref(agent);
+        assert!(blue_princess_realm.query(Locale { rank: 7, file: 3 }));
     }
 
 }
