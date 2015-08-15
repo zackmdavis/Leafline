@@ -19,7 +19,7 @@ impl Locale {
     }
 }
 
-#[derive(Eq,PartialEq,Debug)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone)]
 struct Bitboard(u64);
 
 impl Bitboard {
@@ -72,6 +72,15 @@ impl Bitboard {
 #[derive(Eq,PartialEq,Debug,Copy,Clone)]
 enum Team { Orange, Blue }
 
+impl Team {
+    fn opponent(&self) -> Self {
+        match self {
+            &Team::Orange => Team::Blue,
+            &Team::Blue => Team::Orange
+        }
+    }
+}
+
 #[derive(Eq,PartialEq,Debug,Copy,Clone)]
 enum JobDescription {
     Servant,  // ♂
@@ -91,30 +100,18 @@ struct Agent {
 impl Agent {
     // I wanted to call it `dramatis_personæ`, but "non-ascii idents
     // are not fully supported" 🙀
-    pub fn dramatis_personae() -> Vec<Agent> {
-        vec![Agent{ team: Team::Orange,
+    pub fn dramatis_personae(team: Team) -> Vec<Agent> {
+        vec![Agent{ team: team,
                     job_description: JobDescription::Servant },
-             Agent{ team: Team::Orange,
+             Agent{ team: team,
                     job_description: JobDescription::Pony },
-             Agent{ team: Team::Orange,
+             Agent{ team: team,
                     job_description: JobDescription::Scholar },
-             Agent{ team: Team::Orange,
+             Agent{ team: team,
                     job_description: JobDescription::Cop },
-             Agent{ team: Team::Orange,
+             Agent{ team: team,
                     job_description: JobDescription::Princess },
-             Agent{ team: Team::Orange,
-                    job_description: JobDescription::Figurehead },
-             Agent{ team: Team::Blue,
-                    job_description: JobDescription::Servant },
-             Agent{ team: Team::Blue,
-                    job_description: JobDescription::Pony },
-             Agent{ team: Team::Blue,
-                    job_description: JobDescription::Scholar },
-             Agent{ team: Team::Blue,
-                    job_description: JobDescription::Cop },
-             Agent{ team: Team::Blue,
-                    job_description: JobDescription::Princess },
-             Agent{ team: Team::Blue,
+             Agent{ team: team,
                     job_description: JobDescription::Figurehead }]
     }
 
@@ -147,8 +144,10 @@ impl Agent {
 }
 
 
-#[derive(Eq,PartialEq,Debug)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone)]
 struct GameState {
+    to_move: Team,
+
     orange_servants: Bitboard,
     orange_ponies: Bitboard,
     orange_scholars: Bitboard,
@@ -173,6 +172,8 @@ impl GameState {
             blue_servant_locales.push(Locale { rank: 6, file: f });
         }
         GameState {
+            to_move: Team::Orange,
+
             orange_servants: Bitboard::init(&orange_servant_locales),
             orange_ponies: Bitboard::init(
                 &vec![Locale { rank: 0, file: 1 },
@@ -256,18 +257,34 @@ impl GameState {
         for rank in 0..8 {
             print!("{} ", rank+1);
             for file in 0..8 {
-                for &figurine_class in Agent::dramatis_personae().iter() {
-                    if self.agent_to_bitboard_ref(figurine_class).query(
-                        Locale { rank: rank, file: file }
-                    ) {
-                        figurine_class.render_caricature();
-                        print!(" ");
+                for &team in [Team::Orange, Team::Blue].iter() {
+                    for &figurine_class in
+                        Agent::dramatis_personae(team).iter() {
+                        if self.agent_to_bitboard_ref(figurine_class).query(
+                            Locale { rank: rank, file: file }
+                            ) {
+                            figurine_class.render_caricature();
+                            print!(" ");
+                        }
                     }
                 }
             }
             println!("");
         }
     }
+
+    pub fn lookahead(&self) -> Vec<Self> {
+        let possibilities = Vec::new();
+        let moving_team = self.to_move;
+        for agent_class in Agent::dramatis_personae(moving_team) {
+            let positional_chart: &Bitboard = self.agent_to_bitboard_ref(
+                agent_class);
+            // for each agent class, compute possible moves ... somehow
+        }
+        // TODO work in progress
+        possibilities
+    }
+
 }
 
 
