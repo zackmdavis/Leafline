@@ -25,8 +25,9 @@ impl Locale {
     pub fn displace(&self, offset: (i8, i8)) -> Option<Self> {
         let (rank_offset, file_offset) = offset;
         let potential_locale = Locale {
-            // why is this legal? What happens when you coerce a
-            // negative number to unsigned?
+            // XXX: it won't happen with the arguments we expect to
+            // give it in this program, but in the interests of Safety,
+            // this is an overflow bug (-1i8 as u8 == 255u8)
             rank: (self.rank as i8 + rank_offset) as u8,
             file: (self.file as i8 + file_offset) as u8
         };
@@ -80,6 +81,10 @@ impl Bitboard {
 
     pub fn quench(&self, station: Locale) -> Bitboard {
         self.intersection(station.pinpoint().invert())
+    }
+
+    pub fn transit(&self, departure: Locale, destination: Locale) -> Bitboard {
+        self.quench(departure).alight(destination)
     }
 
     pub fn query(&self, station: Locale) -> bool {
@@ -344,7 +349,15 @@ impl GameState {
         let positional_chart: &Bitboard = self.agent_to_bitboard_ref(
             Agent { team: team, job_description: JobDescription::Servant });
         for start_locale in positional_chart.to_locales().iter() {
-            // TODO can move one square
+            // can move one square if not blocked
+            let std_destination_maybe = start_locale.displace(standard_offset);
+            if let Some(destination) = std_destination_maybe {
+                if self.unoccupied().query(destination) {
+                    let mut possibility = self.clone();
+                    // TODO always be coding
+                }
+            }
+
             if start_locale.rank == initial_rank {
                 // TODO can move with the two-square "boost offset"
             }
