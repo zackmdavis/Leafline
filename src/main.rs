@@ -306,6 +306,56 @@ impl GameState {
         }
     }
 
+    // XXX this code-duplication is hideous, but what can you do in
+    // this language? My problem is exactly that I don't know
+    pub fn agent_to_bitboard_mutref(&mut self, agent: Agent) -> &mut Bitboard {
+        match agent {
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Servant } =>
+                &mut self.orange_servants,
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Pony } =>
+                &mut self.orange_ponies,
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Scholar } =>
+                &mut self.orange_scholars,
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Cop } =>
+                &mut self.orange_cops,
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Princess } =>
+                &mut self.orange_princesses,
+            Agent{ team: Team::Orange,
+                   job_description: JobDescription::Figurehead } =>
+                &mut self.orange_figurehead,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Servant } =>
+                &mut self.blue_servants,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Pony } =>
+                &mut self.blue_ponies,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Scholar } =>
+                &mut self.blue_scholars,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Cop } =>
+                &mut self.blue_cops,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Princess } =>
+                &mut self.blue_princesses,
+            Agent{ team: Team::Blue,
+                   job_description: JobDescription::Figurehead } =>
+                &mut self.blue_figurehead,
+        }
+    }
+
+
+    pub fn replace_subboard(&self, for_whom: Agent, subboard: Bitboard) -> Self {
+        let mut resultant_state = self.clone();
+        resultant_state.agent_to_bitboard_mutref(for_whom).0 = subboard.0;
+        resultant_state
+    }
+
     pub fn occupied_by(&self, team: Team) -> Bitboard {
         match team {
             Team::Orange => self.orange_servants.union(
@@ -334,40 +384,58 @@ impl GameState {
         match team {
             Team::Orange => {
                 initial_rank = 1;
-                standard_offset = (0, 1);
-                boost_offset = (0, 2);
+                standard_offset = (1, 0);
+                boost_offset = (2, 0);
                 stun_offsets = [(1, -1), (1, 1)];
             },
             Team::Blue => {
                 initial_rank = 6;
-                standard_offset = (0, -1);
-                boost_offset = (0, -2);
+                standard_offset = (-1, 0);
+                boost_offset = (-2, 0);
                 stun_offsets = [(-1, -1), (-1, 1)];
             }
         }
-        let mut possibilities = Vec::new();
+        let mut premonitions = Vec::new();
+        let servant_agent = Agent {
+            team: team, job_description: JobDescription::Servant };
         let positional_chart: &Bitboard = self.agent_to_bitboard_ref(
-            Agent { team: team, job_description: JobDescription::Servant });
+            servant_agent);
         for start_locale in positional_chart.to_locales().iter() {
-            // can move one square if not blocked
+            // can move one locale if not blocked
             let std_destination_maybe = start_locale.displace(standard_offset);
-            if let Some(destination) = std_destination_maybe {
-                if self.unoccupied().query(destination) {
-                    let mut possibility = self.clone();
-                    // TODO always be coding
+            if let Some(destination_locale) = std_destination_maybe {
+                if self.unoccupied().query(destination_locale) {
+                    let mut premonition = self.clone();
+                    premonition.replace_subboard(
+                        servant_agent, positional_chart.transit(
+                            *start_locale, destination_locale));
+                    premonitions.push(premonition);
                 }
             }
-
+            // can move two locales if he hasn't previously moved
             if start_locale.rank == initial_rank {
-                // TODO can move with the two-square "boost offset"
+                // safe to unwrap because we know that we're at the
+                // initial rank
+                let boost_destination = start_locale.displace(
+                    boost_offset).unwrap();
+                let standard_destination = start_locale.displace(
+                    standard_offset).unwrap();
+                if (self.unoccupied().query(boost_destination) &&
+                    self.unoccupied().query(standard_destination)) {
+                    let mut premonition = self.clone();
+                    premonition.replace_subboard(
+                        servant_agent, positional_chart.transit(
+                            *start_locale, boost_destination));
+                    premonitions.push(premonition);
+                }
             }
-            // TODO can move diagonally
+            // TODO can stun diagonally
         }
-        possibilities
+        premonitions
     }
 
     pub fn lookahead(&self) -> Vec<Self> {
-        let possibilities = Vec::new();
+        let premonitions = Vec::new();
         let moving_team = self.to_move;
         for agent_class in Agent::dramatis_personae(moving_team) {
             let positional_chart: &Bitboard = self.agent_to_bitboard_ref(
@@ -375,7 +443,7 @@ impl GameState {
             // for each agent class, compute possible moves ... somehow
         }
         // TODO work in progress
-        possibilities
+        premonitions
     }
 
     pub fn display(&self) {
@@ -497,6 +565,13 @@ mod test {
             expected.push(Locale { rank: 1, file: file });
         }
         assert_eq!(expected, state.orange_servants.to_locales());
+    }
+
+    #[test]
+    fn test_orange_servant_lookahead_from_original_position() {
+        let state = GameState::new();
+        let premonitions = state.servant_lookahead(Team::Orange);
+        assert_eq!(16, premonitions.len());
     }
 
 }
