@@ -1,6 +1,9 @@
 extern crate ansi_term;
+mod movement_tables;
 
 use ansi_term::Colour as Color;  // this is America
+
+use movement_tables::PONY_MOVEMENT_TABLE;
 
 
 #[derive(Eq,PartialEq,Debug,Copy,Clone)]
@@ -434,14 +437,33 @@ impl GameState {
         premonitions
     }
 
+    fn pony_lookahead(&self, team: Team) -> Vec<GameState> {
+        let mut premonitions = Vec::new();
+        let pony_agent = Agent {
+            team: team, job_description: JobDescription::Pony };
+        let positional_chart: &Bitboard = self.agent_to_bitboard_ref(
+            pony_agent);
+        for start_locale in positional_chart.to_locales().iter() {
+            let destinations = self.occupied_by(team).invert().intersection(
+                Bitboard(PONY_MOVEMENT_TABLE[
+                    start_locale.bit_index() as usize])).to_locales();
+            for destination in destinations.into_iter() {
+                let mut premonition = self.clone();
+                premonition.replace_subboard(
+                    pony_agent, positional_chart.transit(
+                        *start_locale, destination));
+                // TODO put any stunned opposing figuring into hospital
+                premonitions.push(premonition);
+            }
+        }
+        premonitions
+    }
+
     pub fn lookahead(&self) -> Vec<Self> {
         let premonitions = Vec::new();
         let moving_team = self.to_move;
-        for agent_class in Agent::dramatis_personae(moving_team) {
-            let positional_chart: &Bitboard = self.agent_to_bitboard_ref(
-                agent_class);
-            // for each agent class, compute possible moves ... somehow
-        }
+
+
         // TODO work in progress
         premonitions
     }
@@ -477,8 +499,6 @@ fn main() {
     let arena = GameState::new();
     arena.display();
     println!("");
-    arena.occupied().display();
-    arena.occupied().invert().display();
 }
 
 
@@ -572,6 +592,16 @@ mod test {
         let state = GameState::new();
         let premonitions = state.servant_lookahead(Team::Orange);
         assert_eq!(16, premonitions.len());
+    }
+
+    #[test]
+    #[ignore]  // not working yet
+    fn test_orange_pony_lookahead_from_original_position() {
+        let state = GameState::new();
+        let premonitions = state.servant_lookahead(Team::Orange);
+        println!("MY DEBUG MARKER D {:?}", premonitions);
+        println!("MY DEBUG MARKER E {:?}", premonitions.len());
+        assert_eq!(4, premonitions.len());
     }
 
 }
