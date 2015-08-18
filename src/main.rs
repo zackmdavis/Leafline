@@ -329,11 +329,11 @@ impl GameState {
             let destinations = self.occupied_by(team).invert().intersection(
                 Bitboard(PONY_MOVEMENT_TABLE[
                     start_locale.bit_index() as usize])).to_locales();
-            for destination in destinations.into_iter() {
+            for destination in destinations.iter() {
                 let mut premonition = self.clone();
                 premonition.replace_subboard(
                     pony_agent, positional_chart.transit(
-                        *start_locale, destination));
+                        *start_locale, *destination));
                 // TODO put any stunned opposing figuring into hospital
                 premonitions.push(premonition);
             }
@@ -416,13 +416,24 @@ mod test {
     }
 
     #[test]
-    #[ignore]  // not working yet
+    #[ignore]  // still not working
     fn test_orange_pony_lookahead_from_original_position() {
         let state = GameState::new();
-        let premonitions = state.servant_lookahead(Team::Orange);
-        println!("MY DEBUG MARKER D {:?}", premonitions);
-        println!("MY DEBUG MARKER E {:?}", premonitions.len());
+        let premonitions = state.pony_lookahead(Team::Orange);
         assert_eq!(4, premonitions.len());
+        let collected = premonitions.iter().map(
+            |p| p.orange_ponies.to_locales()).collect::<Vec<_>>();
+        assert_eq!(
+            vec![vec![Locale { rank: 2, file: 0 },
+                      Locale { rank: 0, file: 6 }],
+                 vec![Locale { rank: 2, file: 2 },
+                      Locale { rank: 0, file: 6 }],
+                 vec![Locale { rank: 0, file: 1 },
+                      Locale { rank: 2, file: 5 }],
+                 vec![Locale { rank: 0, file: 1 },
+                      Locale { rank: 2, file: 7 }]],
+                 collected  // unmoved, according to failing test output?!
+        );
     }
 
 }
