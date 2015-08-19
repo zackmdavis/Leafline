@@ -1,4 +1,4 @@
-#[derive(Eq,PartialEq,Debug,Copy,Clone)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 pub struct Locale {
     pub rank: u8,
     pub file: u8
@@ -35,7 +35,7 @@ impl Locale {
 }
 
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 pub struct Bitboard(pub u64);
 
 impl Bitboard {

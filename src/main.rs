@@ -8,7 +8,7 @@ use space::{Locale, Bitboard};
 use movement_tables::PONY_MOVEMENT_TABLE;
 
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 enum Team { Orange, Blue }
 
 impl Team {
@@ -20,7 +20,7 @@ impl Team {
     }
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 enum JobDescription {
     Servant,  // ♂
     Pony,  // ♀
@@ -30,7 +30,7 @@ enum JobDescription {
     Figurehead  // ♂
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 struct Agent {
     team: Team,
     job_description: JobDescription
@@ -234,8 +234,8 @@ impl GameState {
         }
     }
 
-
-    pub fn replace_subboard(&self, for_whom: Agent, subboard: Bitboard) -> Self {
+    pub fn except_replaced_subboard(&self, for_whom: Agent,
+                                    subboard: Bitboard) -> Self {
         let mut resultant_state = self.clone();
         resultant_state.agent_to_bitboard_mutref(for_whom).0 = subboard.0;
         resultant_state
@@ -291,7 +291,7 @@ impl GameState {
             if let Some(destination_locale) = std_destination_maybe {
                 if self.unoccupied().query(destination_locale) {
                     let mut premonition = self.clone();
-                    premonition.replace_subboard(
+                    premonition = premonition.except_replaced_subboard(
                         servant_agent, positional_chart.transit(
                             *start_locale, destination_locale));
                     premonitions.push(premonition);
@@ -308,7 +308,7 @@ impl GameState {
                 if (self.unoccupied().query(boost_destination) &&
                     self.unoccupied().query(standard_destination)) {
                     let mut premonition = self.clone();
-                    premonition.replace_subboard(
+                    premonition.except_replaced_subboard(
                         servant_agent, positional_chart.transit(
                             *start_locale, boost_destination));
                     premonitions.push(premonition);
@@ -331,7 +331,7 @@ impl GameState {
                     start_locale.bit_index() as usize])).to_locales();
             for destination in destinations.iter() {
                 let mut premonition = self.clone();
-                premonition.replace_subboard(
+                premonition = premonition.except_replaced_subboard(
                     pony_agent, positional_chart.transit(
                         *start_locale, *destination));
                 // TODO put any stunned opposing figuring into hospital
@@ -413,10 +413,12 @@ mod test {
         let state = GameState::new();
         let premonitions = state.servant_lookahead(Team::Orange);
         assert_eq!(16, premonitions.len());
+        // although granted that a more thorough test would actually
+        // say something about the nature of the positions, rather than
+        // just how many there are
     }
 
     #[test]
-    #[ignore]  // still not working
     fn test_orange_pony_lookahead_from_original_position() {
         let state = GameState::new();
         let premonitions = state.pony_lookahead(Team::Orange);
@@ -424,15 +426,15 @@ mod test {
         let collected = premonitions.iter().map(
             |p| p.orange_ponies.to_locales()).collect::<Vec<_>>();
         assert_eq!(
-            vec![vec![Locale { rank: 2, file: 0 },
-                      Locale { rank: 0, file: 6 }],
-                 vec![Locale { rank: 2, file: 2 },
-                      Locale { rank: 0, file: 6 }],
+            vec![vec![Locale { rank: 0, file: 6 },
+                      Locale { rank: 2, file: 0 }],
+                 vec![Locale { rank: 0, file: 6 },
+                      Locale { rank: 2, file: 2 }],
                  vec![Locale { rank: 0, file: 1 },
                       Locale { rank: 2, file: 5 }],
                  vec![Locale { rank: 0, file: 1 },
                       Locale { rank: 2, file: 7 }]],
-                 collected  // unmoved, according to failing test output?!
+                 collected
         );
     }
 
