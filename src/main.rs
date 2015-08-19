@@ -1,86 +1,12 @@
 extern crate ansi_term;
-mod space;
-mod movement_tables;
 
-use ansi_term::Colour as Color;  // this is America
+mod space;
+mod identity;
+mod motion;
 
 use space::{Locale, Bitboard};
-use movement_tables::PONY_MOVEMENT_TABLE;
-
-
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
-enum Team { Orange, Blue }
-
-impl Team {
-    fn opponent(&self) -> Self {
-        match self {
-            &Team::Orange => Team::Blue,
-            &Team::Blue => Team::Orange
-        }
-    }
-}
-
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
-enum JobDescription {
-    Servant,  // ♂
-    Pony,  // ♀
-    Scholar,  // ♀
-    Cop,  // ♂
-    Princess,  // ♀
-    Figurehead  // ♂
-}
-
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
-struct Agent {
-    team: Team,
-    job_description: JobDescription
-}
-
-impl Agent {
-    // I wanted to call it `dramatis_personæ`, but "non-ascii idents
-    // are not fully supported" 🙀
-    pub fn dramatis_personae(team: Team) -> Vec<Agent> {
-        vec![Agent{ team: team,
-                    job_description: JobDescription::Servant },
-             Agent{ team: team,
-                    job_description: JobDescription::Pony },
-             Agent{ team: team,
-                    job_description: JobDescription::Scholar },
-             Agent{ team: team,
-                    job_description: JobDescription::Cop },
-             Agent{ team: team,
-                    job_description: JobDescription::Princess },
-             Agent{ team: team,
-                    job_description: JobDescription::Figurehead }]
-    }
-
-    pub fn render_caricature(&self) {
-        let caricature = match self {
-            &Agent { team: Team::Orange, .. } => {
-                match self.job_description {
-                    JobDescription::Servant => Color::Yellow.paint("♙"),
-                    JobDescription::Pony => Color::Yellow.paint("♘"),
-                    JobDescription::Scholar => Color::Yellow.paint("♗"),
-                    JobDescription::Cop => Color::Yellow.paint("♖"),
-                    JobDescription::Princess => Color::Yellow.paint("♕"),
-                    JobDescription::Figurehead => Color::Yellow.paint("♔"),
-                }
-            },
-            &Agent { team: Team::Blue, .. } => {
-                match self.job_description {
-                    JobDescription::Servant => Color::Cyan.paint("♟"),
-                    JobDescription::Pony => Color::Cyan.paint("♞"),
-                    JobDescription::Scholar => Color::Cyan.paint("♝"),
-                    JobDescription::Cop => Color::Cyan.paint("♜"),
-                    JobDescription::Princess => Color::Cyan.paint("♛"),
-                    JobDescription::Figurehead => Color::Cyan.paint("♚"),
-                }
-            }
-        };
-        print!("{}", caricature);
-    }
-
-}
+use identity::{Team, JobDescription, Agent};
+use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
 
 #[derive(Eq,PartialEq,Debug,Copy,Clone)]
@@ -386,8 +312,9 @@ fn main() {
 
 #[cfg(test)]
 mod test {
-    use super::{Team, JobDescription, Agent, GameState};
+    use super::GameState;
     use space::{Locale, Bitboard};
+    use identity::{Team, JobDescription, Agent};
 
     #[test]
     fn test_agent_to_bitboard_ref_on_new_gamestate() {

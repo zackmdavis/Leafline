@@ -39,9 +39,9 @@ def the_book_of_life(job_description, result):
 
 
 if __name__ == "__main__":
-    with open(os.path.join('src', 'movement_tables.rs'),
-              'w') as movement_tables_rs:
-        movement_tables_rs.write(
+    with open(os.path.join('src', 'motion.rs'),
+              'w') as motion_rs:
+        motion_rs.write(
             '\n\n'.join(
                 [the_book_of_life(
                     "pony", universal_distribution(PONY_OPTIONS)),
@@ -49,4 +49,4 @@ if __name__ == "__main__":
                      "figurehead", universal_distribution(FIGUREHEAD_OPTIONS))]
             )
         )
-    print("Wrote movement_tables.rs!")
+    print("Wrote motion.rs!")
