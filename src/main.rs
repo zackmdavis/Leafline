@@ -9,8 +9,21 @@ use identity::{Team, JobDescription, Agent};
 use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
 
+struct Patch {
+    star: Agent,
+    whence: Locale,
+    whither: Locale
+}
+
+struct Commit {
+    patch: Patch,
+    tree: WorldState,
+    hospitalization: Option<Agent>
+}
+
+
 #[derive(Eq,PartialEq,Debug,Copy,Clone)]
-struct GameState {
+struct WorldState {
     to_move: Team,
 
     orange_servants: Pinfield,
@@ -28,15 +41,15 @@ struct GameState {
     blue_figurehead: Pinfield,
 }
 
-impl GameState {
-    pub fn new() -> GameState {
+impl WorldState {
+    pub fn new() -> Self {
         let mut orange_servant_locales = Vec::new();
         let mut blue_servant_locales = Vec::new();
         for f in 0..8 {
             orange_servant_locales.push(Locale { rank: 1, file: f });
             blue_servant_locales.push(Locale { rank: 6, file: f });
         }
-        GameState {
+        WorldState {
             to_move: Team::Orange,
 
             orange_servants: Pinfield::init(&orange_servant_locales),
@@ -167,8 +180,6 @@ impl GameState {
         resultant_state
     }
 
-
-
     pub fn occupied_by(&self, team: Team) -> Pinfield {
         match team {
             Team::Orange => self.orange_servants.union(
@@ -189,7 +200,31 @@ impl GameState {
         self.occupied().invert()
     }
 
-    fn servant_lookahead(&self, team: Team) -> Vec<GameState> {
+    pub fn occupying_agent(&self, at: Locale) -> Option<Agent> {
+        for team in Team::league().into_iter() {
+            for agent in Agent::dramatis_personae(team).into_iter() {
+                if self.agent_to_pinfield_ref(agent).query(at) {
+                    return Some(agent)
+                }
+            }
+        }
+        None
+    }
+
+    pub fn apply(&self, patch: Patch) -> Option<Commit>
+    {
+        // subboard of moving figurine
+        let backstory = self.agent_to_pinfield_ref(patch.star);
+        // subboard of moving figurine after move
+        let derived_subboard = self.except_replaced_subboard(
+            patch.star,
+            backstory.transit(patch.whence, patch.whither)
+        );
+        // TODO
+        None
+    }
+
+    pub fn servant_lookahead(&self, team: Team) -> Vec<Self> {
         let initial_rank;
         let standard_offset;
         let boost_offset;
@@ -247,7 +282,7 @@ impl GameState {
         premonitions
     }
 
-    fn pony_lookahead(&self, team: Team) -> Vec<GameState> {
+    pub fn pony_lookahead(&self, team: Team) -> Vec<Self> {
         let mut premonitions = Vec::new();
         let pony_agent = Agent {
             team: team, job_description: JobDescription::Pony };
@@ -306,7 +341,7 @@ impl GameState {
 
 
 fn main() {
-    let arena = GameState::new();
+    let arena = WorldState::new();
     arena.display();
     println!("");
 }
@@ -314,13 +349,13 @@ fn main() {
 
 #[cfg(test)]
 mod test {
-    use super::GameState;
+    use super::WorldState;
     use space::{Locale, Pinfield};
     use identity::{Team, JobDescription, Agent};
 
     #[test]
     fn test_agent_to_pinfield_ref_on_new_gamestate() {
-        let state = GameState::new();
+        let state = WorldState::new();
         let agent = Agent { team: Team::Blue,
                             job_description: JobDescription::Princess };
         let blue_princess_realm = state.agent_to_pinfield_ref(agent);
@@ -329,7 +364,7 @@ mod test {
 
     #[test]
     fn test_orange_servants_to_locales_from_new_gamestate() {
-        let state = GameState::new();
+        let state = WorldState::new();
         let mut expected = Vec::new();
         for file in 0..8 {
             expected.push(Locale { rank: 1, file: file });
@@ -339,7 +374,7 @@ mod test {
 
     #[test]
     fn test_orange_servant_lookahead_from_original_position() {
-        let state = GameState::new();
+        let state = WorldState::new();
         let premonitions = state.servant_lookahead(Team::Orange);
         assert_eq!(16, premonitions.len());
         // although granted that a more thorough test would actually
@@ -349,7 +384,7 @@ mod test {
 
     #[test]
     fn test_orange_pony_lookahead_from_original_position() {
-        let state = GameState::new();
+        let state = WorldState::new();
         let premonitions = state.pony_lookahead(Team::Orange);
         assert_eq!(4, premonitions.len());
         let collected = premonitions.iter().map(
@@ -365,6 +400,17 @@ mod test {
                       Locale { rank: 2, file: 7 }]],
                  collected
         );
+    }
+
+    #[test]
+    fn concerning_occupying_agents() {
+        let state = WorldState::new();
+        let b8 = Locale { rank: 7, file: 1 };
+        assert_eq!(Agent { team: Team::Blue,
+                           job_description: JobDescription::Pony },
+                   state.occupying_agent(b8).unwrap());
+        let c4 = Locale { rank: 3, file: 2 };
+        assert_eq!(None, state.occupying_agent(c4));
     }
 
 }

@@ -4,7 +4,13 @@ use ansi_term::Colour as Color;  // this is America
 pub enum Team { Orange, Blue }
 
 impl Team {
-    fn opponent(&self) -> Self {
+    pub fn league() -> Vec<Self> {
+        // TODO: figure out how to return an iterator directly rather
+        // than a vector on which we must call `.iter`
+        vec![Team::Orange, Team::Blue]
+    }
+
+    pub fn opponent(&self) -> Self {
         match self {
             &Team::Orange => Team::Blue,
             &Team::Blue => Team::Orange
@@ -32,6 +38,7 @@ impl Agent {
     // I wanted to call it `dramatis_personæ`, but "non-ascii idents
     // are not fully supported" 🙀
     pub fn dramatis_personae(team: Team) -> Vec<Agent> {
+        // TODO: return in iterator
         vec![Agent{ team: team,
                     job_description: JobDescription::Servant },
              Agent{ team: team,
