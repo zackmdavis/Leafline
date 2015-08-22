@@ -4,7 +4,7 @@ mod space;
 mod identity;
 mod motion;
 
-use space::{Locale, Bitboard};
+use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
 use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
@@ -13,19 +13,19 @@ use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 struct GameState {
     to_move: Team,
 
-    orange_servants: Bitboard,
-    orange_ponies: Bitboard,
-    orange_scholars: Bitboard,
-    orange_cops: Bitboard,
-    orange_princesses: Bitboard,
-    orange_figurehead: Bitboard,
+    orange_servants: Pinfield,
+    orange_ponies: Pinfield,
+    orange_scholars: Pinfield,
+    orange_cops: Pinfield,
+    orange_princesses: Pinfield,
+    orange_figurehead: Pinfield,
 
-    blue_servants: Bitboard,
-    blue_ponies: Bitboard,
-    blue_scholars: Bitboard,
-    blue_cops: Bitboard,
-    blue_princesses: Bitboard,
-    blue_figurehead: Bitboard,
+    blue_servants: Pinfield,
+    blue_ponies: Pinfield,
+    blue_scholars: Pinfield,
+    blue_cops: Pinfield,
+    blue_princesses: Pinfield,
+    blue_figurehead: Pinfield,
 }
 
 impl GameState {
@@ -39,44 +39,44 @@ impl GameState {
         GameState {
             to_move: Team::Orange,
 
-            orange_servants: Bitboard::init(&orange_servant_locales),
-            orange_ponies: Bitboard::init(
+            orange_servants: Pinfield::init(&orange_servant_locales),
+            orange_ponies: Pinfield::init(
                 &vec![Locale { rank: 0, file: 1 },
                       Locale { rank: 0, file: 6 }]
             ),
-            orange_scholars: Bitboard::init(
+            orange_scholars: Pinfield::init(
                 &vec![Locale { rank: 0, file: 2 },
                       Locale { rank: 0, file: 5 }]
             ),
-            orange_cops: Bitboard::init(
+            orange_cops: Pinfield::init(
                 &vec![Locale { rank: 0, file: 0 },
                       Locale { rank: 0, file: 7 }]
             ),
-            orange_princesses: Bitboard::init(
+            orange_princesses: Pinfield::init(
                 &vec![Locale { rank: 0, file: 3 }]),
-            orange_figurehead: Bitboard::init(
+            orange_figurehead: Pinfield::init(
                 &vec![Locale { rank: 0, file: 4 }]),
-            blue_servants: Bitboard::init(&blue_servant_locales),
-            blue_ponies: Bitboard::init(
+            blue_servants: Pinfield::init(&blue_servant_locales),
+            blue_ponies: Pinfield::init(
                 &vec![Locale { rank: 7, file: 1 },
                       Locale { rank: 7, file: 6 }]
             ),
-            blue_scholars: Bitboard::init(
+            blue_scholars: Pinfield::init(
                 &vec![Locale { rank: 7, file: 2 },
                       Locale { rank: 7, file: 5 }]
             ),
-            blue_cops: Bitboard::init(
+            blue_cops: Pinfield::init(
                 &vec![Locale { rank: 7, file: 0 },
                       Locale { rank: 7, file: 7 }]
             ),
-            blue_princesses: Bitboard::init(
+            blue_princesses: Pinfield::init(
                 &vec![Locale { rank: 7, file: 3 }]),
-            blue_figurehead: Bitboard::init(
+            blue_figurehead: Pinfield::init(
                 &vec![Locale { rank: 7, file: 4 }]),
         }
     }
 
-    pub fn agent_to_bitboard_ref(&self, agent: Agent) -> &Bitboard {
+    pub fn agent_to_pinfield_ref(&self, agent: Agent) -> &Pinfield {
         match agent {
             Agent{ team: Team::Orange,
                    job_description: JobDescription::Servant } =>
@@ -119,7 +119,7 @@ impl GameState {
 
     // XXX this code-duplication is hideous, but what can you do in
     // this language? My problem is exactly that I don't know
-    pub fn agent_to_bitboard_mutref(&mut self, agent: Agent) -> &mut Bitboard {
+    pub fn agent_to_pinfield_mutref(&mut self, agent: Agent) -> &mut Pinfield {
         match agent {
             Agent{ team: Team::Orange,
                    job_description: JobDescription::Servant } =>
@@ -161,13 +161,15 @@ impl GameState {
     }
 
     pub fn except_replaced_subboard(&self, for_whom: Agent,
-                                    subboard: Bitboard) -> Self {
+                                    subboard: Pinfield) -> Self {
         let mut resultant_state = self.clone();
-        resultant_state.agent_to_bitboard_mutref(for_whom).0 = subboard.0;
+        resultant_state.agent_to_pinfield_mutref(for_whom).0 = subboard.0;
         resultant_state
     }
 
-    pub fn occupied_by(&self, team: Team) -> Bitboard {
+
+
+    pub fn occupied_by(&self, team: Team) -> Pinfield {
         match team {
             Team::Orange => self.orange_servants.union(
                 self.orange_ponies).union(
@@ -179,11 +181,11 @@ impl GameState {
         }
     }
 
-    pub fn occupied(&self) -> Bitboard {
+    pub fn occupied(&self) -> Pinfield {
         self.occupied_by(Team::Orange).union(self.occupied_by(Team::Blue))
     }
 
-    pub fn unoccupied(&self) -> Bitboard {
+    pub fn unoccupied(&self) -> Pinfield {
         self.occupied().invert()
     }
 
@@ -209,7 +211,7 @@ impl GameState {
         let mut premonitions = Vec::new();
         let servant_agent = Agent {
             team: team, job_description: JobDescription::Servant };
-        let positional_chart: &Bitboard = self.agent_to_bitboard_ref(
+        let positional_chart: &Pinfield = self.agent_to_pinfield_ref(
             servant_agent);
         for start_locale in positional_chart.to_locales().iter() {
             // can move one locale if not blocked
@@ -249,11 +251,11 @@ impl GameState {
         let mut premonitions = Vec::new();
         let pony_agent = Agent {
             team: team, job_description: JobDescription::Pony };
-        let positional_chart: &Bitboard = self.agent_to_bitboard_ref(
+        let positional_chart: &Pinfield = self.agent_to_pinfield_ref(
             pony_agent);
         for start_locale in positional_chart.to_locales().iter() {
             let destinations = self.occupied_by(team).invert().intersection(
-                Bitboard(PONY_MOVEMENT_TABLE[
+                Pinfield(PONY_MOVEMENT_TABLE[
                     start_locale.bit_index() as usize])).to_locales();
             for destination in destinations.iter() {
                 let mut premonition = self.clone();
@@ -288,7 +290,7 @@ impl GameState {
                     for &team in [Team::Orange, Team::Blue].iter() {
                         for &figurine_class in
                             Agent::dramatis_personae(team).iter() {
-                                if self.agent_to_bitboard_ref(
+                                if self.agent_to_pinfield_ref(
                                     figurine_class).query(locale) {
                                         figurine_class.render_caricature();
                                         print!(" ");
@@ -313,15 +315,15 @@ fn main() {
 #[cfg(test)]
 mod test {
     use super::GameState;
-    use space::{Locale, Bitboard};
+    use space::{Locale, Pinfield};
     use identity::{Team, JobDescription, Agent};
 
     #[test]
-    fn test_agent_to_bitboard_ref_on_new_gamestate() {
+    fn test_agent_to_pinfield_ref_on_new_gamestate() {
         let state = GameState::new();
         let agent = Agent { team: Team::Blue,
                             job_description: JobDescription::Princess };
-        let blue_princess_realm = state.agent_to_bitboard_ref(agent);
+        let blue_princess_realm = state.agent_to_pinfield_ref(agent);
         assert!(blue_princess_realm.query(Locale { rank: 7, file: 3 }));
     }
 
