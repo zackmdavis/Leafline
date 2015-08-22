@@ -1,16 +1,21 @@
-extern crate ansi_term;
+//! the `life` module of the Leafline oppositional strategy game engine
 
 use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
 use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
-
+/// represents the movement of a figurine
 struct Patch {
     star: Agent,
     whence: Locale,
     whither: Locale
 }
 
+
+/// represents the outcome of a team's turn with a `patch` governing
+/// the figurine moved, the state of the world after the turn (`tree`),
+/// and whether an opposing figurine was stunned and put in the hospital,
+/// and if so, which one
 struct Commit {
     patch: Patch,
     tree: WorldState,
@@ -220,6 +225,7 @@ impl WorldState {
         None
     }
 
+    /// generate possible commits for servants of the given team
     pub fn servant_lookahead(&self, team: Team) -> Vec<Self> {
         let initial_rank;
         let standard_offset;
@@ -278,6 +284,7 @@ impl WorldState {
         premonitions
     }
 
+    /// generate possible commits for ponies of the given team
     pub fn pony_lookahead(&self, team: Team) -> Vec<Self> {
         let mut premonitions = Vec::new();
         let pony_agent = Agent {

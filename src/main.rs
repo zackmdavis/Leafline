@@ -1,3 +1,5 @@
+//! Leafline is an oppositional strategy game engine
+
 extern crate ansi_term;
 
 mod space;
