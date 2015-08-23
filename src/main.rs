@@ -25,7 +25,7 @@ fn main() {
         world.display();
         println!("");
         for (index, premonition) in premonitions.iter().enumerate() {
-            println!("{}. {}", index, premonition)
+            println!("{:>2}. {}", index, premonition)
         }
         print!("\nSelect a move>> ");
         io::stdout().flush().ok().expect("couldn't flush stdout");

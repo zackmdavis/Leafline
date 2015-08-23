@@ -4,7 +4,8 @@ use std::fmt;
 
 use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
-use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
+use motion::{SCHOLAR_OFFSETS, COP_OFFSETS, PRINCESS_OFFSETS,
+             PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
 
 /// represents the movement of a figurine
@@ -35,7 +36,7 @@ impl fmt::Display for Commit {
         };
         write!(
             f,
-            "move {} from {} to {}{}",
+            "{} from {} to {}{}",
             self.patch.star,
             self.patch.whence.to_algebraic(),
             self.patch.whither.to_algebraic(),
@@ -109,6 +110,28 @@ impl WorldState {
                 &vec![Locale { rank: 7, file: 3 }]),
             blue_figurehead: Pinfield::init(
                 &vec![Locale { rank: 7, file: 4 }]),
+        }
+    }
+
+    // XXX: for API consistency with Pinfield, maybe this should be
+    // `new` and the current `new` should be `init`??
+    pub fn new_except_empty() -> Self {
+        WorldState {
+            to_move: Team::Orange,
+
+            orange_servants: Pinfield::new(),
+            orange_ponies: Pinfield::new(),
+            orange_scholars: Pinfield::new(),
+            orange_cops: Pinfield::new(),
+            orange_princesses: Pinfield::new(),
+            orange_figurehead: Pinfield::new(),
+
+            blue_servants: Pinfield::new(),
+            blue_ponies: Pinfield::new(),
+            blue_scholars: Pinfield::new(),
+            blue_cops: Pinfield::new(),
+            blue_princesses: Pinfield::new(),
+            blue_figurehead: Pinfield::new(),
         }
     }
 
@@ -382,7 +405,43 @@ impl WorldState {
     }
 
     pub fn scholar_lookahead(&self, team: Team) -> Vec<Commit> {
-        vec![] // TODO
+        let scholar_agent = Agent {
+            team: team, job_description: JobDescription::Scholar };
+        let positional_chart: &Pinfield = self.agent_to_pinfield_ref(
+            scholar_agent);
+        let mut premonitions = Vec::new();
+        for start_locale in positional_chart.to_locales().into_iter() {
+            for &offset in SCHOLAR_OFFSETS.iter() {
+                let mut venture = 1;
+                loop {
+                    let destination_maybe = start_locale.multidisplace(
+                        offset, venture);
+                    match destination_maybe {
+                        Some(destination) => {
+                            let empty = self.unoccupied().query(destination);
+                            let friend = self.occupied_by(
+                                team).query(destination);
+                            if empty || !friend {
+                                self.predict(
+                                    &mut premonitions,
+                                    Patch {
+                                        star: scholar_agent,
+                                        whence: start_locale,
+                                        whither: destination
+                                    }
+                                );
+                            }
+                            if !empty {
+                                break;
+                            }
+                        },
+                        None => { break; }
+                    }
+                    venture += 1;
+                }
+            }
+        }
+        premonitions
     }
 
     pub fn cop_lookahead(&self, team: Team) -> Vec<Commit> {
@@ -488,6 +547,26 @@ mod test {
                       Locale { rank: 2, file: 7 }]],
                  collected
         );
+    }
+
+    #[test]
+    fn concerning_scholar_lookahead() {
+        let mut world = WorldState::new_except_empty();
+        world.orange_scholars = world.orange_scholars.alight(
+            Locale::from_algebraic("e1".to_string())
+        );
+        world.orange_princesses = world.orange_princesses.alight(
+            Locale::from_algebraic("c3".to_string())
+        );
+        world.blue_princesses = world.blue_princesses.alight(
+            Locale::from_algebraic("g3".to_string())
+        );
+        let premonitions = world.scholar_lookahead(Team::Orange);
+        let expected = vec!["d2", "f2", "g3"].iter().map(
+            |a| Locale::from_algebraic(a.to_string())).collect::<Vec<_>>();
+        let actual = premonitions.iter().map(
+            |p| p.tree.orange_scholars.to_locales()[0]).collect::<Vec<_>>();
+        assert_eq!(expected, actual);
     }
 
     #[test]

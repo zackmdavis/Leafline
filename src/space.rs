@@ -17,6 +17,9 @@ impl Locale {
         format!("{}{}", index_to_file_name[self.file as usize], self.rank + 1)
     }
 
+    // XXX: this should probably take a &str instead of String,
+    // because the argument is typically going to be a string literal
+    // rather than a value from somewhere else
     pub fn from_algebraic(notation: String) -> Self {
         let mut notation_pieces = notation.chars();
         let file_note = notation_pieces.next().unwrap();
@@ -36,7 +39,7 @@ impl Locale {
     }
 
     pub fn is_legal(&self) -> bool {
-        self.rank >= 0 && self.rank < 8 && self.file >= 0 && self.file < 8
+        self.rank < 8 && self.file < 8
     }
 
     pub fn displace(&self, offset: (i8, i8)) -> Option<Self> {
@@ -54,6 +57,21 @@ impl Locale {
             None
         }
     }
+
+    pub fn multidisplace(&self, offset: (i8, i8),
+                         factor: usize) -> Option<Self> {
+        let mut local_locale_maybe = Some(*self);
+        for i in 0..factor {
+            // RESEARCH: is this inefficient (doing stuff in a loop,
+            // instead of using multiplication ops that CPUs can do
+            // natively? Or is LLVM a smart enough optimizer that it
+            // doesn't matter what I say?
+            local_locale_maybe = local_locale_maybe.and_then(
+                |l| l.displace(offset));
+        }
+        local_locale_maybe
+    }
+
 }
 
 
@@ -201,6 +219,18 @@ mod test {
     }
 
     #[test]
+    fn concerning_multidisplacement() {
+        for i in 0usize..8usize {
+            assert_eq!(
+                Some(Locale { rank: i as u8, file: i as u8 }),
+                Locale{ rank: 0, file: 0 }.multidisplace((1, 1), i)
+            )
+        }
+        assert_eq!(None, Locale{ rank: 0, file: 0 }.multidisplace((1, 1), 8));
+    }
+
+
+    #[test]
     fn test_alight_and_quench() {
         let mut stage = Pinfield(0);
         let b5 = Locale { rank: 1, file: 4 };
@@ -220,5 +250,4 @@ mod test {
             assert!(stage.query(starter));
         }
     }
-
 }
