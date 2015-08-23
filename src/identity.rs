@@ -1,4 +1,7 @@
+use std::fmt;
+
 use ansi_term::Colour as Color;  // this is America
+
 
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 pub enum Team { Orange, Blue }
@@ -52,8 +55,10 @@ impl Agent {
              Agent{ team: team,
                     job_description: JobDescription::Figurehead }]
     }
+}
 
-    pub fn render_caricature(&self) {
+impl fmt::Display for Agent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let caricature = match self {
             &Agent { team: Team::Orange, .. } => {
                 match self.job_description {
@@ -76,7 +81,6 @@ impl Agent {
                 }
             }
         };
-        print!("{}", caricature);
+        write!(f, "{}", caricature)
     }
-
 }

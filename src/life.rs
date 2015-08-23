@@ -1,5 +1,7 @@
 //! the `life` module of the Leafline oppositional strategy game engine
 
+use std::fmt;
+
 use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
 use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
@@ -23,6 +25,23 @@ pub struct Commit {
     pub patch: Patch,
     pub tree: WorldState,
     pub hospitalization: Option<Agent>
+}
+
+impl fmt::Display for Commit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let hospital_report = match self.hospitalization {
+            Some(stunning_victim) => format!(", capturing {}", stunning_victim),
+            None => "".to_string()
+        };
+        write!(
+            f,
+            "move {} from {} to {}{}",
+            self.patch.star,
+            self.patch.whence.to_algebraic(),
+            self.patch.whither.to_algebraic(),
+            hospital_report
+        )
+    }
 }
 
 
@@ -362,12 +381,31 @@ impl WorldState {
         premonitions
     }
 
-    pub fn lookahead(&self) -> Vec<Self> {
-        let premonitions = Vec::new();
+    pub fn scholar_lookahead(&self, team: Team) -> Vec<Commit> {
+        vec![] // TODO
+    }
+
+    pub fn cop_lookahead(&self, team: Team) -> Vec<Commit> {
+        vec![] // TODO
+    }
+
+    pub fn princess_lookahead(&self, team: Team) -> Vec<Commit> {
+        vec![] // TODO
+    }
+
+    pub fn figurehead_lookahead(&self, team: Team) -> Vec<Commit> {
+        vec![] // TODO
+    }
+
+    pub fn lookahead(&self) -> Vec<Commit> {
+        let mut premonitions = Vec::new();
         let moving_team = self.to_move;
-
-
-        // TODO work in progress
+        premonitions.extend(self.servant_lookahead(moving_team).into_iter());
+        premonitions.extend(self.pony_lookahead(moving_team).into_iter());
+        premonitions.extend(self.scholar_lookahead(moving_team).into_iter());
+        premonitions.extend(self.cop_lookahead(moving_team).into_iter());
+        premonitions.extend(self.princess_lookahead(moving_team).into_iter());
+        premonitions.extend(self.figurehead_lookahead(moving_team).into_iter());
         premonitions
     }
 
@@ -385,8 +423,7 @@ impl WorldState {
                             Agent::dramatis_personae(team).iter() {
                                 if self.agent_to_pinfield_ref(
                                     figurine_class).query(locale) {
-                                        figurine_class.render_caricature();
-                                        print!(" ");
+                                        print!("{} ", figurine_class)
                                 }
                         }
                     }
@@ -395,13 +432,6 @@ impl WorldState {
             println!("");
         }
     }
-}
-
-
-fn main() {
-    let arena = WorldState::new();
-    arena.display();
-    println!("");
 }
 
 

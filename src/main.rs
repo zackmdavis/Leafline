@@ -16,7 +16,10 @@ use life::{WorldState, Patch, Commit};
 
 
 fn main() {
-    let arena = WorldState::new();
-    arena.display();
+    let world = WorldState::new();
+    world.display();
     println!("");
+    for (index, premonition) in world.lookahead().iter().enumerate() {
+        println!("{}. {}", index, premonition)
+    }
 }
