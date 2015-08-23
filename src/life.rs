@@ -248,6 +248,13 @@ impl WorldState {
                       hospitalization: hospitalization })
     }
 
+    pub fn predict(&self, premonitions: &mut Vec<Commit>, patch: Patch) {
+        let premonition_maybe = self.apply(patch);
+        if let Some(premonition) = premonition_maybe {
+            premonitions.push(premonition);
+        }
+    }
+
     /// generate possible commits for servants of the given team
     pub fn servant_lookahead(&self, team: Team) -> Vec<Commit> {
         let initial_rank;
@@ -268,26 +275,24 @@ impl WorldState {
                 stun_offsets = [(-1, -1), (-1, 1)];
             }
         }
-        let mut premonitions = Vec::new();
         let servant_agent = Agent {
             team: team, job_description: JobDescription::Servant };
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(
             servant_agent);
+        let mut premonitions = Vec::new();
         for start_locale in positional_chart.to_locales().into_iter() {
             // can move one locale if he's not blocked
             let std_destination_maybe = start_locale.displace(standard_offset);
             if let Some(destination_locale) = std_destination_maybe {
                 if self.unoccupied().query(destination_locale) {
-                    let premonition_maybe = self.apply(
+                    self.predict(
+                        &mut premonitions,
                         Patch {
                             star: servant_agent,
                             whence: start_locale,
                             whither: destination_locale
                         }
                     );
-                    if let Some(premonition) = premonition_maybe {
-                        premonitions.push(premonition);
-                    }
                 }
             }
 
@@ -301,19 +306,33 @@ impl WorldState {
                     standard_offset).unwrap();
                 if (self.unoccupied().query(boost_destination) &&
                     self.unoccupied().query(standard_destination)) {
-                    let premonition_maybe = self.apply(
+                    self.predict(
+                        &mut premonitions,
                         Patch {
                             star: servant_agent,
                             whence: start_locale,
                             whither: boost_destination
                         }
                     );
-                    if let Some(premonition) = premonition_maybe {
-                        premonitions.push(premonition);
+                }
+            }
+
+            for &stun_offset in stun_offsets.iter() {
+                let stun_destination_maybe = start_locale.displace(stun_offset);
+                if let Some(stun_destination) = stun_destination_maybe {
+                    if self.occupied_by(team.opposition()).query(
+                            stun_destination) {
+                        self.predict(
+                            &mut premonitions,
+                            Patch {
+                                star: servant_agent,
+                                whence: start_locale,
+                                whither: stun_destination
+                            }
+                        )
                     }
                 }
             }
-            // TODO can stun diagonally
         }
         premonitions
     }
@@ -330,16 +349,14 @@ impl WorldState {
                 Pinfield(PONY_MOVEMENT_TABLE[
                     start_locale.pindex() as usize])).to_locales();
             for destination in destinations.into_iter() {
-                let premonition_maybe = self.apply(
+                self.predict(
+                    &mut premonitions,
                     Patch {
                         star: pony_agent,
                         whence: start_locale,
                         whither: destination
                     }
                 );
-                if let Some(premonition) = premonition_maybe {
-                    premonitions.push(premonition);
-                }
             }
         }
         premonitions
@@ -475,37 +492,52 @@ mod test {
     }
 
     #[test]
-    fn concerning_stunning_patch_application_in_natural_setting() {
+    fn concerning_stunning_in_natural_setting() {
         let state = WorldState::new();
-        let orange_begins = Patch {
-            star: Agent {
+        let orange_servant_agent = Agent {
                 team: Team::Orange,
                 job_description: JobDescription::Servant
-            },
+        };
+        let blue_servant_agent = Agent {
+                team: Team::Blue,
+                job_description: JobDescription::Servant
+        };
+        let orange_begins = Patch {
+            star: orange_servant_agent,
             whence: Locale::from_algebraic("e2".to_string()),
             whither: Locale::from_algebraic("e4".to_string())
         };
         let blue_replies = Patch {
-            star: Agent {
-                team: Team::Blue,
-                job_description: JobDescription::Servant
-            },
+            star: blue_servant_agent,
             whence: Locale::from_algebraic("d7".to_string()),
             whither: Locale::from_algebraic("d5".to_string())
         };
         let orange_counterreplies = Patch {
-            star: Agent {
-                team: Team::Orange,
-                job_description: JobDescription::Servant
-            },
+            star: orange_servant_agent,
             whence: Locale::from_algebraic("e4".to_string()),
             whither: Locale::from_algebraic("d5".to_string())
         };
+
         let first_commit = state.apply(orange_begins).unwrap();
         assert_eq!(None, first_commit.hospitalization);
         let second_commit = first_commit.tree.apply(blue_replies).unwrap();
         assert_eq!(None, second_commit.hospitalization);
-        let crucial_commit = second_commit.tree.apply(
+
+        let precrucial_state = second_commit.tree;
+        let available_stunnings = precrucial_state.servant_lookahead(
+            Team::Orange).into_iter().filter(
+                |p| p.hospitalization.is_some()).collect::<Vec<_>>();
+        assert_eq!(1, available_stunnings.len());
+        assert_eq!(
+            blue_servant_agent,
+            available_stunnings[0].hospitalization.unwrap()
+        );
+        assert_eq!(
+            Locale::from_algebraic("d5".to_string()),
+            available_stunnings[0].patch.whither
+        );
+
+        let crucial_commit = precrucial_state.apply(
             orange_counterreplies).unwrap();
         let new_state = crucial_commit.tree;
         assert_eq!(Agent { team: Team::Orange,
