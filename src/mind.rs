@@ -67,9 +67,14 @@ pub fn negamax_kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
     let premonitions = world.lookahead();
     let mut forecasts = Vec::new();
     for premonition in premonitions.into_iter() {
-        let (_grandchild, score) = negamax_search(premonition.tree, depth-1);
-        forecasts.push((premonition, score));
+        let (_grandchild, mut value) = negamax_search(premonition.tree, depth-1);
+        value = -value;
+        forecasts.push((premonition, value));
     }
+    // The circumlocution (thanks to
+    // https://www.reddit.com/r/rust/comments/29kia3/no_ord_for_f32/ for
+    // the suggestion) is because Rust is sanctimonious about IEEE 754
+    // floats not being totally ordered
     forecasts.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     forecasts
 }
@@ -89,18 +94,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
-    fn concerning_negamax_implementation_suitability() {
-        for depth in 1..5 {
-            let start = time::get_time();
-            negamax_search(WorldState::new(), depth);
-            let end = time::get_time();
-            println!("searching the initial position to depth {} took {:?}",
-                     depth, end-start);
-        }
-    }
-
-    #[test]
     fn experimentally_about_negamax_kickoff() {
         let mut world = WorldState::new_except_empty();
         // SCENARIO: let's imagine Orange (to move) has separate attacks against
@@ -116,7 +109,7 @@ mod test {
             Locale { rank: 2, file: 2 }
         );
 
-        // pony endanger servant
+        // pony endangers servant
         world.blue_servants = world.blue_servants.alight(
             Locale { rank: 7, file: 1 }
         );
@@ -124,20 +117,61 @@ mod test {
             Locale { rank: 5, file: 2 }
         );
 
+        // Blue has another servant sitting nowhere interesting
+        world.blue_servants = world.blue_servants.alight(
+            Locale { rank: 3, file: 6 }
+        );
+
         let depth = 2;
         let start = time::get_time();
         let advisory = negamax_kickoff(world, depth);
         let end = time:: get_time();
 
+        // (you can see this if you run the tests with `-- --nocapture`)
         println!("negamax kickoff: evaluating {} possible choices to \
                   depth {} took {:?}", advisory.len(), depth, end-start);
         for item in advisory.iter() {
             println!("{:?}", item);
         }
-        // XXX OK, I think I must have a sign error somewhere;
-        // capturing the servant and pony are the lowest-ranked options
-        // at -3.3 and -5.5, respectively: and the top option is to move
-        // the Orange pony to a7 where the servant can get it!
+
+        // taking the pony is the right thing to do
+        assert_eq!(Locale { rank: 0, file: 0 }, advisory[0].0.patch.whither);
+
+        // And, furthermore, the answer should be the same if we face the
+        // same situation with the colors reversed
+        //
+        // XXX this would be tidier and less copy-pastey if I had more
+        // general figurine-placing functions that were three rather than
+        // two levels of abstraction above twiddling bits on an unsigned
+        // int ... oh, well
+        let mut negaworld = WorldState::new_except_empty();
+
+        // scholar endangers pony
+        negaworld.orange_ponies = negaworld.orange_ponies.alight(
+            Locale { rank: 0, file: 0 }
+        );
+        negaworld.blue_scholars = negaworld.blue_scholars.alight(
+            Locale { rank: 2, file: 2 }
+        );
+
+        // pony endanger servant
+        negaworld.orange_servants = negaworld.orange_servants.alight(
+            Locale { rank: 7, file: 1 }
+        );
+        negaworld.blue_ponies = negaworld.blue_ponies.alight(
+            Locale { rank: 5, file: 2 }
+        );
+
+        // Orange has another servant sitting nowhere interesting
+        negaworld.orange_servants = world.orange_servants.alight(
+            Locale { rank: 3, file: 6 }
+        );
+
+        let negadvisory = negamax_kickoff(negaworld, depth);
+
+        // taking the pony is still the right thing to do, even in the
+        // negaworld
+        assert_eq!(Locale { rank: 0, file: 0 }, advisory[0].0.patch.whither);
     }
 
 }
