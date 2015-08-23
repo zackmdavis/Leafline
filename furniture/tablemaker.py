@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+# XXX TODO FIXME: needs to be updated; this would overwrite
+# SCHOLAR_OFFSETS, COP_OFFSETS, and PRINCESS_OFFSETS in motion.rs; a
+# probable fix is to generate them here, too ... but on the other
+# hand, static arrays of different lengths are hard to work with due
+# to Rust's Stalinist type system, so maybe that information can live
+# somewhere else anyway.
+
 import itertools
 from functools import reduce
 import operator

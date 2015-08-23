@@ -383,6 +383,60 @@ impl WorldState {
         premonitions
     }
 
+    fn princesslike_lookahead(&self, agent: Agent) -> Vec<Commit> {
+        let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
+        let mut premonitions = Vec::new();
+        let offsets = match agent.job_description {
+            // XXX: I wanted to reference static arrays in motion.rs,
+            // but that doesn't work in the obvious way because array
+            // lengths are part of the type. For now, let's just use
+            // these vector literals.  #YOLO
+            JobDescription::Scholar => vec![
+                (-1, -1), (-1, 1), (1, -1), (1, 1)],
+            JobDescription::Cop => vec![
+                (-1, 0), (1, 0), (0, -1), (0, 1)],
+            JobDescription::Princess => vec![
+                (-1, -1), (-1, 0), (-1, 1), (0, -1),
+                (0, 1), (1, -1), (1, 0), (1, 1)
+            ],
+            _ => panic!("non-princesslike agent passed to \
+                         `princesslike_lookahead`, which is contrary to \
+                         the operation of the moral law.")
+        };
+        for start_locale in positional_chart.to_locales().into_iter() {
+            for &offset in offsets.iter() {
+                let mut venture = 1;
+                loop {
+                    let destination_maybe = start_locale.multidisplace(
+                        offset, venture);
+                    match destination_maybe {
+                        Some(destination) => {
+                            let empty = self.unoccupied().query(destination);
+                            let friend = self.occupied_by(
+                                agent.team).query(destination);
+                            if empty || !friend {
+                                self.predict(
+                                    &mut premonitions,
+                                    Patch {
+                                        star: agent,
+                                        whence: start_locale,
+                                        whither: destination
+                                    }
+                                );
+                            }
+                            if !empty {
+                                break;
+                            }
+                        },
+                        None => { break; }
+                    }
+                    venture += 1;
+                }
+            }
+        }
+        premonitions
+    }
+
     /// generate possible commits for ponies of the given team
     pub fn pony_lookahead(&self, team: Team) -> Vec<Commit> {
         let mut premonitions = Vec::new();
@@ -409,51 +463,18 @@ impl WorldState {
     }
 
     pub fn scholar_lookahead(&self, team: Team) -> Vec<Commit> {
-        let scholar_agent = Agent {
-            team: team, job_description: JobDescription::Scholar };
-        let positional_chart: &Pinfield = self.agent_to_pinfield_ref(
-            scholar_agent);
-        let mut premonitions = Vec::new();
-        for start_locale in positional_chart.to_locales().into_iter() {
-            for &offset in SCHOLAR_OFFSETS.iter() {
-                let mut venture = 1;
-                loop {
-                    let destination_maybe = start_locale.multidisplace(
-                        offset, venture);
-                    match destination_maybe {
-                        Some(destination) => {
-                            let empty = self.unoccupied().query(destination);
-                            let friend = self.occupied_by(
-                                team).query(destination);
-                            if empty || !friend {
-                                self.predict(
-                                    &mut premonitions,
-                                    Patch {
-                                        star: scholar_agent,
-                                        whence: start_locale,
-                                        whither: destination
-                                    }
-                                );
-                            }
-                            if !empty {
-                                break;
-                            }
-                        },
-                        None => { break; }
-                    }
-                    venture += 1;
-                }
-            }
-        }
-        premonitions
+        self.princesslike_lookahead(
+            Agent { team: team, job_description: JobDescription::Scholar })
     }
 
     pub fn cop_lookahead(&self, team: Team) -> Vec<Commit> {
-        vec![] // TODO
+        self.princesslike_lookahead(
+            Agent { team: team, job_description: JobDescription::Cop })
     }
 
     pub fn princess_lookahead(&self, team: Team) -> Vec<Commit> {
-        vec![] // TODO
+        self.princesslike_lookahead(
+            Agent { team: team, job_description: JobDescription::Princess })
     }
 
     pub fn figurehead_lookahead(&self, team: Team) -> Vec<Commit> {
