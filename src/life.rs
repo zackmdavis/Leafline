@@ -50,19 +50,22 @@ impl fmt::Display for Commit {
 pub struct WorldState {
     pub to_move: Team,
 
-    orange_servants: Pinfield,
-    orange_ponies: Pinfield,
-    orange_scholars: Pinfield,
-    orange_cops: Pinfield,
-    orange_princesses: Pinfield,
-    orange_figurehead: Pinfield,
+    // XXX? this is not Python, presumably `pub` is a keyword for a
+    // reason; maybe provide figurine-placement methods and then lock
+    // these down?
+    pub orange_servants: Pinfield,
+    pub orange_ponies: Pinfield,
+    pub orange_scholars: Pinfield,
+    pub orange_cops: Pinfield,
+    pub orange_princesses: Pinfield,
+    pub orange_figurehead: Pinfield,
 
-    blue_servants: Pinfield,
-    blue_ponies: Pinfield,
-    blue_scholars: Pinfield,
-    blue_cops: Pinfield,
-    blue_princesses: Pinfield,
-    blue_figurehead: Pinfield,
+    pub blue_servants: Pinfield,
+    pub blue_ponies: Pinfield,
+    pub blue_scholars: Pinfield,
+    pub blue_cops: Pinfield,
+    pub blue_princesses: Pinfield,
+    pub blue_figurehead: Pinfield,
 }
 
 impl WorldState {

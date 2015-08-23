@@ -1,4 +1,5 @@
 use std::f32::NEG_INFINITY;
+use std::cmp::Ordering;
 
 use identity::{Team, JobDescription, Agent};
 use life::{Commit, WorldState};
@@ -56,11 +57,30 @@ pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
 }
 
 
+// The vision here is that for the turn I'm immediately going to take,
+// I want a report of all possible moves ranked by negamax-computed
+// optimality, but that we don't want to bother with all that bookkeeping
+// for subsequent levels of the game tree; minimax is expensive enough
+// already!!
+pub fn negamax_kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
+    let team = world.to_move;
+    let premonitions = world.lookahead();
+    let mut forecasts = Vec::new();
+    for premonition in premonitions.into_iter() {
+        let (_grandchild, score) = negamax_search(premonition.tree, depth-1);
+        forecasts.push((premonition, score));
+    }
+    forecasts.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
+    forecasts
+}
+
+
 #[cfg(test)]
 mod test {
     use time;
 
-    use super::{negamax_search, score};
+    use super::{negamax_search, negamax_kickoff, score};
+    use space::Locale;
     use life::WorldState;
 
     #[test]
@@ -79,4 +99,24 @@ mod test {
                      depth, end-start);
         }
     }
+
+    #[test]
+    fn experimentally_about_negamax_kickoff_in_faceoff_while_masters_away() {
+        let mut world = WorldState::new_except_empty();
+        let orange_files = [1u8, 2, 3];
+        let blue_files = [2u8, 3, 4];
+        for &file in orange_files.iter() {
+            world.orange_servants = world.orange_servants.alight(
+                Locale { rank: 3, file: file }
+            );
+        }
+        for &file in blue_files.iter() {
+            world.blue_servants = world.blue_servants.alight(
+                Locale { rank: 4, file: file }
+            );
+        }
+        println!("negamax kickoff {:?}", negamax_kickoff(world, 2));
+        // TODO: learn how to debug stuff
+    }
+
 }
