@@ -383,6 +383,35 @@ impl WorldState {
         premonitions
     }
 
+    fn ponylike_lookahead(&self, agent: Agent) -> Vec<Commit> {
+        let mut premonitions = Vec::new();
+        let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
+        let movement_table = match agent.job_description {
+            JobDescription::Pony => PONY_MOVEMENT_TABLE,
+            JobDescription::Figurehead => FIGUREHEAD_MOVEMENT_TABLE,
+            _ => panic!("non-ponylike agent passed to \
+                         `ponylike_lookahead`, which is contrary to \
+                         the operation of the moral law.")
+        };
+        for start_locale in positional_chart.to_locales().into_iter() {
+            let destinations = self.occupied_by(
+                agent.team).invert().intersection(
+                    Pinfield(movement_table[
+                        start_locale.pindex() as usize])).to_locales();
+            for destination in destinations.into_iter() {
+                self.predict(
+                    &mut premonitions,
+                    Patch {
+                        star: agent,
+                        whence: start_locale,
+                        whither: destination
+                    }
+                );
+            }
+        }
+        premonitions
+   }
+
     fn princesslike_lookahead(&self, agent: Agent) -> Vec<Commit> {
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
         let mut premonitions = Vec::new();
@@ -437,29 +466,9 @@ impl WorldState {
         premonitions
     }
 
-    /// generate possible commits for ponies of the given team
     pub fn pony_lookahead(&self, team: Team) -> Vec<Commit> {
-        let mut premonitions = Vec::new();
-        let pony_agent = Agent {
-            team: team, job_description: JobDescription::Pony };
-        let positional_chart: &Pinfield = self.agent_to_pinfield_ref(
-            pony_agent);
-        for start_locale in positional_chart.to_locales().into_iter() {
-            let destinations = self.occupied_by(team).invert().intersection(
-                Pinfield(PONY_MOVEMENT_TABLE[
-                    start_locale.pindex() as usize])).to_locales();
-            for destination in destinations.into_iter() {
-                self.predict(
-                    &mut premonitions,
-                    Patch {
-                        star: pony_agent,
-                        whence: start_locale,
-                        whither: destination
-                    }
-                );
-            }
-        }
-        premonitions
+        self.ponylike_lookahead(
+            Agent { team: team, job_description: JobDescription::Pony })
     }
 
     pub fn scholar_lookahead(&self, team: Team) -> Vec<Commit> {
@@ -478,7 +487,8 @@ impl WorldState {
     }
 
     pub fn figurehead_lookahead(&self, team: Team) -> Vec<Commit> {
-        vec![] // TODO
+        self.ponylike_lookahead(
+            Agent { team: team, job_description: JobDescription::Figurehead })
     }
 
     pub fn lookahead(&self) -> Vec<Commit> {
