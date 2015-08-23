@@ -6,6 +6,7 @@ use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
 
 /// represents the movement of a figurine
+#[derive(Eq,PartialEq,Debug,Copy,Clone)]
 pub struct Patch {
     pub star: Agent,
     pub whence: Locale,
@@ -17,6 +18,7 @@ pub struct Patch {
 /// the figurine moved, the state of the world after the turn (`tree`),
 /// and whether an opposing figurine was stunned and put in the hospital,
 /// and if so, which one
+#[derive(Eq,PartialEq,Debug,Copy,Clone)]
 pub struct Commit {
     pub patch: Patch,
     pub tree: WorldState,
@@ -247,7 +249,7 @@ impl WorldState {
     }
 
     /// generate possible commits for servants of the given team
-    pub fn servant_lookahead(&self, team: Team) -> Vec<Self> {
+    pub fn servant_lookahead(&self, team: Team) -> Vec<Commit> {
         let initial_rank;
         let standard_offset;
         let boost_offset;
@@ -271,18 +273,24 @@ impl WorldState {
             team: team, job_description: JobDescription::Servant };
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(
             servant_agent);
-        for start_locale in positional_chart.to_locales().iter() {
-            // can move one locale if not blocked
+        for start_locale in positional_chart.to_locales().into_iter() {
+            // can move one locale if he's not blocked
             let std_destination_maybe = start_locale.displace(standard_offset);
             if let Some(destination_locale) = std_destination_maybe {
                 if self.unoccupied().query(destination_locale) {
-                    let mut premonition = self.clone();
-                    premonition = premonition.except_replaced_subboard(
-                        servant_agent, positional_chart.transit(
-                            *start_locale, destination_locale));
-                    premonitions.push(premonition);
+                    let premonition_maybe = self.apply(
+                        Patch {
+                            star: servant_agent,
+                            whence: start_locale,
+                            whither: destination_locale
+                        }
+                    );
+                    if let Some(premonition) = premonition_maybe {
+                        premonitions.push(premonition);
+                    }
                 }
             }
+
             // can move two locales if he hasn't previously moved
             if start_locale.rank == initial_rank {
                 // safe to unwrap because we know that we're at the
@@ -293,11 +301,16 @@ impl WorldState {
                     standard_offset).unwrap();
                 if (self.unoccupied().query(boost_destination) &&
                     self.unoccupied().query(standard_destination)) {
-                    let mut premonition = self.clone();
-                    premonition.except_replaced_subboard(
-                        servant_agent, positional_chart.transit(
-                            *start_locale, boost_destination));
-                    premonitions.push(premonition);
+                    let premonition_maybe = self.apply(
+                        Patch {
+                            star: servant_agent,
+                            whence: start_locale,
+                            whither: boost_destination
+                        }
+                    );
+                    if let Some(premonition) = premonition_maybe {
+                        premonitions.push(premonition);
+                    }
                 }
             }
             // TODO can stun diagonally
@@ -306,23 +319,27 @@ impl WorldState {
     }
 
     /// generate possible commits for ponies of the given team
-    pub fn pony_lookahead(&self, team: Team) -> Vec<Self> {
+    pub fn pony_lookahead(&self, team: Team) -> Vec<Commit> {
         let mut premonitions = Vec::new();
         let pony_agent = Agent {
             team: team, job_description: JobDescription::Pony };
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(
             pony_agent);
-        for start_locale in positional_chart.to_locales().iter() {
+        for start_locale in positional_chart.to_locales().into_iter() {
             let destinations = self.occupied_by(team).invert().intersection(
                 Pinfield(PONY_MOVEMENT_TABLE[
                     start_locale.pindex() as usize])).to_locales();
-            for destination in destinations.iter() {
-                let mut premonition = self.clone();
-                premonition = premonition.except_replaced_subboard(
-                    pony_agent, positional_chart.transit(
-                        *start_locale, *destination));
-                // TODO put any stunned opposing figuring into hospital
-                premonitions.push(premonition);
+            for destination in destinations.into_iter() {
+                let premonition_maybe = self.apply(
+                    Patch {
+                        star: pony_agent,
+                        whence: start_locale,
+                        whither: destination
+                    }
+                );
+                if let Some(premonition) = premonition_maybe {
+                    premonitions.push(premonition);
+                }
             }
         }
         premonitions
@@ -412,7 +429,7 @@ mod test {
         let premonitions = state.pony_lookahead(Team::Orange);
         assert_eq!(4, premonitions.len());
         let collected = premonitions.iter().map(
-            |p| p.orange_ponies.to_locales()).collect::<Vec<_>>();
+            |p| p.tree.orange_ponies.to_locales()).collect::<Vec<_>>();
         assert_eq!(
             vec![vec![Locale { rank: 0, file: 6 },
                       Locale { rank: 2, file: 0 }],
@@ -484,8 +501,12 @@ mod test {
             whence: Locale::from_algebraic("e4".to_string()),
             whither: Locale::from_algebraic("d5".to_string())
         };
-        let crucial_commit = state.apply(orange_begins).unwrap().tree.apply(
-            blue_replies).unwrap().tree.apply(orange_counterreplies).unwrap();
+        let first_commit = state.apply(orange_begins).unwrap();
+        assert_eq!(None, first_commit.hospitalization);
+        let second_commit = first_commit.tree.apply(blue_replies).unwrap();
+        assert_eq!(None, second_commit.hospitalization);
+        let crucial_commit = second_commit.tree.apply(
+            orange_counterreplies).unwrap();
         let new_state = crucial_commit.tree;
         assert_eq!(Agent { team: Team::Orange,
                            job_description: JobDescription::Servant },
