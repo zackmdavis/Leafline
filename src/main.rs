@@ -2,12 +2,13 @@
 extern crate itertools;
 
 extern crate ansi_term;
-
+extern crate time;
 
 mod space;
 mod identity;
 mod motion;
 mod life;
+mod mind;
 
 use std::io;
 use std::io::Write;
@@ -36,6 +37,5 @@ fn main() {
         let choice: usize = input_buffer.trim().parse().ok().expect(
             "couldn't parse move choice");
         world = premonitions[choice].tree;
-        world.to_move = world.to_move.opposition();
     }
 }

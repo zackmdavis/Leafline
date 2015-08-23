@@ -140,9 +140,18 @@ impl Pinfield {
         locales
     }
 
+    pub fn pincount(&self) -> u8 {
+        let mut pins = 0;
+        for i in 0..64 {
+            if (2u64.pow(i) & self.0) != 0 {
+                pins += 1
+            }
+        }
+        pins
+    }
+
+    // TODO: convert to Display::fmt
     pub fn display(&self) {
-        let Pinfield(debug) = *self;
-        println!("{}", debug);
         for rank in 0..8 {
             for file in 0..8 {
                 if self.query(Locale { rank: rank, file: file }) {
@@ -249,5 +258,14 @@ mod test {
         for &starter in starters.iter() {
             assert!(stage.query(starter));
         }
+    }
+
+    #[test]
+    fn concerning_pincount() {
+        let starters = vec![Locale{ rank: 1, file: 2 },
+                            Locale{ rank: 3, file: 4 },
+                            Locale{ rank: 5, file: 6 }];
+        let stage = Pinfield::init(&starters);
+        assert_eq!(3, stage.pincount());
     }
 }

@@ -266,6 +266,7 @@ impl WorldState {
         let mut tree = self.except_replaced_subboard(
             patch.star, derived_subboard
         );
+        tree.to_move = tree.to_move.opposition();
 
         // was anyone stunned?
         let hospitalization = self.occupying_agent(patch.whither);
@@ -578,6 +579,16 @@ mod test {
                    state.occupying_agent(b8).unwrap());
         let c4 = Locale { rank: 3, file: 2 };
         assert_eq!(None, state.occupying_agent(c4));
+    }
+
+    #[test]
+    fn concerning_taking_turns() {
+        let state1 = WorldState::new();
+        let state2 = state1.lookahead()[0].tree;
+        let state3 = state2.lookahead()[0].tree;
+        assert_eq!(state1.to_move, Team::Orange);
+        assert_eq!(state2.to_move, Team::Blue);
+        assert_eq!(state3.to_move, Team::Orange);
     }
 
     #[test]
