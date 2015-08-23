@@ -101,22 +101,43 @@ mod test {
     }
 
     #[test]
-    fn experimentally_about_negamax_kickoff_in_faceoff_while_masters_away() {
+    fn experimentally_about_negamax_kickoff() {
         let mut world = WorldState::new_except_empty();
-        let orange_files = [1u8, 2, 3];
-        let blue_files = [2u8, 3, 4];
-        for &file in orange_files.iter() {
-            world.orange_servants = world.orange_servants.alight(
-                Locale { rank: 3, file: file }
-            );
+        // SCENARIO: let's imagine Orange (to move) has separate attacks against
+        // Blue's pony and servant, against which Blue has no defense but
+        // to run away. We predict that Orange will take the pony, and
+        // then Blue will move the servant out of the way.
+
+        // scholar endangers pony
+        world.blue_ponies = world.blue_ponies.alight(
+            Locale { rank: 0, file: 0 }
+        );
+        world.orange_scholars = world.orange_scholars.alight(
+            Locale { rank: 2, file: 2 }
+        );
+
+        // pony endanger servant
+        world.blue_servants = world.blue_servants.alight(
+            Locale { rank: 7, file: 1 }
+        );
+        world.orange_ponies = world.orange_ponies.alight(
+            Locale { rank: 5, file: 2 }
+        );
+
+        let depth = 2;
+        let start = time::get_time();
+        let advisory = negamax_kickoff(world, depth);
+        let end = time:: get_time();
+
+        println!("negamax kickoff: evaluating {} possible choices to \
+                  depth {} took {:?}", advisory.len(), depth, end-start);
+        for item in advisory.iter() {
+            println!("{:?}", item);
         }
-        for &file in blue_files.iter() {
-            world.blue_servants = world.blue_servants.alight(
-                Locale { rank: 4, file: file }
-            );
-        }
-        println!("negamax kickoff {:?}", negamax_kickoff(world, 2));
-        // TODO: learn how to debug stuff
+        // XXX OK, I think I must have a sign error somewhere;
+        // capturing the servant and pony are the lowest-ranked options
+        // at -3.3 and -5.5, respectively: and the top option is to move
+        // the Orange pony to a7 where the servant can get it!
     }
 
 }
