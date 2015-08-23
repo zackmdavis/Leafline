@@ -31,7 +31,7 @@ pub struct Commit {
 impl fmt::Display for Commit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let hospital_report = match self.hospitalization {
-            Some(stunning_victim) => format!(", capturing {}", stunning_victim),
+            Some(stunning_victim) => format!(", stunning {}", stunning_victim),
             None => "".to_string()
         };
         write!(

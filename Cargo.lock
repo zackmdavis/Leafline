@@ -3,6 +3,7 @@ name = "Leafline"
 version = "0.0.4"
 dependencies = [
  "ansi_term 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "argparse 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.3.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -10,6 +11,11 @@ dependencies = [
 [[package]]
 name = "ansi_term"
 version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "argparse"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
