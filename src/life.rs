@@ -47,7 +47,7 @@ impl fmt::Display for Commit {
 
 #[derive(Eq,PartialEq,Debug,Copy,Clone)]
 pub struct WorldState {
-    to_move: Team,
+    pub to_move: Team,
 
     orange_servants: Pinfield,
     orange_ponies: Pinfield,
