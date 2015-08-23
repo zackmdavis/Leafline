@@ -15,6 +15,7 @@ use std::io;
 use std::io::Write;
 
 use argparse::{ArgumentParser, Store};
+use time::*;
 
 use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
@@ -53,9 +54,15 @@ fn main() {
                 }
             },
             _ => {
+                let start_thinking = time::get_time();
                 let forecasts = negamax_kickoff(world, lookahead_depth);
+                let stop_thinking = time::get_time();
+                let thinking_time = stop_thinking - start_thinking;
                 world.display();
-                println!("");
+                println!(
+                    "(scoring alternatives {} levels deep took {} ms)",
+                    lookahead_depth, thinking_time.num_milliseconds()
+                 );
                 for (index,
                      &(premonition, score)) in forecasts.iter().enumerate() {
                     println!("{:>2}. {} (score {})", index, premonition, score);
@@ -64,14 +71,27 @@ fn main() {
             }
 
         }
-        print!("\nSelect a move>> ");
-        io::stdout().flush().ok().expect("couldn't flush stdout");
-        let mut input_buffer = String::new();
-        io::stdin()
-            .read_line(&mut input_buffer)
-            .ok().expect("couldn't read input");
-        let choice: usize = input_buffer.trim().parse().ok().expect(
-            "couldn't parse move choice");
-        world = premonitions[choice].tree;
+        loop {
+            print!("\nSelect a move>> ");
+            io::stdout().flush().ok().expect("couldn't flush stdout");
+            let mut input_buffer = String::new();
+            io::stdin()
+                .read_line(&mut input_buffer)
+                .ok().expect("couldn't read input");
+            let choice: usize = match input_buffer.trim().parse() {
+                Ok(i) => i,
+                Err(e) => {
+                    println!("Error parsing choice: {:?}. Try again.", e);
+                    continue;
+                }
+            };
+            if choice < premonitions.len() {
+                world = premonitions[choice].tree;
+                break;
+            } else {
+                println!("{} isn't among the choices. Try again.",
+                         choice);
+            }
+        }
     }
 }
