@@ -1,6 +1,8 @@
-//! Leafline is an oppositional strategy game engine
+#[macro_use]
+extern crate itertools;
 
 extern crate ansi_term;
+
 
 mod space;
 mod identity;
@@ -10,7 +12,7 @@ mod life;
 use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
 use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
-use life::{WorldState};
+use life::{WorldState, Patch, Commit};
 
 
 fn main() {

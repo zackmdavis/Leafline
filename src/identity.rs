@@ -10,7 +10,7 @@ impl Team {
         vec![Team::Orange, Team::Blue]
     }
 
-    pub fn opponent(&self) -> Self {
+    pub fn opposition(&self) -> Self {
         match self {
             &Team::Orange => Team::Blue,
             &Team::Blue => Team::Orange

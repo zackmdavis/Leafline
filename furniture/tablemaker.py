@@ -7,8 +7,8 @@ import os
 
 def rank_and_file_to_u64(position):
     rank, file = position
-    bit_index = (8 * rank) + file
-    return 2**bit_index
+    pindex = (8 * rank) + file
+    return 2**pindex
 
 def displace(position, offset):
     return tuple(map(operator.add, position, offset))

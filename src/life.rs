@@ -4,11 +4,12 @@ use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
 use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
+
 /// represents the movement of a figurine
-struct Patch {
-    star: Agent,
-    whence: Locale,
-    whither: Locale
+pub struct Patch {
+    pub star: Agent,
+    pub whence: Locale,
+    pub whither: Locale
 }
 
 
@@ -16,10 +17,10 @@ struct Patch {
 /// the figurine moved, the state of the world after the turn (`tree`),
 /// and whether an opposing figurine was stunned and put in the hospital,
 /// and if so, which one
-struct Commit {
-    patch: Patch,
-    tree: WorldState,
-    hospitalization: Option<Agent>
+pub struct Commit {
+    pub patch: Patch,
+    pub tree: WorldState,
+    pub hospitalization: Option<Agent>
 }
 
 
@@ -212,17 +213,37 @@ impl WorldState {
         None
     }
 
-    pub fn apply(&self, patch: Patch) -> Option<Commit>
-    {
+    pub fn apply(&self, patch: Patch) -> Option<Commit> {
         // subboard of moving figurine
         let backstory = self.agent_to_pinfield_ref(patch.star);
         // subboard of moving figurine after move
-        let derived_subboard = self.except_replaced_subboard(
-            patch.star,
-            backstory.transit(patch.whence, patch.whither)
+        let derived_subboard = backstory.transit(patch.whence, patch.whither);
+        // insert subboard into post-patch world-model
+        let mut tree = self.except_replaced_subboard(
+            patch.star, derived_subboard
         );
-        // TODO
-        None
+
+        // was anyone stunned?
+        let hospitalization = self.occupying_agent(patch.whither);
+        if let Some(stunned) = hospitalization {
+            if stunned.team == patch.star.team {
+                panic!("{:?} tried to stun friendly figurine \
+                        {:?} at {:?}.\
+                        This shouldn't happen!",
+                       patch.star, hospitalization, patch.whither);
+            }
+
+            // if someone was stunned, put her or him in the hospital
+            let further_derived_subboard = tree.agent_to_pinfield_ref(
+                stunned).quench(patch.whither);
+            tree = tree.except_replaced_subboard(
+                stunned, further_derived_subboard
+            );
+        }
+        // XXX TODO: actually return None if this would result in
+        // moving team being in "check"
+        Some(Commit { patch: patch, tree: tree,
+                      hospitalization: hospitalization })
     }
 
     /// generate possible commits for servants of the given team
@@ -294,7 +315,7 @@ impl WorldState {
         for start_locale in positional_chart.to_locales().iter() {
             let destinations = self.occupied_by(team).invert().intersection(
                 Pinfield(PONY_MOVEMENT_TABLE[
-                    start_locale.bit_index() as usize])).to_locales();
+                    start_locale.pindex() as usize])).to_locales();
             for destination in destinations.iter() {
                 let mut premonition = self.clone();
                 premonition = premonition.except_replaced_subboard(
@@ -352,7 +373,7 @@ fn main() {
 
 #[cfg(test)]
 mod test {
-    use super::WorldState;
+    use super::{WorldState, Patch, Commit};
     use space::{Locale, Pinfield};
     use identity::{Team, JobDescription, Agent};
 
@@ -416,4 +437,63 @@ mod test {
         assert_eq!(None, state.occupying_agent(c4));
     }
 
+    #[test]
+    fn concerning_peaceful_patch_application() {
+        let state = WorldState::new();
+        let e2 = Locale { rank: 4, file: 1 };
+        let e4 = Locale { rank: 4, file: 3 };
+        let patch = Patch {
+            star: Agent {
+                team: Team::Orange,
+                job_description: JobDescription::Servant
+            },
+            whence: e2,
+            whither: e4
+        };
+        let new_state = state.apply(patch).unwrap().tree;
+        assert_eq!(Agent { team: Team::Orange,
+                           job_description: JobDescription::Servant },
+                   new_state.occupying_agent(e4).unwrap());
+        assert_eq!(None, new_state.occupying_agent(e2));
+    }
+
+    #[test]
+    fn concerning_stunning_patch_application_in_natural_setting() {
+        let state = WorldState::new();
+        let orange_begins = Patch {
+            star: Agent {
+                team: Team::Orange,
+                job_description: JobDescription::Servant
+            },
+            whence: Locale::from_algebraic("e2".to_string()),
+            whither: Locale::from_algebraic("e4".to_string())
+        };
+        let blue_replies = Patch {
+            star: Agent {
+                team: Team::Blue,
+                job_description: JobDescription::Servant
+            },
+            whence: Locale::from_algebraic("d7".to_string()),
+            whither: Locale::from_algebraic("d5".to_string())
+        };
+        let orange_counterreplies = Patch {
+            star: Agent {
+                team: Team::Orange,
+                job_description: JobDescription::Servant
+            },
+            whence: Locale::from_algebraic("e4".to_string()),
+            whither: Locale::from_algebraic("d5".to_string())
+        };
+        let crucial_commit = state.apply(orange_begins).unwrap().tree.apply(
+            blue_replies).unwrap().tree.apply(orange_counterreplies).unwrap();
+        let new_state = crucial_commit.tree;
+        assert_eq!(Agent { team: Team::Orange,
+                           job_description: JobDescription::Servant },
+                   new_state.occupying_agent(
+                       Locale::from_algebraic("d5".to_string())).unwrap());
+        let stunned = crucial_commit.hospitalization.unwrap();
+        assert_eq!(Agent { team: Team::Blue,
+                           job_description: JobDescription::Servant },
+                   stunned);
+    }
 }

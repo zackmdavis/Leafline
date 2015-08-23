@@ -1,16 +1,38 @@
+use itertools::Itertools;
+
+
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 pub struct Locale {
     pub rank: u8,
     pub file: u8
 }
 
+static index_to_file_name: [char; 8] = [
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
+];
+
 impl Locale {
-    pub fn bit_index(&self) -> u32 {
+
+    pub fn to_algebraic(&self) -> String {
+        format!("{}{}", index_to_file_name[self.file as usize], self.rank + 1)
+    }
+
+    pub fn from_algebraic(notation: String) -> Self {
+        let mut notation_pieces = notation.chars();
+        let file_note = notation_pieces.next().unwrap();
+        let rank_note = notation_pieces.next().unwrap();
+        Locale {
+            rank: (rank_note as u8) - 49,  // 49 == '1'
+            file: (file_note as u8) - 97  // 97 == 'a'
+        }
+    }
+
+    pub fn pindex(&self) -> u32 {
         (8u32 * self.rank as u32) + self.file as u32
     }
 
     pub fn pinpoint(&self) -> Pinfield {
-        Pinfield(2u64.pow(self.bit_index()))
+        Pinfield(2u64.pow(self.pindex()))
     }
 
     pub fn is_legal(&self) -> bool {
@@ -120,6 +142,42 @@ impl Pinfield {
 #[cfg(test)]
 mod test {
     use super::{Locale, Pinfield};
+
+    static algebraics: [&'static str; 64] = [
+        "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+        "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+        "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+        "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+        "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+        "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+        "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+        "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"
+    ];
+
+    #[test]
+    fn concerning_converting_to_algebraic() {
+        let actual = iproduct!(0..8, 0..8).map(
+            |t| Locale { rank: t.0, file: t.1 }).map(|l| l.to_algebraic());
+        for (expectation, actuality) in algebraics.iter().zip(actual) {
+            // TODO: it's more elegant if the `.to_string` happens in
+            // the iterator rather than the body of this
+            // assertion-iteration
+            assert_eq!(expectation.to_string(), actuality);
+        }
+    }
+
+    #[test]
+    fn concerning_converting_from_algebraic() {
+        let expected = iproduct!(0..8, 0..8).map(
+            |t| Locale { rank: t.0, file: t.1 });
+        for (expectation, actuality) in expected.zip(algebraics.iter()) {
+            assert_eq!(
+                expectation,
+                // TODO: again, `to_string` in iterator
+                Locale::from_algebraic(actuality.to_string())
+            );
+        }
+    }
 
     #[test]
     fn test_locale() {
