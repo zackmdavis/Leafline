@@ -260,6 +260,20 @@ impl WorldState {
         None
     }
 
+    pub fn in_critical_endangerment(&self, team: Team) -> bool {
+        let mut contingency = *self;
+        contingency.to_move = team.opposition();
+        let premonitions = contingency.lookahead();
+        for premonition in premonitions.iter() {
+            if let Some(patient) = premonition.hospitalization {
+                if patient.job_description == JobDescription::Figurehead {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     pub fn apply(&self, patch: Patch) -> Option<Commit> {
         // subboard of moving figurine
         let backstory = self.agent_to_pinfield_ref(patch.star);
@@ -288,10 +302,19 @@ impl WorldState {
                 stunned, further_derived_subboard
             );
         }
-        // XXX TODO: actually return None if this would result in
-        // moving team being in "check"
-        Some(Commit { patch: patch, tree: tree,
-                      hospitalization: hospitalization })
+        // TODO endangerment-checking may ultimately need to be done in
+        // another function, because sometimes we do want to apply a
+        // patch without considering it, whether for performance reasons
+        // or just to avoid blowing the stack (`lookahead` calls
+        // (e.g.) `pony_lookahead` calls `predict` calls `apply` calls
+        // `in_critical_endangerment` calls `lookahead`)
+        //
+        // if tree.in_critical_endangerment() {
+        //     None
+        // } else {
+            Some(Commit { patch: patch, tree: tree,
+                          hospitalization: hospitalization })
+        // }
     }
 
     pub fn predict(&self, premonitions: &mut Vec<Commit>, patch: Patch) {
@@ -492,6 +515,10 @@ impl WorldState {
     }
 
     pub fn lookahead(&self) -> Vec<Commit> {
+        // Would it be profitable to make this return an iterator (so
+        // that you could break without generating all the premonitions
+        // if something overwhelmingly important came up, like ultimate
+        // endangerment)?
         let mut premonitions = Vec::new();
         let moving_team = self.to_move;
         premonitions.extend(self.servant_lookahead(moving_team).into_iter());
@@ -503,6 +530,8 @@ impl WorldState {
         premonitions
     }
 
+    // XXX TODO FIXME: Orange should appear at the bottom and we
+    // should use the fmt::Display trait
     pub fn display(&self) {
         println!("  a b c d e f g h");
         for rank in 0..8 {
@@ -703,4 +732,50 @@ mod test {
                            job_description: JobDescription::Servant },
                    stunned);
     }
+
+    fn death_of_a_fool() -> WorldState {
+        let mut world = WorldState::new();
+        let fools_patchset = vec![
+            Patch { star: Agent { team: Team::Orange,
+                                  job_description: JobDescription::Servant },
+                    whence: Locale::from_algebraic("f2".to_string()),
+                    whither: Locale::from_algebraic("f4".to_string()) },
+            Patch { star: Agent { team: Team::Blue,
+                                  job_description: JobDescription::Servant },
+                    whence: Locale::from_algebraic("e7".to_string()),
+                    whither: Locale::from_algebraic("e6".to_string()) },
+            Patch { star: Agent { team: Team::Orange,
+                                  job_description: JobDescription::Pony },
+                    whence: Locale::from_algebraic("b1".to_string()),
+                    whither: Locale::from_algebraic("c3".to_string()) },
+            Patch { star: Agent { team: Team::Blue,
+                                  job_description: JobDescription::Princess },
+                    whence: Locale::from_algebraic("d8".to_string()),
+                    whither: Locale::from_algebraic("h4".to_string()) },
+        ];
+        for patch in fools_patchset.into_iter() {
+            world = world.apply(patch).unwrap().tree;
+        }
+        world
+    }
+
+    #[test]
+    fn concerning_critical_endangerment() {
+        let eden = WorldState::new();
+        assert!(!eden.in_critical_endangerment(Team::Orange));
+        assert!(!eden.in_critical_endangerment(Team::Blue));
+        let v_day = death_of_a_fool();
+        assert!(v_day.in_critical_endangerment(Team::Orange));
+        assert!(!v_day.in_critical_endangerment(Team::Blue));
+    }
+
+    #[test]
+    #[ignore]  // not ready yet
+    fn concerning_fools_assasination() {
+        let world = death_of_a_fool();
+        let post_critical_endangerment_lookahead = world.lookahead();
+        // if the opposition has won, nothing to do
+        assert_eq!(Vec::<Commit>::new(), post_critical_endangerment_lookahead);
+    }
+
 }
