@@ -260,21 +260,7 @@ impl WorldState {
         None
     }
 
-    pub fn in_critical_endangerment(&self, team: Team) -> bool {
-        let mut contingency = *self;
-        contingency.to_move = team.opposition();
-        let premonitions = contingency.lookahead();
-        for premonition in premonitions.iter() {
-            if let Some(patient) = premonition.hospitalization {
-                if patient.job_description == JobDescription::Figurehead {
-                    return true;
-                }
-            }
-        }
-        false
-    }
-
-    pub fn apply(&self, patch: Patch) -> Option<Commit> {
+    pub fn apply(&self, patch: Patch) -> Commit {
         // subboard of moving figurine
         let backstory = self.agent_to_pinfield_ref(patch.star);
         // subboard of moving figurine after move
@@ -302,30 +288,49 @@ impl WorldState {
                 stunned, further_derived_subboard
             );
         }
-        // TODO endangerment-checking may ultimately need to be done in
-        // another function, because sometimes we do want to apply a
-        // patch without considering it, whether for performance reasons
-        // or just to avoid blowing the stack (`lookahead` calls
-        // (e.g.) `pony_lookahead` calls `predict` calls `apply` calls
-        // `in_critical_endangerment` calls `lookahead`)
-        //
-        // if tree.in_critical_endangerment() {
-        //     None
-        // } else {
-            Some(Commit { patch: patch, tree: tree,
-                          hospitalization: hospitalization })
-        // }
+        Commit { patch: patch, tree: tree,
+                 hospitalization: hospitalization }
     }
 
-    pub fn predict(&self, premonitions: &mut Vec<Commit>, patch: Patch) {
-        let premonition_maybe = self.apply(patch);
-        if let Some(premonition) = premonition_maybe {
+    pub fn in_critical_endangerment(&self, team: Team) -> bool {
+        let mut contingency = *self;
+        contingency.to_move = team.opposition();
+        let premonitions = contingency.underlookahead(true);
+        for premonition in premonitions.iter() {
+            if let Some(patient) = premonition.hospitalization {
+                if patient.job_description == JobDescription::Figurehead {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn careful_apply(&self, patch: Patch) -> Option<Commit> {
+        let force_commit = self.apply(patch);
+        if force_commit.tree.in_critical_endangerment(self.to_move) {
+            None
+        } else {
+            Some(force_commit)
+        }
+    }
+
+    pub fn predict(&self, premonitions: &mut Vec<Commit>, patch: Patch,
+                   nihilistically: bool) {
+        if nihilistically {  // enjoy Arby's
+            let premonition = self.apply(patch);
             premonitions.push(premonition);
+        } else {
+            let premonition_maybe = self.careful_apply(patch);
+            if let Some(premonition) = premonition_maybe {
+                premonitions.push(premonition);
+            }
         }
     }
 
     /// generate possible commits for servants of the given team
-    pub fn servant_lookahead(&self, team: Team) -> Vec<Commit> {
+    pub fn servant_lookahead(&self, team: Team,
+                             nihilistically: bool) -> Vec<Commit> {
         let initial_rank;
         let standard_offset;
         let boost_offset;
@@ -360,7 +365,8 @@ impl WorldState {
                             star: servant_agent,
                             whence: start_locale,
                             whither: destination_locale
-                        }
+                        },
+                        nihilistically
                     );
                 }
             }
@@ -381,7 +387,8 @@ impl WorldState {
                             star: servant_agent,
                             whence: start_locale,
                             whither: boost_destination
-                        }
+                        },
+                        nihilistically
                     );
                 }
             }
@@ -397,7 +404,8 @@ impl WorldState {
                                 star: servant_agent,
                                 whence: start_locale,
                                 whither: stun_destination
-                            }
+                            },
+                            nihilistically
                         )
                     }
                 }
@@ -406,7 +414,8 @@ impl WorldState {
         premonitions
     }
 
-    fn ponylike_lookahead(&self, agent: Agent) -> Vec<Commit> {
+    fn ponylike_lookahead(&self, agent: Agent,
+                          nihilistically: bool) -> Vec<Commit> {
         let mut premonitions = Vec::new();
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
         let movement_table = match agent.job_description {
@@ -428,14 +437,16 @@ impl WorldState {
                         star: agent,
                         whence: start_locale,
                         whither: destination
-                    }
+                    },
+                    nihilistically
                 );
             }
         }
         premonitions
    }
 
-    fn princesslike_lookahead(&self, agent: Agent) -> Vec<Commit> {
+    fn princesslike_lookahead(&self, agent: Agent,
+                              nihilistically: bool) -> Vec<Commit> {
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
         let mut premonitions = Vec::new();
         let offsets = match agent.job_description {
@@ -473,7 +484,8 @@ impl WorldState {
                                         star: agent,
                                         whence: start_locale,
                                         whither: destination
-                                    }
+                                    },
+                                    nihilistically
                                 );
                             }
                             if !empty {
@@ -489,45 +501,70 @@ impl WorldState {
         premonitions
     }
 
-    pub fn pony_lookahead(&self, team: Team) -> Vec<Commit> {
+    pub fn pony_lookahead(&self, team: Team,
+                          nihilistically: bool) -> Vec<Commit> {
         self.ponylike_lookahead(
-            Agent { team: team, job_description: JobDescription::Pony })
+            Agent { team: team, job_description: JobDescription::Pony },
+            nihilistically
+        )
     }
 
-    pub fn scholar_lookahead(&self, team: Team) -> Vec<Commit> {
+    pub fn scholar_lookahead(&self, team: Team,
+                             nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
-            Agent { team: team, job_description: JobDescription::Scholar })
+            Agent { team: team, job_description: JobDescription::Scholar },
+            nihilistically
+        )
     }
 
-    pub fn cop_lookahead(&self, team: Team) -> Vec<Commit> {
+    pub fn cop_lookahead(&self, team: Team,
+                         nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
-            Agent { team: team, job_description: JobDescription::Cop })
+            Agent { team: team, job_description: JobDescription::Cop },
+            nihilistically
+        )
     }
 
-    pub fn princess_lookahead(&self, team: Team) -> Vec<Commit> {
+    pub fn princess_lookahead(&self, team: Team,
+                              nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
-            Agent { team: team, job_description: JobDescription::Princess })
+            Agent { team: team, job_description: JobDescription::Princess },
+            nihilistically
+        )
     }
 
-    pub fn figurehead_lookahead(&self, team: Team) -> Vec<Commit> {
+    pub fn figurehead_lookahead(&self, team: Team,
+                                nihilistically: bool) -> Vec<Commit> {
         self.ponylike_lookahead(
-            Agent { team: team, job_description: JobDescription::Figurehead })
+            Agent { team: team, job_description: JobDescription::Figurehead },
+            nihilistically
+        )
     }
 
-    pub fn lookahead(&self) -> Vec<Commit> {
+    pub fn underlookahead(&self, nihilistically: bool) -> Vec<Commit> {
         // Would it be profitable to make this return an iterator (so
         // that you could break without generating all the premonitions
         // if something overwhelmingly important came up, like ultimate
         // endangerment)?
         let mut premonitions = Vec::new();
         let moving_team = self.to_move;
-        premonitions.extend(self.servant_lookahead(moving_team).into_iter());
-        premonitions.extend(self.pony_lookahead(moving_team).into_iter());
-        premonitions.extend(self.scholar_lookahead(moving_team).into_iter());
-        premonitions.extend(self.cop_lookahead(moving_team).into_iter());
-        premonitions.extend(self.princess_lookahead(moving_team).into_iter());
-        premonitions.extend(self.figurehead_lookahead(moving_team).into_iter());
+        premonitions.extend(self.servant_lookahead(
+            moving_team, nihilistically).into_iter());
+        premonitions.extend(self.pony_lookahead(
+            moving_team, nihilistically).into_iter());
+        premonitions.extend(
+            self.scholar_lookahead(moving_team, nihilistically).into_iter());
+        premonitions.extend(
+            self.cop_lookahead(moving_team, nihilistically).into_iter());
+        premonitions.extend(
+            self.princess_lookahead(moving_team, nihilistically).into_iter());
+        premonitions.extend(
+            self.figurehead_lookahead(moving_team, nihilistically).into_iter());
         premonitions
+    }
+
+    pub fn lookahead(&self) -> Vec<Commit> {
+        self.underlookahead(false)
     }
 
     // XXX TODO FIXME: Orange should appear at the bottom and we
@@ -586,7 +623,7 @@ mod test {
     #[test]
     fn test_orange_servant_lookahead_from_original_position() {
         let state = WorldState::new();
-        let premonitions = state.servant_lookahead(Team::Orange);
+        let premonitions = state.servant_lookahead(Team::Orange, false);
         assert_eq!(16, premonitions.len());
         // although granted that a more thorough test would actually
         // say something about the nature of the positions, rather than
@@ -596,7 +633,7 @@ mod test {
     #[test]
     fn test_orange_pony_lookahead_from_original_position() {
         let state = WorldState::new();
-        let premonitions = state.pony_lookahead(Team::Orange);
+        let premonitions = state.pony_lookahead(Team::Orange, false);
         assert_eq!(4, premonitions.len());
         let collected = premonitions.iter().map(
             |p| p.tree.orange_ponies.to_locales()).collect::<Vec<_>>();
@@ -625,7 +662,7 @@ mod test {
         world.blue_princesses = world.blue_princesses.alight(
             Locale::from_algebraic("g3".to_string())
         );
-        let premonitions = world.scholar_lookahead(Team::Orange);
+        let premonitions = world.scholar_lookahead(Team::Orange, false);
         let expected = vec!["d2", "f2", "g3"].iter().map(
             |a| Locale::from_algebraic(a.to_string())).collect::<Vec<_>>();
         let actual = premonitions.iter().map(
@@ -667,7 +704,7 @@ mod test {
             whence: e2,
             whither: e4
         };
-        let new_state = state.apply(patch).unwrap().tree;
+        let new_state = state.apply(patch).tree;
         assert_eq!(Agent { team: Team::Orange,
                            job_description: JobDescription::Servant },
                    new_state.occupying_agent(e4).unwrap());
@@ -701,14 +738,15 @@ mod test {
             whither: Locale::from_algebraic("d5".to_string())
         };
 
-        let first_commit = state.apply(orange_begins).unwrap();
+        let first_commit = state.apply(orange_begins);
         assert_eq!(None, first_commit.hospitalization);
-        let second_commit = first_commit.tree.apply(blue_replies).unwrap();
+        let second_commit = first_commit.tree.apply(
+            blue_replies);
         assert_eq!(None, second_commit.hospitalization);
 
         let precrucial_state = second_commit.tree;
         let available_stunnings = precrucial_state.servant_lookahead(
-            Team::Orange).into_iter().filter(
+            Team::Orange, false).into_iter().filter(
                 |p| p.hospitalization.is_some()).collect::<Vec<_>>();
         assert_eq!(1, available_stunnings.len());
         assert_eq!(
@@ -721,7 +759,7 @@ mod test {
         );
 
         let crucial_commit = precrucial_state.apply(
-            orange_counterreplies).unwrap();
+            orange_counterreplies);
         let new_state = crucial_commit.tree;
         assert_eq!(Agent { team: Team::Orange,
                            job_description: JobDescription::Servant },
@@ -733,30 +771,37 @@ mod test {
                    stunned);
     }
 
-    fn death_of_a_fool() -> WorldState {
+    fn prelude_to_the_death_of_a_fool() -> WorldState {
+        // https://en.wikipedia.org/wiki/Fool%27s_mate
         let mut world = WorldState::new();
         let fools_patchset = vec![
             Patch { star: Agent { team: Team::Orange,
                                   job_description: JobDescription::Servant },
                     whence: Locale::from_algebraic("f2".to_string()),
-                    whither: Locale::from_algebraic("f4".to_string()) },
+                    whither: Locale::from_algebraic("f3".to_string()) },
             Patch { star: Agent { team: Team::Blue,
                                   job_description: JobDescription::Servant },
                     whence: Locale::from_algebraic("e7".to_string()),
-                    whither: Locale::from_algebraic("e6".to_string()) },
+                    whither: Locale::from_algebraic("e5".to_string()) },
             Patch { star: Agent { team: Team::Orange,
-                                  job_description: JobDescription::Pony },
-                    whence: Locale::from_algebraic("b1".to_string()),
-                    whither: Locale::from_algebraic("c3".to_string()) },
+                                  job_description: JobDescription::Servant },
+                    whence: Locale::from_algebraic("g2".to_string()),
+                    whither: Locale::from_algebraic("g4".to_string()) },
+        ];
+        for patch in fools_patchset.into_iter() {
+            world = world.careful_apply(patch).unwrap().tree;
+        }
+        world
+    }
+
+    fn death_of_a_fool() -> WorldState {
+        let prelude = prelude_to_the_death_of_a_fool();
+        prelude.apply(
             Patch { star: Agent { team: Team::Blue,
                                   job_description: JobDescription::Princess },
                     whence: Locale::from_algebraic("d8".to_string()),
-                    whither: Locale::from_algebraic("h4".to_string()) },
-        ];
-        for patch in fools_patchset.into_iter() {
-            world = world.apply(patch).unwrap().tree;
-        }
-        world
+                    whither: Locale::from_algebraic("h4".to_string()) }
+        ).tree
     }
 
     #[test]
@@ -770,7 +815,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]  // not ready yet
     fn concerning_fools_assasination() {
         let world = death_of_a_fool();
         let post_critical_endangerment_lookahead = world.lookahead();
