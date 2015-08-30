@@ -1,8 +1,11 @@
 use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 use identity::{Team, JobDescription, Agent};
 use life::{Commit, WorldState};
+
 
 pub fn orientation(team: Team) -> f32 {
     match team {
@@ -75,9 +78,12 @@ pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
 
 // _very_ tempted to switch to developing on Nightly just so we can
 // ungate non_ascii_idents and call this α_β_negamax_search
-pub fn alpha_beta_negamax_search(world: WorldState, depth: u8,
-                                 alpha: f32, beta: f32) -> (Option<Commit>,
-                                                            f32) {
+pub fn alpha_beta_negamax_search(
+    world: WorldState, depth: u8,
+    alpha: f32, beta: f32,
+    deja_vu_table: &mut HashMap<WorldState, f32>) -> (Option<Commit>, f32)
+{
+
     // RESEARCH: I don't really care that much right now, but can you
     // mutate (reassign) an argument name, and if so, what is the syntax?
     let mut experienced_alpha = alpha;
@@ -90,9 +96,32 @@ pub fn alpha_beta_negamax_search(world: WorldState, depth: u8,
     let mut optimum = NEG_INFINITY;
     let mut optimand = None;
     for premonition in premonitions.into_iter() {
-        let (_after, mut value) = alpha_beta_negamax_search(
-            premonition.tree, depth-1, -beta, -experienced_alpha);
-        value = -value;
+        let mut value: f32;
+        let mut cached: bool;
+        {
+            let cached_value_maybe = deja_vu_table.get(&premonition.tree);
+            match cached_value_maybe {
+                Some(&cached_value) => {
+                    cached = true;
+                    value = cached_value;
+                },
+                None => {
+                    cached = false;
+                    // XXX fake assignment to work around the compiler's
+                    // "possibly uninitialized value" rules
+                    value = NEG_INFINITY;
+                }
+            };
+        }
+
+        if !cached {
+            let (after, mut acquired_value) = alpha_beta_negamax_search(
+                premonition.tree, depth-1, -beta, -experienced_alpha,
+                deja_vu_table);
+            value = -acquired_value;
+            deja_vu_table.insert(premonition.tree, value);
+        }
+
         if value > optimum {
             optimum = value;
             optimand = Some(premonition);
@@ -104,8 +133,10 @@ pub fn alpha_beta_negamax_search(world: WorldState, depth: u8,
             break;
         }
     }
+
     (optimand, optimum)
 }
+
 
 // The vision here is that for the turn I'm immediately going to take,
 // I want a report of all possible moves ranked by negamax-computed
@@ -114,12 +145,17 @@ pub fn alpha_beta_negamax_search(world: WorldState, depth: u8,
 // already!!
 pub fn kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
     let team = world.to_move;
+
+    // when we get non-ASCII identifiers: `déjà_vu_table`
+    let mut deja_vu_table: HashMap<WorldState, f32> = HashMap::new();
     let mut premonitions = world.lookahead();
     order_moves(&mut premonitions);
     let mut forecasts = Vec::new();
     for premonition in premonitions.into_iter() {
         let (_grandchild, mut value) = alpha_beta_negamax_search(
-            premonition.tree, depth-1, NEG_INFINITY, INFINITY);
+            premonition.tree, depth-1, NEG_INFINITY, INFINITY,
+            &mut deja_vu_table
+        );
         value = -value;
         forecasts.push((premonition, value));
     }

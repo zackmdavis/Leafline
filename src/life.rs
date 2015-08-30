@@ -9,7 +9,7 @@ use motion::{SCHOLAR_OFFSETS, COP_OFFSETS, PRINCESS_OFFSETS,
 
 
 /// represents the movement of a figurine
-#[derive(Eq,PartialEq,Debug,Copy,Clone)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 pub struct Patch {
     pub star: Agent,
     pub whence: Locale,
@@ -21,7 +21,7 @@ pub struct Patch {
 /// the figurine moved, the state of the world after the turn (`tree`),
 /// and whether an opposing figurine was stunned and put in the hospital,
 /// and if so, which one
-#[derive(Eq,PartialEq,Debug,Copy,Clone)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 pub struct Commit {
     pub patch: Patch,
     pub tree: WorldState,
@@ -46,7 +46,7 @@ impl fmt::Display for Commit {
 }
 
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 pub struct WorldState {
     pub to_move: Team,
 
