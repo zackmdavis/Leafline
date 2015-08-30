@@ -22,7 +22,7 @@ use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
 use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 use life::{WorldState, Patch, Commit};
-use mind::negamax_kickoff;
+use mind::kickoff;
 
 
 fn the_end() {
@@ -70,7 +70,7 @@ fn main() {
             },
             _ => {
                 let start_thinking = time::get_time();
-                let forecasts = negamax_kickoff(world, lookahead_depth);
+                let forecasts = kickoff(world, lookahead_depth);
                 let stop_thinking = time::get_time();
                 let thinking_time = stop_thinking - start_thinking;
                 world.display();

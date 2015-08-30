@@ -1,4 +1,4 @@
-use std::f32::NEG_INFINITY;
+use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
 
 use identity::{Team, JobDescription, Agent};
@@ -57,17 +57,51 @@ pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
 }
 
 
+// _very_ tempted to switch to developing on Nightly just so we can
+// ungate non_ascii_idents and call this α_β_negamax_search
+pub fn alpha_beta_negamax_search(world: WorldState, depth: u8,
+                                 alpha: f32, beta: f32) -> (Option<Commit>,
+                                                            f32) {
+    // RESEARCH: I don't really care that much right now, but can you
+    // mutate (reassign) an argument name, and if so, what is the syntax?
+    let mut experienced_alpha = alpha;
+    let team = world.to_move;
+    let premonitions = world.reckless_lookahead();
+    if depth == 0 || premonitions.is_empty() {
+        return (None, orientation(team) * score(world))
+    };
+    let mut optimum = NEG_INFINITY;
+    let mut optimand = None;
+    for premonition in premonitions.into_iter() {
+        let (_after, mut value) = alpha_beta_negamax_search(
+            premonition.tree, depth-1, -beta, -experienced_alpha);
+        value = -value;
+        if value > optimum {
+            optimum = value;
+            optimand = Some(premonition);
+        }
+        if value > experienced_alpha {
+            experienced_alpha = value;
+        }
+        if experienced_alpha >= beta {
+            break;
+        }
+    }
+    (optimand, optimum)
+}
+
 // The vision here is that for the turn I'm immediately going to take,
 // I want a report of all possible moves ranked by negamax-computed
 // optimality, but that we don't want to bother with all that bookkeeping
 // for subsequent levels of the game tree; minimax is expensive enough
 // already!!
-pub fn negamax_kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
+pub fn kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
     let team = world.to_move;
     let premonitions = world.lookahead();
     let mut forecasts = Vec::new();
     for premonition in premonitions.into_iter() {
-        let (_grandchild, mut value) = negamax_search(premonition.tree, depth-1);
+        let (_grandchild, mut value) = alpha_beta_negamax_search(
+            premonition.tree, depth-1, NEG_INFINITY, INFINITY);
         value = -value;
         forecasts.push((premonition, value));
     }
@@ -84,7 +118,7 @@ pub fn negamax_kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
 mod test {
     use time;
 
-    use super::{negamax_search, negamax_kickoff, score};
+    use super::{negamax_search, kickoff, score};
     use space::Locale;
     use life::WorldState;
 
@@ -94,7 +128,7 @@ mod test {
     }
 
     #[test]
-    fn experimentally_about_negamax_kickoff() {
+    fn experimentally_about_kickoff() {
         let mut world = WorldState::new_except_empty();
         // SCENARIO: let's imagine Orange (to move) has separate attacks against
         // Blue's pony and servant, against which Blue has no defense but
@@ -124,7 +158,7 @@ mod test {
 
         let depth = 2;
         let start = time::get_time();
-        let advisory = negamax_kickoff(world, depth);
+        let advisory = kickoff(world, depth);
         let end = time:: get_time();
 
         // (you can see this if you run the tests with `-- --nocapture`)
@@ -167,7 +201,7 @@ mod test {
             Locale { rank: 3, file: 6 }
         );
 
-        let negadvisory = negamax_kickoff(negaworld, depth);
+        let negadvisory = kickoff(negaworld, depth);
 
         // taking the pony is still the right thing to do, even in the
         // negaworld
