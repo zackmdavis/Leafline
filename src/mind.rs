@@ -36,6 +36,13 @@ pub fn score(world: WorldState) -> f32 {
             valuation += world.agent_to_pinfield_ref(
                 agent).pincount() as f32 * figurine_valuation(agent);
         }
+        // breadth of scholarship bonus
+        if world.agent_to_pinfield_ref(
+            Agent { team: team,
+              job_description: JobDescription::Scholar }
+            ).to_locales().len() >= 2 {
+                valuation += orientation(team) * 0.5
+        }
     }
     valuation
 }
