@@ -295,7 +295,7 @@ impl WorldState {
     pub fn in_critical_endangerment(&self, team: Team) -> bool {
         let mut contingency = *self;
         contingency.to_move = team.opposition();
-        let premonitions = contingency.underlookahead(true);
+        let premonitions = contingency.reckless_lookahead();
         for premonition in premonitions.iter() {
             if let Some(patient) = premonition.hospitalization {
                 if patient.job_description == JobDescription::Figurehead {
@@ -541,7 +541,7 @@ impl WorldState {
         )
     }
 
-    pub fn underlookahead(&self, nihilistically: bool) -> Vec<Commit> {
+    fn underlookahead(&self, nihilistically: bool) -> Vec<Commit> {
         // Would it be profitable to make this return an iterator (so
         // that you could break without generating all the premonitions
         // if something overwhelmingly important came up, like ultimate
@@ -565,6 +565,10 @@ impl WorldState {
 
     pub fn lookahead(&self) -> Vec<Commit> {
         self.underlookahead(false)
+    }
+
+    pub fn reckless_lookahead(&self) -> Vec<Commit> {
+        self.underlookahead(true)
     }
 
     // XXX TODO FIXME: Orange should appear at the bottom and we

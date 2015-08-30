@@ -39,7 +39,7 @@ pub fn score(world: WorldState) -> f32 {
 
 pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
     let team = world.to_move;
-    let premonitions = world.lookahead();
+    let premonitions = world.reckless_lookahead();
     if depth == 0 || premonitions.is_empty() {
         return (None, orientation(team) * score(world))
     }

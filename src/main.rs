@@ -13,6 +13,7 @@ mod mind;
 
 use std::io;
 use std::io::Write;
+use std::process;
 
 use argparse::{ArgumentParser, Store};
 use time::*;
@@ -23,6 +24,11 @@ use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 use life::{WorldState, Patch, Commit};
 use mind::negamax_kickoff;
 
+
+fn the_end() {
+    println!("THE END");
+    process::exit(0);
+}
 
 fn main() {
     // Does argparse not offer a way to Store an argument (not a
@@ -45,8 +51,17 @@ fn main() {
     let mut premonitions: Vec<Commit>;
     loop {
         match lookahead_depth {
+            // XXX can we unify the scored and unscored logic? Useful
+            // not only on general DRYness principles, but perhaps also
+            // toward supporting human vs. computer playish things rather
+            // than just advising every movement
             0 => {
                 premonitions = world.lookahead();
+                if premonitions.len() == 0 {
+                    // XXX distinguish between stalemate and
+                    // checkm^H^H^H^H^H^Hultimate endangerment
+                    the_end();
+                }
                 world.display();
                 println!("");
                 for (index, premonition) in premonitions.iter().enumerate() {
@@ -68,6 +83,9 @@ fn main() {
                     println!("{:>2}. {} (score {})", index, premonition, score);
                 }
                 premonitions = forecasts.iter().map(|t| t.0).collect::<Vec<_>>();
+                if premonitions.len() == 0 {
+                    the_end();
+                }
             }
 
         }
