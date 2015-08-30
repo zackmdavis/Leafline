@@ -37,9 +37,25 @@ pub fn score(world: WorldState) -> f32 {
     valuation
 }
 
+fn mmv_lva_heuristic(commit: &Commit) -> f32 {
+    // https://chessprogramming.wikispaces.com/MVV-LVA
+    match commit.hospitalization {
+        Some(patient) => (figurine_valuation(patient) -
+                          figurine_valuation(commit.patch.star)),
+        None => 0.0
+    }
+}
+
+fn order_moves(commits: &mut Vec<Commit>) {
+    commits.sort_by(|a, b| mmv_lva_heuristic(
+        &b).partial_cmp(&mmv_lva_heuristic(&a)).unwrap_or(Ordering::Equal));
+}
+
+
 pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
     let team = world.to_move;
-    let premonitions = world.reckless_lookahead();
+    let mut premonitions = world.reckless_lookahead();
+    order_moves(&mut premonitions);
     if depth == 0 || premonitions.is_empty() {
         return (None, orientation(team) * score(world))
     }
@@ -66,7 +82,8 @@ pub fn alpha_beta_negamax_search(world: WorldState, depth: u8,
     // mutate (reassign) an argument name, and if so, what is the syntax?
     let mut experienced_alpha = alpha;
     let team = world.to_move;
-    let premonitions = world.reckless_lookahead();
+    let mut premonitions = world.reckless_lookahead();
+    order_moves(&mut premonitions);
     if depth == 0 || premonitions.is_empty() {
         return (None, orientation(team) * score(world))
     };
@@ -97,7 +114,8 @@ pub fn alpha_beta_negamax_search(world: WorldState, depth: u8,
 // already!!
 pub fn kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
     let team = world.to_move;
-    let premonitions = world.lookahead();
+    let mut premonitions = world.lookahead();
+    order_moves(&mut premonitions);
     let mut forecasts = Vec::new();
     for premonition in premonitions.into_iter() {
         let (_grandchild, mut value) = alpha_beta_negamax_search(
