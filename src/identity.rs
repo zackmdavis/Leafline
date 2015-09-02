@@ -55,6 +55,52 @@ impl Agent {
              Agent{ team: team,
                     job_description: JobDescription::Figurehead }]
     }
+
+    pub fn to_preservation_rune(&self) -> char {
+        // XXX wow
+        //      such boilerplate
+        //   many agents     very repeat
+        //                  wow
+        match self {
+            &Agent { team: Team::Orange,
+                    // 'P' is for "peon"
+                    job_description: JobDescription::Servant } => 'P',
+            &Agent { team: Team::Orange,
+                    // 'N' is for "neigh"
+                    job_description: JobDescription::Pony } => 'N',
+            &Agent { team: Team::Orange,
+                    // 'B' is for "book"
+                    job_description: JobDescription::Scholar } => 'B',
+            &Agent { team: Team::Orange,
+                    // 'R' is for "the Rule of law"
+                    job_description: JobDescription::Cop } => 'R',
+            &Agent { team: Team::Orange,
+                    // 'Q' is the Princess's favorite letter of the alphabet
+                    job_description: JobDescription::Princess } => 'Q',
+            &Agent { team: Team::Orange,
+                    // 'K' in baseball notation indicates a strikeout,
+                    // which is bad; if the figurehead is in critical
+                    // endangerment, his team loses the game, which is
+                    // also bad
+                    job_description: JobDescription::Figurehead } => 'K',
+            // Blue Team's preservation runes are like Orange Team's
+            // except in lowercase; this is because lowercase characters
+            // have higher ASCII values, just as blue light has a higher
+            // frequency than orange light
+            &Agent { team: Team::Blue,
+                    job_description: JobDescription::Servant } => 'p',
+            &Agent { team: Team::Blue,
+                    job_description: JobDescription::Pony } => 'n',
+            &Agent { team: Team::Blue,
+                    job_description: JobDescription::Scholar } => 'b',
+            &Agent { team: Team::Blue,
+                    job_description: JobDescription::Cop } => 'r',
+            &Agent { team: Team::Blue,
+                    job_description: JobDescription::Princess } => 'q',
+            &Agent { team: Team::Blue,
+                    job_description: JobDescription::Figurehead } => 'k',
+        }
+    }
 }
 
 impl fmt::Display for Agent {

@@ -222,6 +222,51 @@ impl WorldState {
         }
     }
 
+    pub fn preserve(&self) -> String {
+        fn void_void_run_length(work: &mut String, counter: &mut u8) {
+            work.push(counter.to_string().chars().next().unwrap());
+            *counter = 0;
+        }
+
+        let mut book = String::with_capacity(
+            // pessimistic board storage + rank delimiters + metadata
+            // ≟ 64 + 7 + 14 =
+            85
+        );
+
+        let mut void_run_length = 0;
+        for rank in (0..8).rev() {
+            for file in 0..8 {
+                let agent_maybe = self.occupying_agent(
+                    Locale { rank: rank, file: file });
+                match agent_maybe {
+                    Some(agent) => {
+                        if void_run_length > 0 {
+                            void_void_run_length(
+                                &mut book, &mut void_run_length);
+                        }
+                        book.push(agent.to_preservation_rune());
+                    },
+                    None => {
+                        void_run_length += 1;
+                    }
+                }
+            }
+            if void_run_length > 0 {
+                void_void_run_length(
+                    &mut book, &mut void_run_length);
+            }
+            if rank > 0 {
+                book.push('/')
+            }
+        }
+        book
+    }
+
+    pub fn reconstruct(scan: String) -> Self {
+        Self::new() // TODO
+    }
+
     pub fn except_replaced_subboard(&self, for_whom: Agent,
                                     subboard: Pinfield) -> Self {
         let mut resultant_state = self.clone();
@@ -824,6 +869,49 @@ mod test {
         let post_critical_endangerment_lookahead = world.lookahead();
         // if the opposition has won, nothing to do
         assert_eq!(Vec::<Commit>::new(), post_critical_endangerment_lookahead);
+    }
+
+    #[test]
+    fn concerning_preservation_and_reconstruction_of_historical_worlds() {
+        // en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation#Examples
+        let eden = WorldState::new();
+        let book_of_eden =
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" // TODO w KQkq - 0 1
+            .to_string();
+        assert_eq!(book_of_eden, eden.preserve());
+        // assert_eq!(WorldState::reconstruct(book_of_eden), eden); TODO
+
+        let patchset = vec![
+            Patch { star: Agent { team: Team::Orange,
+                                  job_description: JobDescription::Servant },
+                    whence: Locale::from_algebraic("e2".to_string()),
+                    whither: Locale::from_algebraic("e4".to_string()) },
+            Patch { star: Agent { team: Team::Blue,
+                                  job_description: JobDescription::Servant },
+                    whence: Locale::from_algebraic("c7".to_string()),
+                    whither: Locale::from_algebraic("c5".to_string()) },
+            Patch { star: Agent { team: Team::Orange,
+                                  job_description: JobDescription::Pony },
+                    whence: Locale::from_algebraic("g1".to_string()),
+                    whither: Locale::from_algebraic("f3".to_string()) },
+        ];
+
+        let book_of_patches = vec![
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR" // b KQkq e3 0 1
+                .to_string(),
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR" // w KQkq c6 0 2
+                .to_string(),
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R" // b KQkq - 1 2
+                .to_string(),
+        ];
+
+        let mut world = eden;
+        for (patch, book) in patchset.into_iter().zip(
+                book_of_patches.into_iter()) {
+            world = world.careful_apply(patch).unwrap().tree;
+            assert_eq!(book, world.preserve());
+            // assert_eq!(WorldState::reconstruct(book), world); TODO
+        }
     }
 
 }
