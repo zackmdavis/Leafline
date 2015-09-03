@@ -96,6 +96,11 @@ fn main() {
             io::stdin()
                 .read_line(&mut input_buffer)
                 .ok().expect("couldn't read input");
+
+            if input_buffer.trim() == "quit" {
+                the_end();
+            }
+
             let choice: usize = match input_buffer.trim().parse() {
                 Ok(i) => i,
                 Err(e) => {
