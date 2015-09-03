@@ -260,6 +260,13 @@ impl WorldState {
                 book.push('/')
             }
         }
+        let to_move_indication_rune = match self.to_move {
+            // TODO: think of some remotely plausible rationalization for 'w'
+            Team::Orange => 'w',
+            Team::Blue => 'b',
+        };
+        book.push(' ');
+        book.push(to_move_indication_rune);
         book
     }
 
@@ -876,7 +883,7 @@ mod test {
         // en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation#Examples
         let eden = WorldState::new();
         let book_of_eden =
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" // TODO w KQkq - 0 1
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w" // TODO KQkq - 0 1
             .to_string();
         assert_eq!(book_of_eden, eden.preserve());
         // assert_eq!(WorldState::reconstruct(book_of_eden), eden); TODO
@@ -897,11 +904,11 @@ mod test {
         ];
 
         let book_of_patches = vec![
-            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR" // b KQkq e3 0 1
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b" // KQkq e3 0 1
                 .to_string(),
-            "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR" // w KQkq c6 0 2
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w" // KQkq c6 0 2
                 .to_string(),
-            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R" // b KQkq - 1 2
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b" // KQkq - 1 2
                 .to_string(),
         ];
 
