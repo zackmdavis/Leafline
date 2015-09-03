@@ -1,2 +1,5 @@
 target
 notes.txt
+
+*.sw[po]
+*~
