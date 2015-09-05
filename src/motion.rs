@@ -1,3 +1,5 @@
+pub static CENTER_OF_THE_WORLD: u64 = 66229406269440;
+
 pub static PONY_MOVEMENT_TABLE: [u64; 64] = [
     132096,
     329728,
