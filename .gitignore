@@ -1,5 +1,5 @@
 # Cargo build directory
-target
+target/
 
 # personal development notes
 notes.txt
@@ -7,5 +7,13 @@ notes.txt
 # Python bytecode cache directory
 __pycache__/
 
-# "Chess" (?) board download zipball
+# "Chess" (?) board download zipball and unpacked resources (very
+# important, but we're not vendorizing them into the repo)
 web_client/resources/chessboardjs-0.3.0.zip
+web_client/resources/public/css/chessboard-0.3.0.css
+web_client/resources/public/css/chessboard-0.3.0.min.css
+web_client/resources/public/js/chessboard-0.3.0.js
+web_client/resources/public/js/chessboard-0.3.0.min.js
+
+# boring JavaScript compiled from cool ECMAScript 6
+web_client/resources/public/js/leafline_client-built.js
