@@ -8,7 +8,12 @@
 {% block page-scripts %}
   {% script "/js/chessboard-0.3.0.js" %}
   <script>
-     var board1 = ChessBoard('world', 'start');
+   var configuration = {
+       position: 'start',
+       draggable: true,
+       pieceTheme: 'img/figurines/{piece}.png'
+   };
+   var world = ChessBoard('world', configuration);
   </script>
 {% endblock %}
 
