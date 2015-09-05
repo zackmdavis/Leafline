@@ -1,7 +1,6 @@
 use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::collections::hash_map::Entry;
 
 use identity::{Team, JobDescription, Agent};
 use life::{Commit, WorldState};
@@ -15,8 +14,7 @@ pub fn orientation(team: Team) -> f32 {
 }
 
 pub fn figurine_valuation(agent: Agent) -> f32 {
-    let Agent { team: team, job_description: job_description } = agent;
-    let value = match job_description {
+    let value = match agent.job_description {
         // en.wikipedia.org/wiki/
         // Chess_piece_relative_value#Hans_Berliner.27s_system
         JobDescription::Servant => 1.0,
@@ -26,7 +24,7 @@ pub fn figurine_valuation(agent: Agent) -> f32 {
         JobDescription::Princess => 8.8,
         JobDescription::Figurehead => 20000.0
     };
-    orientation(team) * value
+    orientation(agent.team) * value
 }
 
 pub fn score(world: WorldState) -> f32 {
@@ -122,7 +120,7 @@ pub fn alpha_beta_negamax_search(
         }
 
         if !cached {
-            let (after, mut acquired_value) = alpha_beta_negamax_search(
+            let (_, acquired_value) = alpha_beta_negamax_search(
                 premonition.tree, depth-1, -beta, -experienced_alpha,
                 deja_vu_table);
             value = -acquired_value;
@@ -151,8 +149,6 @@ pub fn alpha_beta_negamax_search(
 // for subsequent levels of the game tree; minimax is expensive enough
 // already!!
 pub fn kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
-    let team = world.to_move;
-
     // when we get non-ASCII identifiers: `déjà_vu_table`
     let mut deja_vu_table: HashMap<WorldState, f32> = HashMap::new();
     let mut premonitions = world.lookahead();

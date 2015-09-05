@@ -20,10 +20,7 @@ use argparse::{ArgumentParser, Store};
 use rustc_serialize::json;
 use time::*;
 
-use space::{Locale, Pinfield};
-use identity::{Team, JobDescription, Agent};
-use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
-use life::{WorldState, Patch, Commit};
+use life::{WorldState, Commit};
 use mind::kickoff;
 
 
@@ -142,6 +139,11 @@ fn main() {
             io::stdin()
                 .read_line(&mut input_buffer)
                 .ok().expect("couldn't read input");
+
+            if input_buffer.trim() == "quit" {
+                the_end(); 
+            }
+
             let choice: usize = match input_buffer.trim().parse() {
                 Ok(i) => i,
                 Err(e) => {
