@@ -3,6 +3,7 @@ extern crate itertools;
 
 extern crate argparse;
 extern crate ansi_term;
+extern crate rustc_serialize;
 extern crate time;
 
 mod space;
@@ -16,10 +17,46 @@ use std::io::Write;
 use std::process;
 
 use argparse::{ArgumentParser, Store};
+use rustc_serialize::json;
 use time::*;
 
 use life::{WorldState, Commit};
 use mind::kickoff;
+
+
+
+fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
+    let start_thinking = time::get_time();
+    let forecasts = kickoff(world, depth);
+    let stop_thinking = time::get_time();
+    let thinking_time = stop_thinking - start_thinking;
+    (forecasts, thinking_time)
+}
+
+
+fn oppose(in_medias_res: WorldState, depth: u8) -> (WorldState, Duration) {
+    let (forecasts, thinking_time) = forecast(in_medias_res, depth);
+    let (determination, _karma) = forecasts[0];
+    (determination.tree, thinking_time)
+}
+
+
+#[derive(RustcEncodable, RustcDecodable)]
+struct Postcard {
+    world: String,
+    thinking_time: u64
+}
+
+
+fn correspond(reminder: String, depth: u8) -> String {
+    let world = WorldState::reconstruct(reminder);
+    let (world_plus_tick, sidereal) = oppose(world, depth);
+    let postcard = Postcard {
+        world: world_plus_tick.preserve(),
+        thinking_time: sidereal.num_milliseconds() as u64
+    };
+    json::encode(&postcard).unwrap()
+}
 
 
 fn the_end() {
@@ -27,13 +64,14 @@ fn the_end() {
     process::exit(0);
 }
 
+
 fn main() {
     // Does argparse not offer a way to Store an argument (not a
     // hardcoded value) into an Option? Contribution opportunity if so??
     //
     // For now, use 0 like None.
     let mut lookahead_depth: u8 = 0;
-
+    let mut postcard: String = "".to_string();
     {
         let mut parser = ArgumentParser::new();
         parser.set_description("Leafline: an oppositional strategy game engine");
@@ -41,7 +79,17 @@ fn main() {
             &["--lookahead"], Store,
             "rank moves using AI minimax lookahead this deep."
         );
+        parser.refer(&mut postcard).add_option(
+            &["--correspond"], Store,
+            "just output the serialization of the AI's top move in response \
+             to the given serialized world-state"
+        );
         parser.parse_args_or_exit();
+    }
+
+    if !postcard.is_empty() {
+        println!("{}", correspond(postcard, lookahead_depth));
+        process::exit(0);
     }
 
     let mut world = WorldState::new();
@@ -66,10 +114,8 @@ fn main() {
                 }
             },
             _ => {
-                let start_thinking = time::get_time();
-                let forecasts = kickoff(world, lookahead_depth);
-                let stop_thinking = time::get_time();
-                let thinking_time = stop_thinking - start_thinking;
+                let (forecasts,
+                     thinking_time) = forecast(world, lookahead_depth);
                 world.display();
                 println!(
                     "(scoring alternatives {} levels deep took {} ms)",

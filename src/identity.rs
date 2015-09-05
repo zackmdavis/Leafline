@@ -101,6 +101,42 @@ impl Agent {
                     job_description: JobDescription::Figurehead } => 'k',
         }
     }
+
+    pub fn from_preservation_rune(rune: char) -> Self {
+        // XXX TODO FIXME: I've heard of code duplication, but this is
+        // ridiculous. Not to mention ridiculous. Think of some less
+        // tedious approach for looking up static ancillary data about an
+        // Agent class. Steven Fackler's "Rust-PHF" looks interesting ...
+        match rune {
+            'P' => Agent { team: Team::Orange,
+                           job_description: JobDescription::Servant },
+            'N' => Agent { team: Team::Orange,
+                           job_description: JobDescription::Pony },
+            'B' => Agent { team: Team::Orange,
+                           job_description: JobDescription::Scholar },
+            'R' => Agent { team: Team::Orange,
+                           job_description: JobDescription::Cop },
+            'Q' => Agent { team: Team::Orange,
+                           job_description: JobDescription::Princess },
+            'K' => Agent { team: Team::Orange,
+                           job_description: JobDescription::Figurehead },
+            'p' => Agent { team: Team::Blue,
+                           job_description: JobDescription::Servant },
+            'n' => Agent { team: Team::Blue,
+                           job_description: JobDescription::Pony },
+            'b' => Agent { team: Team::Blue,
+                           job_description: JobDescription::Scholar },
+            'r' => Agent { team: Team::Blue,
+                           job_description: JobDescription::Cop },
+            'q' => Agent { team: Team::Blue,
+                           job_description: JobDescription::Princess },
+            'k' => Agent { team: Team::Blue,
+                           job_description: JobDescription::Figurehead },
+            _ => panic!("Non-agent-preservation-rune passed to \
+                         `from_preservation_rune`, which is contrary to the \
+                         operation of the moral law!"),
+        }
+    }
 }
 
 impl fmt::Display for Agent {

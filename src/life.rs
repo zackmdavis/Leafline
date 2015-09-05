@@ -259,11 +259,66 @@ impl WorldState {
                 book.push('/')
             }
         }
+        let to_move_indication_rune = match self.to_move {
+            // TODO: think of some remotely plausible rationalization for 'w'
+            Team::Orange => 'w',
+            Team::Blue => 'b',
+        };
+        book.push(' ');
+        book.push(to_move_indication_rune);
         book
     }
 
     pub fn reconstruct(scan: String) -> Self {
-        Self::new() // TODO
+        let mut rank = 7;
+        let mut file = 0;
+        let mut world = WorldState::new_except_empty();
+        let mut volumes = scan.split(' ');
+        let positional_scan = volumes.next();
+        for rune in positional_scan.unwrap().chars() {
+            match rune {
+                '/' => {
+                    file = 0;
+                    rank -= 1;
+                },
+                empty_locales @ '0' ... '8' => {
+                    let file_offset: u8 = empty_locales
+                        .to_string().parse().unwrap();
+                    file += file_offset;
+                }
+                // XXX "If you use `@` with `|`, you need to make sure
+                // the name is bound in each part of the pattern" oh like
+                // that's ergonomic
+                r @ 'P' | r @ 'N' | r @ 'B' | r @ 'R' | r @ 'Q' | r @ 'K' |
+                r @ 'p' | r @ 'n' | r @ 'b' | r @ 'r' | r @ 'q' | r @ 'k' => {
+                    let agent = Agent::from_preservation_rune(r);
+                    let derived_pinfield;
+                    {
+                        let hot_pinfield = world.agent_to_pinfield_ref(agent);
+                        derived_pinfield = hot_pinfield.alight(
+                            Locale { rank: rank, file: file });
+                    }
+                    // XXX: this isn't Clojure; copying a
+                    // datastructure with a small diff actually has costs
+                    world = world.except_replaced_subboard(
+                        agent, derived_pinfield
+                    );
+                    file += 1;
+                },
+                _ => panic!("Unexpected rune is contrary to the operation \
+                             of the moral law."),
+            }
+        }
+        let rune_of_those_with_initiative = volumes
+            .next().unwrap().chars().next().unwrap();
+        world.to_move = match rune_of_those_with_initiative {
+            'w' => Team::Orange,
+            'b' => Team::Blue,
+            _ => panic!("Non-initiative-preserving-rune passed to \
+                         a match expecting such in a way contrary to the \
+                         operation of the moral law!"),
+        };
+        world
     }
 
     pub fn except_replaced_subboard(&self, for_whom: Agent,
@@ -875,10 +930,10 @@ mod test {
         // en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation#Examples
         let eden = WorldState::new();
         let book_of_eden =
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" // TODO w KQkq - 0 1
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w" // TODO KQkq - 0 1
             .to_string();
         assert_eq!(book_of_eden, eden.preserve());
-        // assert_eq!(WorldState::reconstruct(book_of_eden), eden); TODO
+        assert_eq!(eden, WorldState::reconstruct(book_of_eden));
 
         let patchset = vec![
             Patch { star: Agent { team: Team::Orange,
@@ -896,11 +951,11 @@ mod test {
         ];
 
         let book_of_patches = vec![
-            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR" // b KQkq e3 0 1
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b" // KQkq e3 0 1
                 .to_string(),
-            "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR" // w KQkq c6 0 2
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w" // KQkq c6 0 2
                 .to_string(),
-            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R" // b KQkq - 1 2
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b" // KQkq - 1 2
                 .to_string(),
         ];
 
@@ -909,7 +964,7 @@ mod test {
                 book_of_patches.into_iter()) {
             world = world.careful_apply(patch).unwrap().tree;
             assert_eq!(book, world.preserve());
-            // assert_eq!(WorldState::reconstruct(book), world); TODO
+            assert_eq!(WorldState::reconstruct(book), world);
         }
     }
 
