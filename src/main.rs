@@ -3,6 +3,7 @@ extern crate itertools;
 
 extern crate argparse;
 extern crate ansi_term;
+extern crate rustc_serialize;
 extern crate time;
 
 mod space;
@@ -16,6 +17,7 @@ use std::io::Write;
 use std::process;
 
 use argparse::{ArgumentParser, Store};
+use rustc_serialize::json;
 use time::*;
 
 use space::{Locale, Pinfield};
@@ -35,17 +37,28 @@ fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
 }
 
 
-fn oppose(in_medias_res: WorldState, depth: u8) -> WorldState {
-    let forecasts = kickoff(in_medias_res, depth);
+fn oppose(in_medias_res: WorldState, depth: u8) -> (WorldState, Duration) {
+    let (forecasts, thinking_time) = forecast(in_medias_res, depth);
     let (determination, _karma) = forecasts[0];
-    determination.tree
+    (determination.tree, thinking_time)
+}
+
+
+#[derive(RustcEncodable, RustcDecodable)]
+struct Postcard {
+    world: String,
+    thinking_time: u64
 }
 
 
 fn correspond(reminder: String, depth: u8) -> String {
     let world = WorldState::reconstruct(reminder);
-    let world_plus_tick = oppose(world, depth);
-    world_plus_tick.preserve()
+    let (world_plus_tick, sidereal) = oppose(world, depth);
+    let postcard = Postcard {
+        world: world_plus_tick.preserve(),
+        thinking_time: sidereal.num_milliseconds() as u64
+    };
+    json::encode(&postcard).unwrap()
 }
 
 
