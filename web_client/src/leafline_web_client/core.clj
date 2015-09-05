@@ -49,6 +49,12 @@
     (immutant/stop @http-server)
     (reset! http-server nil)))
 
+(defn restart-server! []
+  (stop-http-server)
+  (start-http-server
+   ;; Magnus Carlsen's peak ELO rating
+   2882))
+
 (defn stop-app []
   (stop-nrepl)
   (stop-http-server)
