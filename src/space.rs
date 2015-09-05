@@ -1,21 +1,18 @@
-use itertools::Itertools;
-
-
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 pub struct Locale {
     pub rank: u8,
     pub file: u8
 }
 
-static index_to_file_name: [char; 8] = [
+static INDEX_TO_FILE_NAME: [char; 8] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
 ];
 
 impl Locale {
 
     pub fn to_algebraic(&self) -> String {
-        format!("{}{}", index_to_file_name[self.file as usize], self.rank + 1)
-    }
+        format!("{}{}", INDEX_TO_FILE_NAME[self.file as usize], self.rank + 1)
+    } 
 
     // XXX: this should probably take a &str instead of String,
     // because the argument is typically going to be a string literal
@@ -61,7 +58,7 @@ impl Locale {
     pub fn multidisplace(&self, offset: (i8, i8),
                          factor: usize) -> Option<Self> {
         let mut local_locale_maybe = Some(*self);
-        for i in 0..factor {
+        for _ in 0..factor {
             // RESEARCH: is this inefficient (doing stuff in a loop,
             // instead of using multiplication ops that CPUs can do
             // natively? Or is LLVM a smart enough optimizer that it

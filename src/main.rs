@@ -98,7 +98,7 @@ fn main() {
                 .ok().expect("couldn't read input");
 
             if input_buffer.trim() == "quit" {
-                the_end();
+                the_end(); 
             }
 
             let choice: usize = match input_buffer.trim().parse() {

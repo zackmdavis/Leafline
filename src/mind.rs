@@ -1,7 +1,6 @@
 use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::collections::hash_map::Entry;
 
 use identity::{Team, JobDescription, Agent};
 use life::{Commit, WorldState};
