@@ -1,2 +1,11 @@
+# Cargo build directory
 target
+
+# personal development notes
 notes.txt
+
+# Python bytecode cache directory
+__pycache__/
+
+# "Chess" (?) board download zipball
+web_client/resources/chessboardjs-0.3.0.zip

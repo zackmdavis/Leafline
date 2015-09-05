@@ -41,6 +41,7 @@
    ;; let's not bother with CSRF protection, at least for now
    ;; (wrap-routes #'home-routes middleware/wrap-csrf)
    home-routes
+   (route/resources "/")
    (route/not-found
     (:body
      (error-page {:status 404
