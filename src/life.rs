@@ -4,8 +4,7 @@ use std::fmt;
 
 use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
-use motion::{SCHOLAR_OFFSETS, COP_OFFSETS, PRINCESS_OFFSETS,
-             PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
+use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
 
 /// represents the movement of a figurine
@@ -424,8 +423,8 @@ impl WorldState {
                     boost_offset).unwrap();
                 let standard_destination = start_locale.displace(
                     standard_offset).unwrap();
-                if (self.unoccupied().query(boost_destination) &&
-                    self.unoccupied().query(standard_destination)) {
+                if self.unoccupied().query(boost_destination) &&
+                    self.unoccupied().query(standard_destination) {
                     self.predict(
                         &mut premonitions,
                         Patch {

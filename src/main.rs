@@ -18,10 +18,7 @@ use std::process;
 use argparse::{ArgumentParser, Store};
 use time::*;
 
-use space::{Locale, Pinfield};
-use identity::{Team, JobDescription, Agent};
-use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
-use life::{WorldState, Patch, Commit};
+use life::{WorldState, Commit};
 use mind::kickoff;
 
 

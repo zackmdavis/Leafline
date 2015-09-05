@@ -1,16 +1,3 @@
-pub static SCHOLAR_OFFSETS: [(i8, i8); 4] = [
-    (-1, -1), (-1, 1), (1, -1), (1, 1)
-];
-
-pub static COP_OFFSETS: [(i8, i8); 4] = [
-    (-1, 0), (1, 0), (0, -1), (0, 1)
-];
-
-pub static PRINCESS_OFFSETS: [(i8, i8); 8] = [
-    (-1, -1), (-1, 0), (-1, 1), (0, -1),
-    (0, 1), (1, -1), (1, 0), (1, 1)
-];
-
 pub static PONY_MOVEMENT_TABLE: [u64; 64] = [
     132096,
     329728,
