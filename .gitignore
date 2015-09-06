@@ -20,4 +20,4 @@ web_client/resources/public/js/chessboard-0.3.0.js
 web_client/resources/public/js/chessboard-0.3.0.min.js
 
 # boring, mainstream JavaScript compiled from cool new ECMAScript 6
-web_client/resources/public/js/leafline_client-built.js
+web_client/resources/public/js/client-built.js

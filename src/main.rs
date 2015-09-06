@@ -20,7 +20,8 @@ use argparse::{ArgumentParser, Store};
 use rustc_serialize::json;
 use time::*;
 
-use life::{WorldState, Commit};
+use identity::Agent;
+use life::{WorldState, Commit, Patch};
 use mind::kickoff;
 
 
@@ -34,25 +35,29 @@ fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
 }
 
 
-fn oppose(in_medias_res: WorldState, depth: u8) -> (WorldState, Duration) {
+fn oppose(in_medias_res: WorldState, depth: u8) -> (Commit, Duration) {
     let (forecasts, thinking_time) = forecast(in_medias_res, depth);
     let (determination, _karma) = forecasts[0];
-    (determination.tree, thinking_time)
+    (determination, thinking_time)
 }
 
 
 #[derive(RustcEncodable, RustcDecodable)]
 struct Postcard {
     world: String,
+    patch: Patch,
+    hospitalization: Option<Agent>,
     thinking_time: u64
 }
 
 
 fn correspond(reminder: String, depth: u8) -> String {
     let world = WorldState::reconstruct(reminder);
-    let (world_plus_tick, sidereal) = oppose(world, depth);
+    let (commit, sidereal) = oppose(world, depth);
     let postcard = Postcard {
-        world: world_plus_tick.preserve(),
+        world: commit.tree.preserve(),
+        patch: commit.patch,
+        hospitalization: commit.hospitalization,
         thinking_time: sidereal.num_milliseconds() as u64
     };
     json::encode(&postcard).unwrap()
@@ -141,7 +146,7 @@ fn main() {
                 .ok().expect("couldn't read input");
 
             if input_buffer.trim() == "quit" {
-                the_end(); 
+                the_end();
             }
 
             let choice: usize = match input_buffer.trim().parse() {

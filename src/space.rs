@@ -1,4 +1,4 @@
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub struct Locale {
     pub rank: u8,
     pub file: u8
@@ -12,7 +12,7 @@ impl Locale {
 
     pub fn to_algebraic(&self) -> String {
         format!("{}{}", INDEX_TO_FILE_NAME[self.file as usize], self.rank + 1)
-    } 
+    }
 
     // XXX: this should probably take a &str instead of String,
     // because the argument is typically going to be a string literal

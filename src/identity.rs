@@ -3,7 +3,7 @@ use std::fmt;
 use ansi_term::Colour as Color;  // this is America
 
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub enum Team { Orange, Blue }
 
 impl Team {
@@ -21,7 +21,7 @@ impl Team {
     }
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub enum JobDescription {
     Servant,  // ♂
     Pony,  // ♀
@@ -31,7 +31,7 @@ pub enum JobDescription {
     Figurehead  // ♂
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub struct Agent {
     pub team: Team,
     pub job_description: JobDescription

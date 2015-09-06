@@ -8,7 +8,7 @@ use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
 
 /// represents the movement of a figurine
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub struct Patch {
     pub star: Agent,
     pub whence: Locale,

@@ -24,7 +24,8 @@ def download_statics():
 def compile_client():
     subprocess.check_output(
         ["babel",
-         "web_client/resources/public/js/leafline_client.js",
+         "web_client/resources/public/js/client.js",
+         "--watch",
          "--out-file",
-         "web_client/resources/public/js/leafline_client-built.js"]
+         "web_client/resources/public/js/client-built.js"]
     )
