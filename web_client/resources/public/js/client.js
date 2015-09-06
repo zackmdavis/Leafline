@@ -85,7 +85,7 @@ function transpireYear() {
 function printHeadline(team, figurine, whence, whither,
                        hospitalization, commentary) {
     let year = getYear();
-    let $headline = $('<p />').addClass("headline")
+    let $headline = $('<div />').addClass("headline")
         .attr('data-team', team).attr('data-year', year);
     let dateline;
     if (team === "Orange") {

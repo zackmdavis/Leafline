@@ -10,7 +10,9 @@
   (layout/render "home.html"))
 
 (defn about-page []
-  (layout/render "about.html"))
+  (layout/render
+   "about.html"
+   {:readme (-> "project_readme.md" io/resource slurp)}))
 
 (defn correspondence-endpoint [request]
   ;; TODO validate world, 400 if bad

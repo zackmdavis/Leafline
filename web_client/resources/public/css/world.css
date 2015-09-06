@@ -1,3 +1,13 @@
+#content {
+    margin-top: 15px;
+}
+
+#history {
+    background-color: #E0E0E0;
+    overflow-y: scroll;
+    height: 400px;
+}
+
 .agent-icon {
     width: 20px;
     height: auto;
@@ -6,4 +16,12 @@
 .commentary {
     font-size: 10px;
     color: #303060;
+}
+
+.headline {
+    line-height: 0px;
+}
+
+.agent-icon {
+    margin: 0px;
 }

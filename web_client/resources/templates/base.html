@@ -5,40 +5,30 @@
     <title>Welcome to leafline-web-client</title>
   </head>
   <body>
-    <!-- navbar -->
-    <div class="navbar navbar-inverse navbar-fixed-top">
-      <div class="container">
-        <div class="navbar-header">
-          <a class="navbar-brand" href="{{servlet-context}}/">leafline-web-client</a>
-        </div>
-        <div class="navbar-collapse collapse ">
-          <ul class="nav navbar-nav">
-            <li {% ifequal page "home.html" %} class="active"{%endifequal%}>
-              <a href="{{servlet-context}}/">Home</a>
-            </li>
-            <li {% ifequal page "about.html" %} class="active"{%endifequal%}>
-              <a href="{{servlet-context}}/about/">About</a>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
+    <nav class="top-bar" data-topbar role="navigation">
+      <ul class="title-area">
+        <li class="name">
+          <a href="/">
+            <img id="logo" src="/img/leafline_logo.png"/>
+          </a>
+        </li>
+      </ul>
 
-    <div class="container">
-      {% block content %}
-      {% endblock %}
-    </div>
+      <section class="top-bar-section">
+        <ul class="left">
+          <li><a href="{{servlet-context}}/about/">About</a></li>
+        </ul>
+      </section>
+    </nav>
+
+    {% block content %}
+    {% endblock %}
+
     <!-- scripts and styles -->
-    {% style "/assets/bootstrap/css/bootstrap.min.css" %}
-    {% style "/assets/bootstrap/css/bootstrap-theme.min.css" %}
-    {% style "/css/screen.css" %}
-
+    {% style "/assets/foundation/css/foundation.min.css" %}
+    {% style "/css/site.css" %}
     {% script "/assets/jquery/jquery.min.js" %}
-    {% script "/assets/bootstrap/js/bootstrap.min.js" %}
 
-    <script type="text/javascript">
-      var context = "{{servlet-context}}";
-    </script>
 
     {% block page-styles %}
     {% endblock %}

@@ -1,4 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-  <p>Leafline is an oppositional strategy game engine!</p>
+  <div id="content">
+    <div class="row">
+      {{ readme|markdown }}
+    </div>
+  </div>
+
+
 {% endblock %}
