@@ -1,4 +1,4 @@
-(defproject leafline-web-client "0.0.7"
+(defproject leafline-web-client "0.0.8"
 
   :description "Web client for the Leafline oppositional strategy game engine"
   :url "https://github.com/zackmdavis/Leafline"
