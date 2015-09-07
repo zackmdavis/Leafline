@@ -27,7 +27,7 @@ use mind::kickoff;
 
 fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
     let start_thinking = time::get_time();
-    let forecasts = kickoff(world, depth);
+    let forecasts: Vec<(Commit, f32)> = kickoff(world, depth);
     let stop_thinking = time::get_time();
     let thinking_time = stop_thinking - start_thinking;
     (forecasts, thinking_time)
@@ -36,7 +36,7 @@ fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
 
 fn oppose(in_medias_res: WorldState, depth: u8) -> (WorldState, Duration) {
     let (forecasts, thinking_time) = forecast(in_medias_res, depth);
-    let (determination, _karma) = forecasts[0];
+    let (ref determination, _karma) = forecasts[0];
     (determination.tree, thinking_time)
 }
 
@@ -121,11 +121,14 @@ fn main() {
                     "(scoring alternatives {} levels deep took {} ms)",
                     lookahead_depth, thinking_time.num_milliseconds()
                  );
-                for (index,
-                     &(premonition, score)) in forecasts.iter().enumerate() {
-                    println!("{:>2}. {} (score {})", index, premonition, score);
+                for (index, prem_score) in forecasts.iter().enumerate() {
+                    println!("{:>2}. {} (score {})", index, prem_score.0, prem_score.1);
                 }
-                premonitions = forecasts.iter().map(|t| t.0).collect::<Vec<_>>();
+                premonitions = vec!();
+                for prem_score in forecasts {
+                    premonitions.push(prem_score.0);
+                }
+
                 if premonitions.len() == 0 {
                     the_end();
                 }

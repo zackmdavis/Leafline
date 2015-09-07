@@ -20,7 +20,7 @@ pub struct Patch {
 /// the figurine moved, the state of the world after the turn (`tree`),
 /// and whether an opposing figurine was stunned and put in the hospital,
 /// and if so, which one
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
+#[derive(Eq,PartialEq,Debug,Hash)]
 pub struct Commit {
     pub patch: Patch,
     pub tree: WorldState,
