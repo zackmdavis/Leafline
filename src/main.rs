@@ -1,4 +1,7 @@
+#![feature(test)]
+
 #[macro_use]
+
 extern crate itertools;
 
 extern crate argparse;

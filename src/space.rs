@@ -32,7 +32,7 @@ impl Locale {
     }
 
     pub fn pinpoint(&self) -> Pinfield {
-        Pinfield(2u64.pow(self.pindex()))
+        Pinfield(1u64 << self.pindex())
     }
 
     pub fn is_legal(&self) -> bool {
@@ -164,7 +164,7 @@ impl Pinfield {
 
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::{Locale, Pinfield};
 
     static algebraics: [&'static str; 64] = [
