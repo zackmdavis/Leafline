@@ -61,9 +61,7 @@ impl Locale {
         let (real_rank, real_file) = (factor*rank_offset, factor*file_offset);
 
         let potential_locale = Locale {
-            // XXX: it won't happen with the arguments we expect to
-            // give it in this program, but in the interests of Safety,
-            // this is an overflow bug (-1i8 as u8 == 255u8)
+            // XXX: could overflow given unrealistic arguments
             rank: (self.rank as i8 + real_rank) as u8,
             file: (self.file as i8 + real_file) as u8
         };
@@ -136,8 +134,8 @@ impl Pinfield {
         for rank in 0..8 {
             for file in 0..8 {
                 if bitfield & bits != 0 {
-                    let potential_locale = Locale { rank: rank as u8, file: file  as u8 };
-                    locales.push(potential_locale);
+                    let locale = Locale { rank: rank, file: file };
+                    locales.push(locale);
                 }
                 bitfield <<= 1;
             }

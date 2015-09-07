@@ -117,7 +117,7 @@ pub fn alpha_beta_negamax_search(
     let mut optimand = None;
     for premonition in premonitions.into_iter() {
         let mut value: f32;
-        let mut cached: bool;
+        let cached: bool;
         {
             let cached_value_maybe = deja_vu_table.get(&premonition.tree);
             match cached_value_maybe {
@@ -198,7 +198,6 @@ pub fn kickoff(world: &WorldState,
 mod tests {
     extern crate test;
     use self::test::Bencher;
-    use time;
 
     use super::{kickoff, score};
     use space::Locale;
@@ -212,29 +211,29 @@ mod tests {
     }
 
     #[bench]
-    fn benchmark_kickoff_d1(b: &mut Bencher) {
+    fn benchmark_kickoff_depth_1(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(move || kickoff(&ws, 1, true));
+        b.iter(|| kickoff(&ws, 1, true));
     }
 
     #[bench]
-    fn benchmark_kickoff_d2_nihil(b: &mut Bencher) {
+    fn benchmark_kickoff_depth_2_arbys(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| kickoff(&ws, 2, true));
     }
 
     #[bench]
-    fn benchmark_kickoff_d2_arbys(b: &mut Bencher) {
+    fn benchmark_kickoff_depth_2_carefully(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| kickoff(&ws, 2, false));
     }
 
-    /*
+    #[ignore]
     #[bench]
-    fn benchmark_kickoff_d3(b: &mut Bencher) {
-        b.iter(|| kickoff(WorldState::new(), 3));
+    fn benchmark_kickoff_depth_3(b: &mut Bencher) {
+        let ws = WorldState::new();
+        b.iter(|| kickoff(&ws, 3, true));
     }
-    */
 
     #[test]
     fn concerning_fairness_of_the_initial_position() {
@@ -271,16 +270,7 @@ mod tests {
         );
 
         let depth = 2;
-        let start = time::get_time();
         let advisory = kickoff(&world, depth, true);
-        let end = time::get_time();
-
-        // (you can see this if you run the tests with `-- --nocapture`)
-        println!("negamax kickoff: evaluating {} possible choices to \
-                  depth {} took {:?}", advisory.len(), depth, end-start);
-        //for item in advisory.iter() {
-            //println!("{:?}", item);
-        //}
 
         // taking the pony is the right thing to do
         assert_eq!(Locale { rank: 0, file: 0 }, advisory[0].0.patch.whither);
@@ -303,7 +293,7 @@ mod tests {
             Locale { rank: 2, file: 2 }
         );
 
-        // pony endanger servant
+        // pony endangers servant
         negaworld.orange_servants = negaworld.orange_servants.alight(
             Locale { rank: 7, file: 1 }
         );

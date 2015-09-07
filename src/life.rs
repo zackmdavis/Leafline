@@ -577,8 +577,8 @@ impl WorldState {
                             // of recalculating (`unoccupied` is just `occupied().invert()`, of
                             // which we're already calculating half.) This appears to slow things
                             // down! I also tried only making the occupied_by call if empty were
-                            // false, but that also slows things down?? that one i can see being
-                            // maybe a code size issue or something? i'm very confused.
+                            // false, but that also slows things down?? That one I can see being
+                            // maybe a code size issue or something? I'm very confused.
                             let empty = self.unoccupied().query(destination);
                             let friend = self.occupied_by(
                                 agent.team).query(destination);
