@@ -148,6 +148,7 @@ impl Pinfield {
     }
 
     // TODO: convert to Display::fmt
+    #[allow(dead_code)]
     pub fn display(&self) {
         for rank in 0..8 {
             for file in 0..8 {
@@ -167,7 +168,7 @@ impl Pinfield {
 mod test {
     use super::{Locale, Pinfield};
 
-    static algebraics: [&'static str; 64] = [
+    static ALGEBRAICS: [&'static str; 64] = [
         "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
         "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
         "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
@@ -182,7 +183,7 @@ mod test {
     fn concerning_converting_to_algebraic() {
         let actual = iproduct!(0..8, 0..8).map(
             |t| Locale { rank: t.0, file: t.1 }).map(|l| l.to_algebraic());
-        for (expectation, actuality) in algebraics.iter().zip(actual) {
+        for (expectation, actuality) in ALGEBRAICS.iter().zip(actual) {
             // TODO: it's more elegant if the `.to_string` happens in
             // the iterator rather than the body of this
             // assertion-iteration
@@ -194,7 +195,7 @@ mod test {
     fn concerning_converting_from_algebraic() {
         let expected = iproduct!(0..8, 0..8).map(
             |t| Locale { rank: t.0, file: t.1 });
-        for (expectation, actuality) in expected.zip(algebraics.iter()) {
+        for (expectation, actuality) in expected.zip(ALGEBRAICS.iter()) {
             assert_eq!(
                 expectation,
                 // TODO: again, `to_string` in iterator

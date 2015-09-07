@@ -74,6 +74,7 @@ fn order_moves(commits: &mut Vec<Commit>) {
 }
 
 
+#[allow(dead_code)]  // somehow feel like leaving this checked in for now
 pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
     let team = world.to_move;
     let mut premonitions = world.reckless_lookahead();
@@ -189,9 +190,10 @@ pub fn kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
 mod test {
     use time;
 
-    use super::{negamax_search, kickoff, score};
+    use super::{kickoff, score};
     use space::Locale;
     use life::WorldState;
+    use identity::Team;
 
     #[test]
     fn concerning_fairness_of_the_initial_position() {
@@ -250,6 +252,7 @@ mod test {
         // two levels of abstraction above twiddling bits on an unsigned
         // int ... oh, well
         let mut negaworld = WorldState::new_except_empty();
+        negaworld.to_move = Team::Blue;
 
         // scholar endangers pony
         negaworld.orange_ponies = negaworld.orange_ponies.alight(
@@ -276,7 +279,8 @@ mod test {
 
         // taking the pony is still the right thing to do, even in the
         // negaworld
-        assert_eq!(Locale { rank: 0, file: 0 }, advisory[0].0.patch.whither);
+        assert_eq!(Locale { rank: 0, file: 0 },
+                   negadvisory[0].0.patch.whither);
     }
 
 }
