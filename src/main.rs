@@ -31,7 +31,7 @@ use mind::kickoff;
 
 fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
     let start_thinking = time::get_time();
-    let forecasts: Vec<(Commit, f32)> = kickoff(world, depth);
+    let forecasts: Vec<(Commit, f32)> = kickoff(&world, depth, false);
     let stop_thinking = time::get_time();
     let thinking_time = stop_thinking - start_thinking;
     (forecasts, thinking_time)

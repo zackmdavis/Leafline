@@ -573,6 +573,12 @@ impl WorldState {
                         offset, venture);
                     match destination_maybe {
                         Some(destination) => {
+                            // Beware: I tried to "fix" this by making it reuse pinfields instead
+                            // of recalculating (`unoccupied` is just `occupied().invert()`, of
+                            // which we're already calculating half.) This appears to slow things
+                            // down! I also tried only making the occupied_by call if empty were
+                            // false, but that also slows things down?? that one i can see being
+                            // maybe a code size issue or something? i'm very confused.
                             let empty = self.unoccupied().query(destination);
                             let friend = self.occupied_by(
                                 agent.team).query(destination);
@@ -648,17 +654,17 @@ impl WorldState {
         let mut premonitions = Vec::new();
         let moving_team = self.to_move;
         premonitions.extend(self.servant_lookahead(
-            moving_team, nihilistically).into_iter());
+            moving_team, nihilistically));
         premonitions.extend(self.pony_lookahead(
-            moving_team, nihilistically).into_iter());
+            moving_team, nihilistically));
         premonitions.extend(
-            self.scholar_lookahead(moving_team, nihilistically).into_iter());
+            self.scholar_lookahead(moving_team, nihilistically));
         premonitions.extend(
-            self.cop_lookahead(moving_team, nihilistically).into_iter());
+            self.cop_lookahead(moving_team, nihilistically));
         premonitions.extend(
-            self.princess_lookahead(moving_team, nihilistically).into_iter());
+            self.princess_lookahead(moving_team, nihilistically));
         premonitions.extend(
-            self.figurehead_lookahead(moving_team, nihilistically).into_iter());
+            self.figurehead_lookahead(moving_team, nihilistically));
         premonitions
     }
 
@@ -699,10 +705,81 @@ impl WorldState {
 
 
 #[cfg(test)]
-mod test {
+mod tests {
+    extern crate test;
+    use self::test::Bencher;
     use super::{WorldState, Patch, Commit};
-    use space::{Locale, Pinfield};
+    use space::Locale;
     use identity::{Team, JobDescription, Agent};
+
+    #[bench]
+    fn benchmark_servant_lookahead(b: &mut Bencher) {
+        let ws = WorldState::reconstruct(
+            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+        b.iter(|| ws.servant_lookahead(Team::Orange, false));
+    }
+
+    #[bench]
+    fn benchmark_pony_lookahead(b: &mut Bencher) {
+        let ws = WorldState::reconstruct(
+            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+        b.iter(|| ws.pony_lookahead(Team::Orange, false));
+    }
+
+    #[bench]
+    fn benchmark_scholar_lookahead(b: &mut Bencher) {
+        let ws = WorldState::reconstruct(
+            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+        b.iter(|| ws.scholar_lookahead(Team::Orange, false));
+    }
+
+    #[bench]
+    fn benchmark_cop_lookahead(b: &mut Bencher) {
+        let ws = WorldState::reconstruct(
+            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+        ws.cop_lookahead(Team::Orange, false);
+        ws.cop_lookahead(Team::Orange, false);
+        ws.cop_lookahead(Team::Orange, false);
+        ws.cop_lookahead(Team::Orange, false);
+        b.iter(|| ws.cop_lookahead(Team::Orange, false));
+    }
+
+    #[bench]
+    fn benchmark_princess_lookahead(b: &mut Bencher) {
+        let ws = WorldState::reconstruct(
+            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+        b.iter(|| ws.princess_lookahead(Team::Orange, false));
+    }
+
+    #[bench]
+    fn benchmark_figurehead_lookahead(b: &mut Bencher) {
+        let ws = WorldState::reconstruct(
+            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+        b.iter(|| ws.figurehead_lookahead(Team::Orange, false));
+    }
+
+    #[bench]
+    fn benchmark_new_lookahead(b: &mut Bencher) {
+        let ws = WorldState::new();
+        b.iter(|| ws.lookahead());
+    }
+
+    #[bench]
+    fn benchmark_non_new_lookahead(b: &mut Bencher) {
+        // a randomly chosen "complicated" looking position from a Kasparov
+        // game
+        let ws = WorldState::reconstruct(
+            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+        b.iter(|| ws.lookahead());
+    }
+
+    #[bench]
+    fn benchmark_ultimate_endangerment(b: &mut Bencher ){
+        let ws = WorldState::reconstruct(
+            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+        b.iter(|| ws.in_critical_endangerment(Team::Orange));
+
+    }
 
     #[test]
     fn test_agent_to_pinfield_ref_on_new_gamestate() {
