@@ -58,6 +58,8 @@ pub struct WorldState {
     pub orange_cops: Pinfield,
     pub orange_princesses: Pinfield,
     pub orange_figurehead: Pinfield,
+    pub orange_can_kcastle: bool,
+    pub orange_can_qcastle: bool,
 
     pub blue_servants: Pinfield,
     pub blue_ponies: Pinfield,
@@ -65,7 +67,12 @@ pub struct WorldState {
     pub blue_cops: Pinfield,
     pub blue_princesses: Pinfield,
     pub blue_figurehead: Pinfield,
+    pub blue_can_kcastle: bool,
+    pub blue_can_qcastle: bool,
 }
+
+const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 }; 
+const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 }; 
 
 impl WorldState {
     pub fn new() -> Self {
@@ -94,7 +101,10 @@ impl WorldState {
             orange_princesses: Pinfield::init(
                 &vec![Locale { rank: 0, file: 3 }]),
             orange_figurehead: Pinfield::init(
-                &vec![Locale { rank: 0, file: 4 }]),
+                &vec![ORANGE_FIGUREHEAD_START]),
+            orange_can_kcastle: true,
+            orange_can_qcastle: true,
+
             blue_servants: Pinfield::init(&blue_servant_locales),
             blue_ponies: Pinfield::init(
                 &vec![Locale { rank: 7, file: 1 },
@@ -111,7 +121,9 @@ impl WorldState {
             blue_princesses: Pinfield::init(
                 &vec![Locale { rank: 7, file: 3 }]),
             blue_figurehead: Pinfield::init(
-                &vec![Locale { rank: 7, file: 4 }]),
+                &vec![BLUE_FIGUREHEAD_START]),
+            blue_can_kcastle: true,
+            blue_can_qcastle: true,
         }
     }
 
@@ -127,6 +139,8 @@ impl WorldState {
             orange_cops: Pinfield::new(),
             orange_princesses: Pinfield::new(),
             orange_figurehead: Pinfield::new(),
+            orange_can_kcastle: true,
+            orange_can_qcastle: true,
 
             blue_servants: Pinfield::new(),
             blue_ponies: Pinfield::new(),
@@ -134,6 +148,8 @@ impl WorldState {
             blue_cops: Pinfield::new(),
             blue_princesses: Pinfield::new(),
             blue_figurehead: Pinfield::new(),
+            blue_can_kcastle: true,
+            blue_can_qcastle: true,
         }
     }
 
@@ -218,6 +234,20 @@ impl WorldState {
             Agent{ team: Team::Blue,
                    job_description: JobDescription::Figurehead } =>
                 &mut self.blue_figurehead,
+        }
+    }
+
+    pub fn is_being_leered_at_by(&self, locale: Locale, team: Team) -> bool {
+        let agent = Agent { team: team.opposition(), job_description: JobDescription::Figurehead };
+        let pinfield = self.agent_to_pinfield_ref(agent);
+        let mut tree = self.except_replaced_subboard(
+            agent, pinfield.alight(locale));
+        tree.to_move = team;
+        let prems = tree.reckless_lookahead();
+        if prems.iter().any(|c| (*c).patch.whither == locale) {
+            true
+        } else {
+            false
         }
     }
 
@@ -646,6 +676,69 @@ impl WorldState {
         )
     }
 
+    pub fn castle_lookahead(&self, team: Team, nihilistically: bool) -> Vec<Commit> {
+        let mut premonitions = Vec::<Commit>::new();
+
+        let (kcastle, qcastle) = match team {
+            Team::Orange => (self.orange_can_kcastle, self.orange_can_qcastle),
+            Team::Blue => (self.blue_can_kcastle, self.blue_can_qcastle),
+        };
+            
+
+        // the king must be on the home square, having never moved before;
+        // otherwise we wouldnt have gotten here because `TEAM_can_castle` is true.
+
+        let agent = Agent {
+            team: team,
+            job_description: JobDescription::Figurehead
+        };
+
+
+        let home_rank = match team {
+            Team::Orange => 0,
+            Team::Blue => 7
+        };
+        let mut locales_to_query = Vec::new();
+        if qcastle {
+            locales_to_query.push(
+                (vec![
+                 Locale { rank: home_rank, file: 1 },
+                 Locale { rank: home_rank, file: 2 },
+                 Locale { rank: home_rank, file: 3 }],
+                 Patch {
+                     star: agent,
+                     whence: Locale { rank: home_rank, file: 4 },
+                     whither: Locale { rank: home_rank, file: 2 }
+                 }));
+        }
+        if kcastle {
+            locales_to_query.push(
+                (vec![
+                 Locale { rank: home_rank, file: 5 },
+                 Locale { rank: home_rank, file: 6 }],
+                 Patch {
+                     star: agent,
+                     whence: Locale { rank: home_rank, file: 4 },
+                     whither: Locale { rank: home_rank, file: 6 }
+                 }));
+        }
+        let unoc = self.unoccupied();
+        for (locales, patch) in locales_to_query {
+            if locales.iter().all(|l| unoc.query(*l)) {
+                if !locales.iter().any(
+                        |l| self.is_being_leered_at_by(*l, team.opposition())) {
+                    self.predict(
+                        &mut premonitions,
+                        patch,
+                        nihilistically
+                    );
+                }
+            }
+        }
+
+        premonitions
+    }
+
     fn underlookahead(&self, nihilistically: bool) -> Vec<Commit> {
         // Would it be profitable to make this return an iterator (so
         // that you could break without generating all the premonitions
@@ -665,6 +758,8 @@ impl WorldState {
             self.princess_lookahead(moving_team, nihilistically));
         premonitions.extend(
             self.figurehead_lookahead(moving_team, nihilistically));
+        premonitions.extend(
+            self.castle_lookahead(moving_team, nihilistically));
         premonitions
     }
 
@@ -780,6 +875,51 @@ mod tests {
             "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
         b.iter(|| ws.in_critical_endangerment(Team::Orange));
 
+    }
+
+    #[test]
+    fn basic_leering_test() {
+        assert![WorldState::new().is_being_leered_at_by(
+            Locale { rank: 2, file: 5 }, Team::Orange)]
+    }
+
+    #[test]
+    fn concerning_castling_legality() {
+        assert_eq!(true, WorldState::new().orange_can_kcastle);
+        assert_eq!(true, WorldState::new().blue_can_kcastle);
+        assert_eq!(true, WorldState::new().orange_can_qcastle);
+        assert_eq!(true, WorldState::new().blue_can_qcastle);
+    }
+
+    #[test]
+    fn concerning_castling() {
+        let mut ws = WorldState::reconstruct(
+            "8/8/4k3/8/8/8/8/4K2R w".to_string());
+        ws.orange_can_qcastle = false;
+        let mut prems = ws.castle_lookahead(Team::Orange, false);
+        assert_eq!(1, prems.len());
+
+        ws = WorldState::reconstruct(
+            "8/8/4k3/8/8/8/8/R3K2R w".to_string());
+        prems = ws.castle_lookahead(Team::Orange, false);
+        assert_eq!(2, prems.len());
+
+        ws = WorldState::reconstruct(
+            "8/8/4k3/8/8/8/8/R3KN1R w".to_string());
+        prems = ws.castle_lookahead(Team::Orange, false);
+        assert_eq!(1, prems.len());
+
+        ws = WorldState::reconstruct(
+            "8/8/4k3/8/8/4b3/8/R3KN1R w".to_string());
+        // can't move into check
+        prems = ws.castle_lookahead(Team::Orange, false);
+        assert_eq!(0, prems.len());
+
+        ws = WorldState::reconstruct(
+            "8/8/4k3/8/b7/8/8/R3KN1R w - - 0 1".to_string());
+        // can't move THROUGH check, either!
+        prems = ws.castle_lookahead(Team::Orange, false);
+        assert_eq!(0, prems.len());
     }
 
     #[test]

@@ -117,7 +117,7 @@ pub fn alpha_beta_negamax_search(
     let mut optimand = None;
     for premonition in premonitions.into_iter() {
         let mut value: f32;
-        let mut cached: bool;
+        let cached: bool;
         {
             let cached_value_maybe = deja_vu_table.get(&premonition.tree);
             match cached_value_maybe {
@@ -205,6 +205,17 @@ mod tests {
     use life::WorldState;
     use identity::Team;
 
+    impl WorldState {
+        fn no_castling_at_all(&mut self) {
+            // Mutating in place?? &mut self?? this kind of atrocity must never live
+            // outside of a tests module!
+            self.orange_can_kcastle = false;
+            self.orange_can_qcastle = false;
+            self.blue_can_kcastle = false;
+            self.blue_can_qcastle = false;
+        }
+    }
+
 
     #[bench]
     fn benchmark_scoring(b: &mut Bencher) {
@@ -269,6 +280,7 @@ mod tests {
         world.blue_servants = world.blue_servants.alight(
             Locale { rank: 3, file: 6 }
         );
+        world.no_castling_at_all();
 
         let depth = 2;
         let start = time::get_time();
@@ -278,10 +290,9 @@ mod tests {
         // (you can see this if you run the tests with `-- --nocapture`)
         println!("negamax kickoff: evaluating {} possible choices to \
                   depth {} took {:?}", advisory.len(), depth, end-start);
-        //for item in advisory.iter() {
-            //println!("{:?}", item);
-        //}
 
+        world.display();
+        advisory[0].0.tree.display();
         // taking the pony is the right thing to do
         assert_eq!(Locale { rank: 0, file: 0 }, advisory[0].0.patch.whither);
 
@@ -317,6 +328,7 @@ mod tests {
         );
         negaworld.to_move = Team::Blue;
 
+        negaworld.no_castling_at_all();
 
         let negadvisory = kickoff(&negaworld, depth, true);
 
