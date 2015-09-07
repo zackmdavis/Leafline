@@ -151,6 +151,7 @@ impl Pinfield {
     }
 
     // TODO: convert to Display::fmt
+    #[allow(dead_code)]
     pub fn display(&self) {
         for rank in 0..8 {
             for file in 0..8 {

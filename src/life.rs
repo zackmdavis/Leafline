@@ -678,6 +678,7 @@ impl WorldState {
 
     // XXX TODO FIXME: Orange should appear at the bottom and we
     // should use the fmt::Display trait
+    #[allow(dead_code)]
     pub fn display(&self) {
         println!("  a b c d e f g h");
         for rank in 0..8 {
