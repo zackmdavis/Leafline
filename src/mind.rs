@@ -185,13 +185,36 @@ pub fn kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
 }
 
 
+
 #[cfg(test)]
-mod test {
+mod tests {
+    extern crate test;
+    use self::test::Bencher;
     use time;
 
-    use super::{negamax_search, kickoff, score};
+    use super::{kickoff, score};
     use space::Locale;
     use life::WorldState;
+
+    #[bench]
+    fn benchmark_scoring(b: &mut Bencher) {
+        b.iter(|| score(WorldState::new()));
+    }
+
+    #[bench]
+    fn benchmark_kickoff_d1(b: &mut Bencher) {
+        b.iter(|| kickoff(WorldState::new(), 1));
+    }
+
+    #[bench]
+    fn benchmark_kickoff_d2(b: &mut Bencher) {
+        b.iter(|| kickoff(WorldState::new(), 2));
+    }
+
+    #[bench]
+    fn benchmark_kickoff_d3(b: &mut Bencher) {
+        b.iter(|| kickoff(WorldState::new(), 3));
+    }
 
     #[test]
     fn concerning_fairness_of_the_initial_position() {
@@ -276,7 +299,7 @@ mod test {
 
         // taking the pony is still the right thing to do, even in the
         // negaworld
-        assert_eq!(Locale { rank: 0, file: 0 }, advisory[0].0.patch.whither);
+        assert_eq!(Locale { rank: 0, file: 0 }, negadvisory[0].0.patch.whither);
     }
 
 }
