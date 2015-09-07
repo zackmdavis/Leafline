@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 from urllib.request import urlretrieve
 
 from invoke import task, run
@@ -20,12 +21,14 @@ def download_statics():
     install_chessboard_js()
 
 
+BABEL_COMMAND = [
+    "babel", "web_client/resources/public/js/client.js",
+    "--watch",
+    "--out-file", "web_client/resources/public/js/client-built.js"
+]
+
 @task
 def compile_client():
-    subprocess.check_output(
-        ["babel",
-         "web_client/resources/public/js/client.js",
-         "--watch",
-         "--out-file",
-         "web_client/resources/public/js/client-built.js"]
-    )
+    subprocess_runner = (subprocess.run if sys.version_info >= (3, 5)
+                         else subprocess.call)
+    subprocess_runner(BABEL_COMMAND)

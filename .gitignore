@@ -21,3 +21,10 @@ web_client/resources/public/js/chessboard-0.3.0.min.js
 
 # boring, mainstream JavaScript compiled from cool new ECMAScript 6
 web_client/resources/public/js/client-built.js
+
+# virtualenv droppings (yes, I know this isn't even a Python project; humor me)
+bin/
+lib/
+lib64
+pyvenv.cfg
+pip-selfcheck.json
