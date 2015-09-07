@@ -4,6 +4,8 @@ use std::collections::HashMap;
 
 use identity::{Team, JobDescription, Agent};
 use life::{Commit, WorldState};
+use motion::CENTER_OF_THE_WORLD;
+use space::Pinfield;
 
 
 pub fn orientation(team: Team) -> f32 {
@@ -29,6 +31,7 @@ pub fn figurine_valuation(agent: Agent) -> f32 {
 
 pub fn score(world: WorldState) -> f32 {
     let mut valuation = 0.0;
+
     for team in Team::league().into_iter() {
         for agent in Agent::dramatis_personae(team).into_iter() {
             valuation += world.agent_to_pinfield_ref(
@@ -37,11 +40,22 @@ pub fn score(world: WorldState) -> f32 {
         // breadth of scholarship bonus
         if world.agent_to_pinfield_ref(
             Agent { team: team,
-              job_description: JobDescription::Scholar }
+                    job_description: JobDescription::Scholar }
             ).to_locales().len() >= 2 {
                 valuation += orientation(team) * 0.5
         }
     }
+
+    // ponies and servants want to be in the center of the world's
+    // action, maybe??
+    let center = Pinfield(CENTER_OF_THE_WORLD);
+    // cast to signed to avoid overflow
+    let orange_centerism: i8 = world.orange_servants.union(
+        world.orange_ponies).intersection(center).pincount() as i8;
+    let blue_centerism: i8 = world.blue_servants.union(
+        world.blue_ponies).intersection(center).pincount() as i8;
+    valuation += (orange_centerism - blue_centerism) as f32 * 0.1;
+
     valuation
 }
 

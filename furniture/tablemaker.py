@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
 
-# XXX TODO FIXME: needs to be updated; this would overwrite
-# SCHOLAR_OFFSETS, COP_OFFSETS, and PRINCESS_OFFSETS in motion.rs; a
-# probable fix is to generate them here, too ... but on the other
-# hand, static arrays of different lengths are hard to work with due
-# to Rust's Stalinist type system, so maybe that information can live
-# somewhere else anyway.
-
 import itertools
 from functools import reduce
 import operator
@@ -23,6 +16,12 @@ def displace(position, offset):
 def is_legal(position):
     return all(0 <= directional < 8 for directional in position)
 
+
+def center_of_the_world():
+    return reduce(operator.ior,
+                  [rank_and_file_to_u64(position)
+                   for position in itertools.product(range(2, 6), repeat=2)])
+
 PONY_OPTIONS = ((+1, +2), (-1, +2), (+1, -2), (-1, -2),
                 (+2, +1), (-2, +1), (+2, -1), (-2, -1))
 
@@ -30,6 +29,7 @@ FIGUREHEAD_OPTIONS = [(i, j)
                       for i in (-1, 0, 1)
                       for j in (-1, 0, 1)
                       if not i == j == 0]
+
 
 def universal_distribution(options):
     return [reduce(operator.ior,
@@ -50,8 +50,10 @@ if __name__ == "__main__":
               'w') as motion_rs:
         motion_rs.write(
             '\n\n'.join(
-                [the_book_of_life(
-                    "pony", universal_distribution(PONY_OPTIONS)),
+                ["pub static CENTER_OF_THE_WORLD: u64 = {};".format(
+                    center_of_the_world()),
+                 the_book_of_life(
+                     "pony", universal_distribution(PONY_OPTIONS)),
                  the_book_of_life(
                      "figurehead", universal_distribution(FIGUREHEAD_OPTIONS))]
             )

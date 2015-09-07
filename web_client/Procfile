@@ -1,0 +1,1 @@
+web: java $JVM_OPTS -cp target/leafline-web-client.jar clojure.main -m leafline-web-client.core
