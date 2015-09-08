@@ -33,11 +33,13 @@ function sendPostcard(news) {
         url: "/write/",
         method: 'POST',
         data: {
-            world: ChessBoard.objToFen(news),
+            world: preserveExtendedWorld(news, secretServiceEligibilities),
         },
         success: function (data, textStatus, jqxhr) {
             console.log(`received response ${JSON.stringify(data)}`);
-            world.position(data.world);
+            let [newWorld, _toMove, newEligibilities] = data.world.split(/ /);
+            world.position(newWorld);
+            secretServiceEligibilities = newEligibilities;
             let commentary = ` (after ${data.thinking_time} ms thinking time)`;
             // XXX we are not really respecting the separation of
             // concerns here; mixing logic and presentation will only
@@ -113,10 +115,20 @@ function printHeadline(team, figurine, whence, whither,
     $history.append($headline);
 }
 
+function preserveExtendedWorld(narrowWorld, eligibilities) {
+    // XXX: 'b' as the initiative-preserving rune because for now all
+    // our assumptions affirm that we use the function only to send a
+    // postcard to the server, who is playing blue. But you'd probably
+    // want to generalize this and actually store that bit (literally
+    // one information-theoretic bit) of state in the client.
+    return `${ChessBoard.objToFen(narrowWorld)} b ${eligibilities}`;
+}
+
 const configuration = {
     position: 'start',
     draggable: true,
     pieceTheme: 'img/figurines/{piece}.png',
     onDrop: dropHandler,
 };
+let secretServiceEligibilities = "KQkq";
 let world = ChessBoard('world', configuration);

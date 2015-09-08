@@ -24,12 +24,7 @@ impl Patch {
         if self.star.job_description != JobDescription::Figurehead {
             false
         } else {
-            let val = (self.whence.file as i8 - self.whither.file as i8).abs();
-            if val == 2 {
-                true
-            } else {
-                false
-            }
+            (self.whence.file as i8 - self.whither.file as i8).abs() == 2
         }
     }
 }
@@ -90,8 +85,8 @@ pub struct WorldState {
     pub blue_can_qcastle: bool,
 }
 
-const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 }; 
-const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 }; 
+const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
+const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 };
 
 impl WorldState {
     pub fn new() -> Self {
@@ -158,8 +153,8 @@ impl WorldState {
             orange_cops: Pinfield::new(),
             orange_princesses: Pinfield::new(),
             orange_figurehead: Pinfield::new(),
-            orange_can_kcastle: true,
-            orange_can_qcastle: true,
+            orange_can_kcastle: false,
+            orange_can_qcastle: false,
 
             blue_servants: Pinfield::new(),
             blue_ponies: Pinfield::new(),
@@ -167,8 +162,8 @@ impl WorldState {
             blue_cops: Pinfield::new(),
             blue_princesses: Pinfield::new(),
             blue_figurehead: Pinfield::new(),
-            blue_can_kcastle: true,
-            blue_can_qcastle: true,
+            blue_can_kcastle: false,
+            blue_can_qcastle: false,
         }
     }
 
@@ -257,17 +252,14 @@ impl WorldState {
     }
 
     pub fn is_being_leered_at_by(&self, locale: Locale, team: Team) -> bool {
-        let agent = Agent { team: team.opposition(), job_description: JobDescription::Figurehead };
+        let agent = Agent { team: team.opposition(),
+                            job_description: JobDescription::Figurehead };
         let pinfield = self.agent_to_pinfield_ref(agent);
         let mut tree = self.except_replaced_subboard(
             agent, pinfield.alight(locale));
         tree.to_move = team;
         let prems = tree.lookahead_without_secret_service(true);
-        if prems.iter().any(|c| (*c).patch.whither == locale) {
-            true
-        } else {
-            false
-        }
+        prems.iter().any(|c| (*c).patch.whither == locale)
     }
 
     pub fn preserve(&self) -> String {
@@ -315,6 +307,21 @@ impl WorldState {
         };
         book.push(' ');
         book.push(to_move_indication_rune);
+        book.push(' ');
+        let mut any_service = false;
+        for &(service_eligibility, eligibility_rune) in [
+            (self.orange_can_kcastle, 'K'), (self.orange_can_qcastle, 'Q'),
+            (self.blue_can_kcastle, 'k'), (self.blue_can_qcastle, 'q')].iter() {
+            if service_eligibility {
+                book.push(eligibility_rune);
+                if !any_service {
+                    any_service = true;
+                }
+            }
+        }
+        if !any_service {
+            book.push('-');
+        }
         book
     }
 
@@ -354,8 +361,7 @@ impl WorldState {
                     );
                     file += 1;
                 },
-                _ => panic!("Unexpected rune is contrary to the operation \
-                             of the moral law."),
+                r @ _ => moral_panic!(format!("Unexpected rune '{}'", r)),
             }
         }
         let rune_of_those_with_initiative = volumes
@@ -363,10 +369,24 @@ impl WorldState {
         world.to_move = match rune_of_those_with_initiative {
             'w' => Team::Orange,
             'b' => Team::Blue,
-            _ => panic!("Non-initiative-preserving-rune passed to \
-                         a match expecting such in a way contrary to the \
-                         operation of the moral law!"),
+            _ => moral_panic!("Non-initiative-preserving-rune passed to \
+                               a match expecting such"),
         };
+        let secret_service_eligibilities = volumes.next().unwrap();
+        for eligibility in secret_service_eligibilities.chars() {
+            match eligibility {
+                'K' => { world.orange_can_kcastle = true; },
+                'Q' => { world.orange_can_qcastle = true; },
+                'k' => { world.blue_can_kcastle = true; },
+                'q' => { world.blue_can_qcastle = true; },
+                '-' => { break; },
+                r @ _ => {
+                    moral_panic!(
+                        format!("non-eligibility rune '{}'", r)
+                    );
+                }
+            }
+        }
         world
     }
 
@@ -449,7 +469,7 @@ impl WorldState {
                 6 => (7, 5),
                 2 => (0, 3),
                 _ => moral_panic!("This looked like a Secret Service commit, \
-                                  but it is not")
+                                   but it is not")
             };
 
             let secret_derived_subboard = tree.agent_to_pinfield_ref(cop_agent).transit(
@@ -612,9 +632,8 @@ impl WorldState {
         let movement_table = match agent.job_description {
             JobDescription::Pony => PONY_MOVEMENT_TABLE,
             JobDescription::Figurehead => FIGUREHEAD_MOVEMENT_TABLE,
-            _ => panic!("non-ponylike agent passed to \
-                         `ponylike_lookahead`, which is contrary to \
-                         the operation of the moral law.")
+            _ => moral_panic!("non-ponylike agent passed to \
+                               `ponylike_lookahead`")
         };
         for start_locale in positional_chart.to_locales().into_iter() {
             let destinations = self.occupied_by(
@@ -653,9 +672,8 @@ impl WorldState {
                 (-1, -1), (-1, 0), (-1, 1), (0, -1),
                 (0, 1), (1, -1), (1, 0), (1, 1)
             ],
-            _ => panic!("non-princesslike agent passed to \
-                         `princesslike_lookahead`, which is contrary to \
-                         the operation of the moral law.")
+            _ => moral_panic!("non-princesslike agent passed to \
+                               `princesslike_lookahead`")
         };
         for start_locale in positional_chart.to_locales().into_iter() {
             for &offset in offsets.iter() {
@@ -745,10 +763,6 @@ impl WorldState {
             Team::Orange => (self.orange_can_kcastle, self.orange_can_qcastle),
             Team::Blue => (self.blue_can_kcastle, self.blue_can_qcastle),
         };
-            
-
-        // the king must be on the home square, having never moved before;
-        // otherwise we wouldnt have gotten here because `TEAM_can_castle` is true.
 
         let agent = Agent {
             team: team,
@@ -760,6 +774,17 @@ impl WorldState {
             Team::Orange => 0,
             Team::Blue => 7
         };
+
+        // the king must be on the home square, having never moved before;
+        // otherwise we wouldnt have gotten here because `TEAM_can_castle` is true.
+        if kcastle || qcastle {
+            debug_assert!(
+                self.agent_to_pinfield_ref(agent).query(
+                    Locale { rank: home_rank, file: 4 })
+            );
+        } else {
+            return premonitions;
+        }
 
         let mut locales_to_query = Vec::new();
         if qcastle {
@@ -813,7 +838,7 @@ impl WorldState {
 
         premonitions
     }
-    
+
     fn lookahead_without_secret_service(&self, nihilistically: bool) -> Vec<Commit> {
         // Would it be profitable to make this return an iterator (so
         // that you could break without generating all the premonitions
@@ -889,31 +914,34 @@ mod tests {
     use space::Locale;
     use identity::{Team, JobDescription, Agent};
 
+    // an arbitrarily chosen "complicated" looking position from a Kasparov
+    // game
+    static VISION: &'static str = "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b -";
+
     #[bench]
     fn benchmark_servant_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(
-            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+        let ws = WorldState::reconstruct(VISION.to_string());
         b.iter(|| ws.servant_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_pony_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(
-            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+            VISION.to_string());
         b.iter(|| ws.pony_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_scholar_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(
-            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+            VISION.to_string());
         b.iter(|| ws.scholar_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_cop_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(
-            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+            VISION.to_string());
         ws.cop_lookahead(Team::Orange, false);
         ws.cop_lookahead(Team::Orange, false);
         ws.cop_lookahead(Team::Orange, false);
@@ -924,14 +952,14 @@ mod tests {
     #[bench]
     fn benchmark_princess_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(
-            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+            VISION.to_string());
         b.iter(|| ws.princess_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_figurehead_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(
-            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+            VISION.to_string());
         b.iter(|| ws.figurehead_lookahead(Team::Orange, false));
     }
 
@@ -943,19 +971,16 @@ mod tests {
 
     #[bench]
     fn benchmark_non_new_lookahead(b: &mut Bencher) {
-        // a randomly chosen "complicated" looking position from a Kasparov
-        // game
         let ws = WorldState::reconstruct(
-            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+            VISION.to_string());
         b.iter(|| ws.lookahead());
     }
 
     #[bench]
     fn benchmark_ultimate_endangerment(b: &mut Bencher ){
         let ws = WorldState::reconstruct(
-            "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b".to_string());
+            VISION.to_string());
         b.iter(|| ws.in_critical_endangerment(Team::Orange));
-
     }
 
     #[test]
@@ -975,9 +1000,10 @@ mod tests {
     #[test]
     fn concerning_castling_restrictions() {
         let ws = WorldState::reconstruct(
-            "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPBPPP/RNBQK2R w".to_string());
+            "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPBPPP/RNBQK2R w KQkq".to_string());
         let patch = Patch {
-            star: Agent { team: Team::Orange, job_description: JobDescription::Figurehead },
+            star: Agent { team: Team::Orange,
+                          job_description: JobDescription::Figurehead },
             whence: Locale { rank: 0, file: 4 },
             whither: Locale { rank: 0, file: 5 }
         };
@@ -985,7 +1011,8 @@ mod tests {
         assert_eq!(false, ws.apply(patch).tree.orange_can_kcastle);
 
         let patch = Patch {
-            star: Agent { team: Team::Orange, job_description: JobDescription::Cop },
+            star: Agent { team: Team::Orange,
+                          job_description: JobDescription::Cop },
             whence: Locale { rank: 0, file: 7 },
             whither: Locale { rank: 0, file: 6 }
         };
@@ -995,51 +1022,49 @@ mod tests {
     #[test]
     fn concerning_castling_availability() {
         let mut ws = WorldState::reconstruct(
-            "8/8/4k3/8/8/8/8/4K2R w".to_string());
-        ws.orange_can_qcastle = false;
+            "8/8/4k3/8/8/8/8/4K2R w K".to_string());
         let mut prems = ws.castle_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
         ws = WorldState::reconstruct(
-            "8/8/4k3/8/8/8/8/R3K2R w".to_string());
+            "8/8/4k3/8/8/8/8/R3K2R w KQ".to_string());
         prems = ws.castle_lookahead(Team::Orange, false);
         assert_eq!(2, prems.len());
 
         ws = WorldState::reconstruct(
-            "8/8/4k3/8/8/8/8/R3KN1R w".to_string());
+            "8/8/4k3/8/8/8/8/R3KN1R w Q".to_string());
         prems = ws.castle_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
         ws = WorldState::reconstruct(
-            "8/8/4k3/8/8/4b3/8/R3KN1R w".to_string());
-        // can't move into check
+            "8/8/4k3/8/8/4b3/8/R3KN1R w Q".to_string());
+        // can't move into endangerment
         prems = ws.castle_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
 
         ws = WorldState::reconstruct(
-            "8/8/4k3/8/b7/8/8/R3KN1R w - - 0 1".to_string());
-        // can't move THROUGH check, either!
+            "8/8/4k3/8/b7/8/8/R3KN1R w Q - 0 1".to_string());
+        // can't move through endangerment, either!
         prems = ws.castle_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
     }
 
     #[test]
     fn concerning_castling_actually_working() {
-        let mut ws = WorldState::reconstruct(
-            "8/8/4k3/8/8/8/8/4K2R w".to_string());
-        ws.orange_can_qcastle = false;
+        let ws = WorldState::reconstruct(
+            "8/8/4k3/8/8/8/8/4K2R w K".to_string());
         assert!(ws.orange_can_kcastle);
         let prems = ws.castle_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
         assert_eq!(false, prems[0].tree.orange_can_kcastle);
         prems[0].tree.display();
-        assert_eq!("8/8/4k3/8/8/8/8/5RK1 b", prems[0].tree.preserve());
+        assert_eq!("8/8/4k3/8/8/8/8/5RK1 b -", prems[0].tree.preserve());
     }
 
     #[test]
     fn concerning_castling_out_of_check() {
         let ws = WorldState::reconstruct(
-            "8/8/4k3/8/4r3/8/8/4K2R w".to_string());
+            "8/8/4k3/8/4r3/8/8/4K2R w K".to_string());
         assert!(ws.orange_can_kcastle);
         let prems = ws.castle_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
@@ -1271,7 +1296,7 @@ mod tests {
         // en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation#Examples
         let eden = WorldState::new();
         let book_of_eden =
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w" // TODO KQkq - 0 1
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq" // TODO - 0 1
             .to_string();
         assert_eq!(book_of_eden, eden.preserve());
         assert_eq!(eden, WorldState::reconstruct(book_of_eden));
@@ -1292,11 +1317,11 @@ mod tests {
         ];
 
         let book_of_patches = vec![
-            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b" // KQkq e3 0 1
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq" // e3 0 1
                 .to_string(),
-            "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w" // KQkq c6 0 2
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq" // c6 0 2
                 .to_string(),
-            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b" // KQkq - 1 2
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq" // - 1 2
                 .to_string(),
         ];
 
