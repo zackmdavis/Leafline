@@ -33,7 +33,7 @@ pub fn score(world: WorldState) -> f32 {
     let mut valuation = 0.0;
 
     for team in Team::league().into_iter() {
-        for agent in Agent::dramatis_personae(team).into_iter() {
+        for agent in Agent::dramatis_personæ(team).into_iter() {
             valuation += world.agent_to_pinfield_ref(
                 agent).pincount() as f32 * figurine_valuation(agent);
         }
@@ -96,9 +96,7 @@ pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
 }
 
 
-// _very_ tempted to switch to developing on Nightly just so we can
-// ungate non_ascii_idents and call this α_β_negamax_search
-pub fn alpha_beta_negamax_search(
+pub fn α_β_negamax_search(
     world: WorldState, depth: u8,
     alpha: f32, beta: f32,
     deja_vu_table: &mut HashMap<WorldState, f32>) -> (Option<Commit>, f32)
@@ -117,7 +115,7 @@ pub fn alpha_beta_negamax_search(
     let mut optimand = None;
     for premonition in premonitions.into_iter() {
         let mut value: f32;
-        let mut cached: bool;
+        let cached: bool;
         {
             let cached_value_maybe = deja_vu_table.get(&premonition.tree);
             match cached_value_maybe {
@@ -135,7 +133,7 @@ pub fn alpha_beta_negamax_search(
         }
 
         if !cached {
-            let (_, acquired_value) = alpha_beta_negamax_search(
+            let (_, acquired_value) = α_β_negamax_search(
                 premonition.tree, depth-1, -beta, -experienced_alpha,
                 deja_vu_table);
             value = -acquired_value;
@@ -163,14 +161,21 @@ pub fn alpha_beta_negamax_search(
 // optimality, but that we don't want to bother with all that bookkeeping
 // for subsequent levels of the game tree; minimax is expensive enough
 // already!!
-pub fn kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
+pub fn kickoff(world: &WorldState,
+               depth: u8,
+               nihilistically: bool) -> Vec<(Commit, f32)> {
     // when we get non-ASCII identifiers: `déjà_vu_table`
     let mut deja_vu_table: HashMap<WorldState, f32> = HashMap::new();
-    let mut premonitions = world.lookahead();
+    let mut premonitions;
+    if nihilistically {
+        premonitions = world.reckless_lookahead();
+    } else {
+        premonitions = world.lookahead();
+    }
     order_moves(&mut premonitions);
     let mut forecasts = Vec::new();
     for premonition in premonitions.into_iter() {
-        let (_grandchild, mut value) = alpha_beta_negamax_search(
+        let (_grandchild, mut value) = α_β_negamax_search(
             premonition.tree, depth-1, NEG_INFINITY, INFINITY,
             &mut deja_vu_table
         );
@@ -186,14 +191,47 @@ pub fn kickoff(world: WorldState, depth: u8) -> Vec<(Commit, f32)> {
 }
 
 
+
 #[cfg(test)]
-mod test {
-    use time;
+mod tests {
+    extern crate test;
+    use self::test::Bencher;
 
     use super::{kickoff, score};
     use space::Locale;
     use life::WorldState;
     use identity::Team;
+
+
+    #[bench]
+    fn benchmark_scoring(b: &mut Bencher) {
+        b.iter(|| score(WorldState::new()));
+    }
+
+    #[bench]
+    fn benchmark_kickoff_depth_1(b: &mut Bencher) {
+        let ws = WorldState::new();
+        b.iter(|| kickoff(&ws, 1, true));
+    }
+
+    #[bench]
+    fn benchmark_kickoff_depth_2_arbys(b: &mut Bencher) {
+        let ws = WorldState::new();
+        b.iter(|| kickoff(&ws, 2, true));
+    }
+
+    #[bench]
+    fn benchmark_kickoff_depth_2_carefully(b: &mut Bencher) {
+        let ws = WorldState::new();
+        b.iter(|| kickoff(&ws, 2, false));
+    }
+
+    #[ignore]
+    #[bench]
+    fn benchmark_kickoff_depth_3(b: &mut Bencher) {
+        let ws = WorldState::new();
+        b.iter(|| kickoff(&ws, 3, true));
+    }
 
     #[test]
     fn concerning_fairness_of_the_initial_position() {
@@ -230,16 +268,7 @@ mod test {
         );
 
         let depth = 2;
-        let start = time::get_time();
-        let advisory = kickoff(world, depth);
-        let end = time:: get_time();
-
-        // (you can see this if you run the tests with `-- --nocapture`)
-        println!("negamax kickoff: evaluating {} possible choices to \
-                  depth {} took {:?}", advisory.len(), depth, end-start);
-        for item in advisory.iter() {
-            println!("{:?}", item);
-        }
+        let advisory = kickoff(&world, depth, true);
 
         // taking the pony is the right thing to do
         assert_eq!(Locale { rank: 0, file: 0 }, advisory[0].0.patch.whither);
@@ -262,7 +291,7 @@ mod test {
             Locale { rank: 2, file: 2 }
         );
 
-        // pony endanger servant
+        // pony endangers servant
         negaworld.orange_servants = negaworld.orange_servants.alight(
             Locale { rank: 7, file: 1 }
         );
@@ -271,11 +300,13 @@ mod test {
         );
 
         // Orange has another servant sitting nowhere interesting
-        negaworld.orange_servants = world.orange_servants.alight(
+        negaworld.orange_servants = negaworld.orange_servants.alight(
             Locale { rank: 3, file: 6 }
         );
+        negaworld.to_move = Team::Blue;
 
-        let negadvisory = kickoff(negaworld, depth);
+
+        let negadvisory = kickoff(&negaworld, depth, true);
 
         // taking the pony is still the right thing to do, even in the
         // negaworld

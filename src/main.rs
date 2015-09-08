@@ -1,3 +1,6 @@
+#![feature(test)]
+#![feature(non_ascii_idents)]
+
 #[macro_use]
 extern crate itertools;
 
@@ -28,7 +31,7 @@ use mind::kickoff;
 
 fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
     let start_thinking = time::get_time();
-    let forecasts = kickoff(world, depth);
+    let forecasts: Vec<(Commit, f32)> = kickoff(&world, depth, false);
     let stop_thinking = time::get_time();
     let thinking_time = stop_thinking - start_thinking;
     (forecasts, thinking_time)
@@ -36,8 +39,15 @@ fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
 
 
 fn oppose(in_medias_res: WorldState, depth: u8) -> (Commit, Duration) {
-    let (forecasts, thinking_time) = forecast(in_medias_res, depth);
-    let (determination, _karma) = forecasts[0];
+    let (mut forecasts, thinking_time) = forecast(in_medias_res, depth);
+    let determination_and_karma;
+    if !forecasts.is_empty() {
+        determination_and_karma = forecasts.swap_remove(0);
+    } else {
+        // XXX TODO FIXME: during actual gameplay, we don't want to panic
+        panic!("Cannot oppose with no moves");
+    }
+    let (determination, _karma) = determination_and_karma;
     (determination, thinking_time)
 }
 
@@ -126,11 +136,14 @@ fn main() {
                     "(scoring alternatives {} levels deep took {} ms)",
                     lookahead_depth, thinking_time.num_milliseconds()
                  );
-                for (index,
-                     &(premonition, score)) in forecasts.iter().enumerate() {
-                    println!("{:>2}. {} (score {})", index, premonition, score);
+                for (index, prem_score) in forecasts.iter().enumerate() {
+                    println!("{:>2}. {} (score {})", index, prem_score.0, prem_score.1);
                 }
-                premonitions = forecasts.iter().map(|t| t.0).collect::<Vec<_>>();
+                premonitions = vec!();
+                for prem_score in forecasts {
+                    premonitions.push(prem_score.0);
+                }
+
                 if premonitions.len() == 0 {
                     the_end();
                 }

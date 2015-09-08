@@ -32,7 +32,7 @@ impl Locale {
     }
 
     pub fn pinpoint(&self) -> Pinfield {
-        Pinfield(2u64.pow(self.pindex()))
+        Pinfield(1u64 << self.pindex())
     }
 
     pub fn is_legal(&self) -> bool {
@@ -56,17 +56,20 @@ impl Locale {
     }
 
     pub fn multidisplace(&self, offset: (i8, i8),
-                         factor: usize) -> Option<Self> {
-        let mut local_locale_maybe = Some(*self);
-        for _ in 0..factor {
-            // RESEARCH: is this inefficient (doing stuff in a loop,
-            // instead of using multiplication ops that CPUs can do
-            // natively? Or is LLVM a smart enough optimizer that it
-            // doesn't matter what I say?
-            local_locale_maybe = local_locale_maybe.and_then(
-                |l| l.displace(offset));
+                         factor: i8) -> Option<Self> {
+        let (rank_offset, file_offset) = offset;
+        let (real_rank, real_file) = (factor*rank_offset, factor*file_offset);
+
+        let potential_locale = Locale {
+            // XXX: could overflow given unrealistic arguments
+            rank: (self.rank as i8 + real_rank) as u8,
+            file: (self.file as i8 + real_file) as u8
+        };
+        if potential_locale.is_legal() {
+            Some(potential_locale)
+        } else {
+            None
         }
-        local_locale_maybe
     }
 
 }
@@ -126,25 +129,23 @@ impl Pinfield {
 
     pub fn to_locales(&self) -> Vec<Locale> {
         let mut locales = Vec::new();
+        let Pinfield(bits) = *self;
+        let mut bitfield = 1u64;
         for rank in 0..8 {
             for file in 0..8 {
-                let potential_locale = Locale { rank: rank, file: file };
-                if self.query(potential_locale) {
-                    locales.push(potential_locale);
+                if bitfield & bits != 0 {
+                    let locale = Locale { rank: rank, file: file };
+                    locales.push(locale);
                 }
+                bitfield <<= 1;
             }
         }
         locales
     }
 
     pub fn pincount(&self) -> u8 {
-        let mut pins = 0;
-        for i in 0..64 {
-            if (2u64.pow(i) & self.0) != 0 {
-                pins += 1
-            }
-        }
-        pins
+        let Pinfield(bits) = *self;
+        bits.count_ones() as u8
     }
 
     // TODO: convert to Display::fmt
@@ -165,7 +166,9 @@ impl Pinfield {
 
 
 #[cfg(test)]
-mod test {
+mod tests {
+    extern crate test;
+    use self::test::Bencher;
     use super::{Locale, Pinfield};
 
     static ALGEBRAICS: [&'static str; 64] = [
@@ -178,6 +181,17 @@ mod test {
         "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
         "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"
     ];
+
+    #[bench]
+    fn benchmark_to_locales(b: &mut Bencher) {
+        let mut stage = Pinfield(0);
+        for r in 0..8 {
+            stage = stage.alight(Locale { rank: 1, file: r });
+            stage = stage.alight(Locale { rank: 7, file: r });
+        }
+
+        b.iter(|| stage.to_locales());
+    }
 
     #[test]
     fn concerning_converting_to_algebraic() {
@@ -227,7 +241,7 @@ mod test {
 
     #[test]
     fn concerning_multidisplacement() {
-        for i in 0usize..8usize {
+        for i in 0..8{
             assert_eq!(
                 Some(Locale { rank: i as u8, file: i as u8 }),
                 Locale{ rank: 0, file: 0 }.multidisplace((1, 1), i)
