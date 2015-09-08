@@ -40,9 +40,14 @@ fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
 
 fn oppose(in_medias_res: WorldState, depth: u8) -> (Commit, Duration) {
     let (mut forecasts, thinking_time) = forecast(in_medias_res, depth);
-    let (determination, _karma) = forecasts
-        .pop()
-        .expect("Cannot oppose with no moves!");
+    let determination_and_karma;
+    if !forecasts.is_empty() {
+        determination_and_karma = forecasts.swap_remove(0);
+    } else {
+        // XXX TODO FIXME: during actual gameplay, we don't want to panic
+        panic!("Cannot oppose with no moves");
+    }
+    let (determination, _karma) = determination_and_karma;
     (determination, thinking_time)
 }
 
