@@ -8,8 +8,9 @@ target/
 # personal development notes
 notes.txt
 
-# Python bytecode cache directory
+# Python bytecode
 __pycache__/
+*.pyc
 
 # "Chess" (?) board download zipball and unpacked resources (very
 # important, but we're not vendorizing them into the repo)
@@ -30,9 +31,6 @@ lib/
 lib64
 pyvenv.cfg
 pip-selfcheck.json
-
-# bytecode-compiled python
-*.pyc
 
 # npm droppings (yes, I know this isn't even a Node project; humor me)
 node_modules/
