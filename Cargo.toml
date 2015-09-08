@@ -1,6 +1,6 @@
 [package]
 name = "Leafline"
-version = "0.0.8"
+version = "0.0.9"
 authors = ["Zack M. Davis <code@zackmdavis.net>"]
 
 [dependencies]
