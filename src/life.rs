@@ -24,12 +24,7 @@ impl Patch {
         if self.star.job_description != JobDescription::Figurehead {
             false
         } else {
-            let val = (self.whence.file as i8 - self.whither.file as i8).abs();
-            if val == 2 {
-                true
-            } else {
-                false
-            }
+            (self.whence.file as i8 - self.whither.file as i8).abs() == 2
         }
     }
 }
@@ -90,8 +85,8 @@ pub struct WorldState {
     pub blue_can_qcastle: bool,
 }
 
-const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 }; 
-const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 }; 
+const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
+const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 };
 
 impl WorldState {
     pub fn new() -> Self {
@@ -257,17 +252,14 @@ impl WorldState {
     }
 
     pub fn is_being_leered_at_by(&self, locale: Locale, team: Team) -> bool {
-        let agent = Agent { team: team.opposition(), job_description: JobDescription::Figurehead };
+        let agent = Agent { team: team.opposition(),
+                            job_description: JobDescription::Figurehead };
         let pinfield = self.agent_to_pinfield_ref(agent);
         let mut tree = self.except_replaced_subboard(
             agent, pinfield.alight(locale));
         tree.to_move = team;
         let prems = tree.lookahead_without_secret_service(true);
-        if prems.iter().any(|c| (*c).patch.whither == locale) {
-            true
-        } else {
-            false
-        }
+        prems.iter().any(|c| (*c).patch.whither == locale)
     }
 
     pub fn preserve(&self) -> String {
@@ -354,8 +346,7 @@ impl WorldState {
                     );
                     file += 1;
                 },
-                _ => panic!("Unexpected rune is contrary to the operation \
-                             of the moral law."),
+                _ => moral_panic!("Unexpected rune"),
             }
         }
         let rune_of_those_with_initiative = volumes
@@ -363,9 +354,8 @@ impl WorldState {
         world.to_move = match rune_of_those_with_initiative {
             'w' => Team::Orange,
             'b' => Team::Blue,
-            _ => panic!("Non-initiative-preserving-rune passed to \
-                         a match expecting such in a way contrary to the \
-                         operation of the moral law!"),
+            _ => moral_panic!("Non-initiative-preserving-rune passed to \
+                               a match expecting such"),
         };
         world
     }
@@ -449,7 +439,7 @@ impl WorldState {
                 6 => (7, 5),
                 2 => (0, 3),
                 _ => moral_panic!("This looked like a Secret Service commit, \
-                                  but it is not")
+                                   but it is not")
             };
 
             let secret_derived_subboard = tree.agent_to_pinfield_ref(cop_agent).transit(
@@ -612,9 +602,8 @@ impl WorldState {
         let movement_table = match agent.job_description {
             JobDescription::Pony => PONY_MOVEMENT_TABLE,
             JobDescription::Figurehead => FIGUREHEAD_MOVEMENT_TABLE,
-            _ => panic!("non-ponylike agent passed to \
-                         `ponylike_lookahead`, which is contrary to \
-                         the operation of the moral law.")
+            _ => moral_panic!("non-ponylike agent passed to \
+                               `ponylike_lookahead`")
         };
         for start_locale in positional_chart.to_locales().into_iter() {
             let destinations = self.occupied_by(
@@ -653,9 +642,8 @@ impl WorldState {
                 (-1, -1), (-1, 0), (-1, 1), (0, -1),
                 (0, 1), (1, -1), (1, 0), (1, 1)
             ],
-            _ => panic!("non-princesslike agent passed to \
-                         `princesslike_lookahead`, which is contrary to \
-                         the operation of the moral law.")
+            _ => moral_panic!("non-princesslike agent passed to \
+                               `princesslike_lookahead`")
         };
         for start_locale in positional_chart.to_locales().into_iter() {
             for &offset in offsets.iter() {
@@ -745,7 +733,7 @@ impl WorldState {
             Team::Orange => (self.orange_can_kcastle, self.orange_can_qcastle),
             Team::Blue => (self.blue_can_kcastle, self.blue_can_qcastle),
         };
-            
+
 
         // the king must be on the home square, having never moved before;
         // otherwise we wouldnt have gotten here because `TEAM_can_castle` is true.
@@ -813,7 +801,7 @@ impl WorldState {
 
         premonitions
     }
-    
+
     fn lookahead_without_secret_service(&self, nihilistically: bool) -> Vec<Commit> {
         // Would it be profitable to make this return an iterator (so
         // that you could break without generating all the premonitions
