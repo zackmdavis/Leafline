@@ -1,4 +1,4 @@
-# leafline-web-client
+# Leafline web client
 
 Web client for the Leafline oppositional strategy game engine!
 
@@ -6,7 +6,12 @@ Web client for the Leafline oppositional strategy game engine!
 
 To start a web server for the application, run:
 
-    lein run
+```
+lein run
+```
+
+Alternatively, you can say `lein repl` to get a REPL and then run `(restart-server!)` to start the server (or restart it if it is already running).
+
 
 ## License
 
