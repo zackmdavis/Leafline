@@ -7,12 +7,30 @@ use identity::{Team, JobDescription, Agent};
 use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
 
+macro_rules! moral_panic {
+    ($y:expr) => (panic!("{}, which is contrary to the operation of the moral law!", $y))
+}
+
 /// represents the movement of a figurine
 #[derive(Eq,PartialEq,Debug,Hash,RustcEncodable,RustcDecodable)]
 pub struct Patch {
     pub star: Agent,
     pub whence: Locale,
     pub whither: Locale
+}
+
+impl Patch {
+    pub fn concerns_secret_service(&self) -> bool {
+        if self.star.job_description != JobDescription::Figurehead {
+            false
+        } else {
+            if (self.whence.rank as i8 - self.whither.rank as i8).abs() == 2 {
+                true
+            } else {
+                false
+            }
+        }
+    }
 }
 
 
@@ -398,6 +416,49 @@ impl WorldState {
         let mut tree = self.except_replaced_subboard(
             patch.star, derived_subboard
         );
+        match patch.star.job_description {
+            JobDescription::Figurehead => {
+                match patch.star.team {
+                    Team::Orange => {
+                        tree.orange_can_kcastle = false; tree.orange_can_qcastle = false;
+                    },
+                    Team::Blue => {
+                        tree.blue_can_kcastle = false; tree.blue_can_qcastle = false;
+                    }
+                }
+            },
+            JobDescription::Cop => {
+                match (patch.whence.file, patch.star.team) {
+                    (0, Team::Orange) => { tree.orange_can_qcastle = false; },
+                    (7, Team::Orange) => { tree.orange_can_kcastle = false; },
+                    (0, Team::Blue) => { tree.blue_can_qcastle = false; },
+                    (7, Team::Blue) => { tree.blue_can_kcastle = false; },
+                    _ => {},
+                }
+            },
+            _ => {},
+        }
+
+
+        if patch.concerns_secret_service() {
+            let cop_agent = Agent {
+                team: patch.star.team,
+                job_description: JobDescription::Cop };
+            let (start_file, end_file) = match patch.whither.file {
+                6 => (7, 5),
+                2 => (0, 3),
+                _ => moral_panic!("This looked like a Secret Service commit, \
+                                  but it is not")
+            };
+
+            let secret_derived_subboard = tree.agent_to_pinfield_ref(cop_agent).transit(
+                Locale { rank: patch.whither.rank, file: start_file },
+                Locale { rank: patch.whither.rank, file: end_file });
+            tree = tree.except_replaced_subboard(
+                cop_agent, secret_derived_subboard
+            );
+
+        }
         tree.to_move = tree.to_move.opposition();
 
         // was anyone stunned?
@@ -889,6 +950,26 @@ mod tests {
         assert_eq!(true, WorldState::new().blue_can_kcastle);
         assert_eq!(true, WorldState::new().orange_can_qcastle);
         assert_eq!(true, WorldState::new().blue_can_qcastle);
+    }
+
+    #[test]
+    fn concerning_castling_restrictions() {
+        let ws = WorldState::reconstruct(
+            "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPBPPP/RNBQK2R w".to_string());
+        let patch = Patch {
+            star: Agent { team: Team::Orange, job_description: JobDescription::Figurehead },
+            whence: Locale { rank: 0, file: 4 },
+            whither: Locale { rank: 0, file: 5 }
+        };
+
+        assert_eq!(false, ws.apply(patch).tree.orange_can_kcastle);
+
+        let patch = Patch {
+            star: Agent { team: Team::Orange, job_description: JobDescription::Cop },
+            whence: Locale { rank: 0, file: 7 },
+            whither: Locale { rank: 0, file: 6 }
+        };
+        assert_eq!(false, ws.apply(patch).tree.orange_can_kcastle);
     }
 
     #[test]
