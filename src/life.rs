@@ -350,7 +350,7 @@ impl WorldState {
 
     pub fn occupying_agent(&self, at: Locale) -> Option<Agent> {
         for team in Team::league().into_iter() {
-            for agent in Agent::dramatis_personae(team).into_iter() {
+            for agent in Agent::dramatis_personæ(team).into_iter() {
                 if self.agent_to_pinfield_ref(agent).query(at) {
                     return Some(agent)
                 }
@@ -690,7 +690,7 @@ impl WorldState {
                 } else {
                     for &team in [Team::Orange, Team::Blue].iter() {
                         for &figurine_class in
-                            Agent::dramatis_personae(team).iter() {
+                            Agent::dramatis_personæ(team).iter() {
                                 if self.agent_to_pinfield_ref(
                                     figurine_class).query(locale) {
                                         print!("{} ", figurine_class)

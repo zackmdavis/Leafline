@@ -1,7 +1,7 @@
 #![feature(test)]
+#![feature(non_ascii_idents)]
 
 #[macro_use]
-
 extern crate itertools;
 
 extern crate argparse;

@@ -33,7 +33,7 @@ pub fn score(world: WorldState) -> f32 {
     let mut valuation = 0.0;
 
     for team in Team::league().into_iter() {
-        for agent in Agent::dramatis_personae(team).into_iter() {
+        for agent in Agent::dramatis_personæ(team).into_iter() {
             valuation += world.agent_to_pinfield_ref(
                 agent).pincount() as f32 * figurine_valuation(agent);
         }
@@ -96,9 +96,7 @@ pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
 }
 
 
-// _very_ tempted to switch to developing on Nightly just so we can
-// ungate non_ascii_idents and call this α_β_negamax_search
-pub fn alpha_beta_negamax_search(
+pub fn α_β_negamax_search(
     world: WorldState, depth: u8,
     alpha: f32, beta: f32,
     deja_vu_table: &mut HashMap<WorldState, f32>) -> (Option<Commit>, f32)
@@ -135,7 +133,7 @@ pub fn alpha_beta_negamax_search(
         }
 
         if !cached {
-            let (_, acquired_value) = alpha_beta_negamax_search(
+            let (_, acquired_value) = α_β_negamax_search(
                 premonition.tree, depth-1, -beta, -experienced_alpha,
                 deja_vu_table);
             value = -acquired_value;
@@ -177,7 +175,7 @@ pub fn kickoff(world: &WorldState,
     order_moves(&mut premonitions);
     let mut forecasts = Vec::new();
     for premonition in premonitions.into_iter() {
-        let (_grandchild, mut value) = alpha_beta_negamax_search(
+        let (_grandchild, mut value) = α_β_negamax_search(
             premonition.tree, depth-1, NEG_INFINITY, INFINITY,
             &mut deja_vu_table
         );
