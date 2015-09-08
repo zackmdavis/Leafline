@@ -399,7 +399,7 @@ impl WorldState {
 
     pub fn occupying_agent(&self, at: Locale) -> Option<Agent> {
         for team in Team::league().into_iter() {
-            for agent in Agent::dramatis_personae(team).into_iter() {
+            for agent in Agent::dramatis_personæ(team).into_iter() {
                 if self.agent_to_pinfield_ref(agent).query(at) {
                     return Some(agent)
                 }
@@ -669,8 +669,8 @@ impl WorldState {
                             // of recalculating (`unoccupied` is just `occupied().invert()`, of
                             // which we're already calculating half.) This appears to slow things
                             // down! I also tried only making the occupied_by call if empty were
-                            // false, but that also slows things down?? that one i can see being
-                            // maybe a code size issue or something? i'm very confused.
+                            // false, but that also slows things down?? That one I can see being
+                            // maybe a code size issue or something? I'm very confused.
                             let empty = self.unoccupied().query(destination);
                             let friend = self.occupied_by(
                                 agent.team).query(destination);
@@ -866,7 +866,7 @@ impl WorldState {
                 } else {
                     for &team in [Team::Orange, Team::Blue].iter() {
                         for &figurine_class in
-                            Agent::dramatis_personae(team).iter() {
+                            Agent::dramatis_personæ(team).iter() {
                                 if self.agent_to_pinfield_ref(
                                     figurine_class).query(locale) {
                                         print!("{} ", figurine_class)

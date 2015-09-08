@@ -38,9 +38,7 @@ pub struct Agent {
 }
 
 impl Agent {
-    // I wanted to call it `dramatis_personæ`, but "non-ascii idents
-    // are not fully supported" 🙀
-    pub fn dramatis_personae(team: Team) -> Vec<Agent> {
+    pub fn dramatis_personæ(team: Team) -> Vec<Agent> {
         // TODO: return in iterator
         vec![Agent{ team: team,
                     job_description: JobDescription::Servant },
