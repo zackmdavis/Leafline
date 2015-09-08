@@ -45,7 +45,7 @@ def the_book_of_life(job_description, result):
     )
 
 
-if __name__ == "__main__":
+def main():
     with open(os.path.join('src', 'motion.rs'),
               'w') as motion_rs:
         motion_rs.write(
@@ -59,3 +59,6 @@ if __name__ == "__main__":
             )
         )
     print("Wrote motion.rs!")
+
+if __name__ == "__main__":
+    main()

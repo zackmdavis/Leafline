@@ -1,7 +1,7 @@
 import os
 import subprocess
 import sys
-from urllib.request import urlretrieve
+from urllib import urlretrieve
 
 from invoke import task, run
 
@@ -19,6 +19,7 @@ def install_chessboard_js():
 @task
 def download_statics():
     install_chessboard_js()
+
 
 
 BABEL_COMMAND = [
