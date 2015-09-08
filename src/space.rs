@@ -17,6 +17,7 @@ impl Locale {
     // XXX: this should probably take a &str instead of String,
     // because the argument is typically going to be a string literal
     // rather than a value from somewhere else
+    #[allow(dead_code)]
     pub fn from_algebraic(notation: String) -> Self {
         let mut notation_pieces = notation.chars();
         let file_note = notation_pieces.next().unwrap();
