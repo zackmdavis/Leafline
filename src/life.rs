@@ -24,7 +24,8 @@ impl Patch {
         if self.star.job_description != JobDescription::Figurehead {
             false
         } else {
-            if (self.whence.rank as i8 - self.whither.rank as i8).abs() == 2 {
+            let val = (self.whence.file as i8 - self.whither.file as i8).abs();
+            if val == 2 {
                 true
             } else {
                 false
@@ -261,7 +262,7 @@ impl WorldState {
         let mut tree = self.except_replaced_subboard(
             agent, pinfield.alight(locale));
         tree.to_move = team;
-        let prems = tree.reckless_lookahead();
+        let prems = tree.lookahead_without_secret_service(true);
         if prems.iter().any(|c| (*c).patch.whither == locale) {
             true
         } else {
@@ -759,6 +760,7 @@ impl WorldState {
             Team::Orange => 0,
             Team::Blue => 7
         };
+
         let mut locales_to_query = Vec::new();
         if qcastle {
             locales_to_query.push(
@@ -784,8 +786,20 @@ impl WorldState {
                  }));
         }
         let unoc = self.unoccupied();
+        let mut being_leered_at = None;
         for (locales, patch) in locales_to_query {
             if locales.iter().all(|l| unoc.query(*l)) {
+                match being_leered_at {
+                    None => {
+                        being_leered_at = Some(
+                            self.is_being_leered_at_by(
+                                Locale { rank: home_rank, file: 4 }, team.opposition()))
+                    },
+                    _ => {},
+                }
+                if being_leered_at.unwrap() {
+                    return premonitions;
+                }
                 if !locales.iter().any(
                         |l| self.is_being_leered_at_by(*l, team.opposition())) {
                     self.predict(
@@ -799,8 +813,8 @@ impl WorldState {
 
         premonitions
     }
-
-    fn underlookahead(&self, nihilistically: bool) -> Vec<Commit> {
+    
+    fn lookahead_without_secret_service(&self, nihilistically: bool) -> Vec<Commit> {
         // Would it be profitable to make this return an iterator (so
         // that you could break without generating all the premonitions
         // if something overwhelmingly important came up, like ultimate
@@ -819,8 +833,14 @@ impl WorldState {
             self.princess_lookahead(moving_team, nihilistically));
         premonitions.extend(
             self.figurehead_lookahead(moving_team, nihilistically));
+        premonitions
+    }
+
+    fn underlookahead(&self, nihilistically: bool) -> Vec<Commit> {
+        let mut premonitions = self.
+            lookahead_without_secret_service( nihilistically);
         premonitions.extend(
-            self.castle_lookahead(moving_team, nihilistically));
+            self.castle_lookahead(self.to_move, nihilistically));
         premonitions
     }
 
@@ -973,7 +993,7 @@ mod tests {
     }
 
     #[test]
-    fn concerning_castling() {
+    fn concerning_castling_availability() {
         let mut ws = WorldState::reconstruct(
             "8/8/4k3/8/8/8/8/4K2R w".to_string());
         ws.orange_can_qcastle = false;
@@ -1000,6 +1020,28 @@ mod tests {
             "8/8/4k3/8/b7/8/8/R3KN1R w - - 0 1".to_string());
         // can't move THROUGH check, either!
         prems = ws.castle_lookahead(Team::Orange, false);
+        assert_eq!(0, prems.len());
+    }
+
+    #[test]
+    fn concerning_castling_actually_working() {
+        let mut ws = WorldState::reconstruct(
+            "8/8/4k3/8/8/8/8/4K2R w".to_string());
+        ws.orange_can_qcastle = false;
+        assert!(ws.orange_can_kcastle);
+        let prems = ws.castle_lookahead(Team::Orange, false);
+        assert_eq!(1, prems.len());
+        assert_eq!(false, prems[0].tree.orange_can_kcastle);
+        prems[0].tree.display();
+        assert_eq!("8/8/4k3/8/8/8/8/5RK1 b", prems[0].tree.preserve());
+    }
+
+    #[test]
+    fn concerning_castling_out_of_check() {
+        let ws = WorldState::reconstruct(
+            "8/8/4k3/8/4r3/8/8/4K2R w".to_string());
+        assert!(ws.orange_can_kcastle);
+        let prems = ws.castle_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
     }
 
