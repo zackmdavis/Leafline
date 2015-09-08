@@ -5,7 +5,7 @@ all: dev src/*.rs
 	cargo build --release
 
 src/motion.rs: furniture/tablemaker.py
-	python $@
+	python $<
 
 web_client/resources/public/js/chessboard-0.3.0.js: web_client/resources/chessboardjs-0.3.0.zip
 	mkdir -p chessboard

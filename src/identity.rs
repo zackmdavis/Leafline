@@ -130,9 +130,8 @@ impl Agent {
                            job_description: JobDescription::Princess },
             'k' => Agent { team: Team::Blue,
                            job_description: JobDescription::Figurehead },
-            _ => panic!("Non-agent-preservation-rune passed to \
-                         `from_preservation_rune`, which is contrary to the \
-                         operation of the moral law!"),
+            _ => moral_panic!("Non-agent-preservation-rune passed to \
+                         `from_preservation_rune`"),
         }
     }
 }
