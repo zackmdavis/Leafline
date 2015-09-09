@@ -1,7 +1,20 @@
+# coding: utf-8
+
 import os
 import subprocess
 import sys
-from urllib import urlretrieve
+import time
+
+if sys.version_info < (3,):
+    print("Are you using Python 2?")
+    time.sleep(1.4)
+    print("Do you know what year it is?")
+    time.sleep(1.4)
+    print("—okay.")
+    time.sleep(1.4)
+    from urllib import urlretrieve
+else:
+    from urllib.request import urlretrieve
 
 from invoke import task, run
 
