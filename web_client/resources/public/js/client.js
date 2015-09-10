@@ -1,3 +1,40 @@
+const Team = Object.freeze({Orange: "Orange", Blue: "Blue"});
+
+const configuration = {
+    position: 'start',
+    draggable: true,
+    pieceTheme: 'img/figurines/{piece}.png',
+    onDrop: dropHandler,
+};
+
+class WorldState {
+    constructor() {
+        this.initiative = Team.Orange;
+        this.preservedServiceEligibilities = "KQkq";
+        this.multifield = ChessBoard('world', configuration);
+    }
+
+    preserveInitiative() {
+        if (this.initiative === Team.Orange) {
+            return 'w';
+        } else if (this.initiative === Team.Blue) {
+            return 'b';
+        }
+    }
+
+    preserve() {
+        return `${this.multifield.fen()} ` +
+            `${this.preserveInitiative()} ` +
+            `${this.preservedServiceEligibilities}`;
+    }
+
+    cedeInitiative() {
+        this.initiative = (this.initiative == Team.Orange) ? Team.Blue : Team.Orange;
+    }
+}
+
+let world = new WorldState();
+
 function guiAgentRuneToIcon(agentRune) {
     return $('<img>').attr('src', `img/figurines/${agentRune}.png`)
         .addClass('agent-icon');
@@ -33,13 +70,14 @@ function sendPostcard(news) {
         url: "/write/",
         method: 'POST',
         data: {
-            world: preserveExtendedWorld(news, secretServiceEligibilities),
+            world: world.preserve(),
         },
         success: function (data, textStatus, jqxhr) {
-            console.log(`received response ${JSON.stringify(data)}`);
-            let [newWorld, _toMove, newEligibilities] = data.world.split(/ /);
-            world.position(newWorld);
-            secretServiceEligibilities = newEligibilities;
+            let [newField, _initiative,
+                 newEligibilities] = data.world.split(/ /);
+            world.cedeInitiative();
+            world.multifield.position(newField);
+            world.preservedServiceEligibilities = newEligibilities;
             let commentary = ` (after ${data.thinking_time} ms thinking time)`;
             // XXX we are not really respecting the separation of
             // concerns here; mixing logic and presentation will only
@@ -66,6 +104,8 @@ function sendPostcard(news) {
 function dropHandler(whence, whither, agent,
                      news, _previously, _orientation) {
     if (whence != whither && whither != 'offboard') {
+        world.multifield.position(news, false);
+        world.cedeInitiative();
         sendPostcard(news);
         printHeadline(
             "Orange", guiAgentRuneToIcon(agent),
@@ -114,21 +154,3 @@ function printHeadline(team, figurine, whence, whither,
 
     $history.append($headline);
 }
-
-function preserveExtendedWorld(narrowWorld, eligibilities) {
-    // XXX: 'b' as the initiative-preserving rune because for now all
-    // our assumptions affirm that we use the function only to send a
-    // postcard to the server, who is playing blue. But you'd probably
-    // want to generalize this and actually store that bit (literally
-    // one information-theoretic bit) of state in the client.
-    return `${ChessBoard.objToFen(narrowWorld)} b ${eligibilities}`;
-}
-
-const configuration = {
-    position: 'start',
-    draggable: true,
-    pieceTheme: 'img/figurines/{piece}.png',
-    onDrop: dropHandler,
-};
-let secretServiceEligibilities = "KQkq";
-let world = ChessBoard('world', configuration);
