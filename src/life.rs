@@ -1,15 +1,10 @@
 //! the `life` module of the Leafline oppositional strategy game engine
-
 use std::fmt;
 
 use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
 use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
-
-macro_rules! moral_panic {
-    ($y:expr) => (panic!("{}, which is contrary to the operation of the moral law!", $y))
-}
 
 /// represents the movement of a figurine
 #[derive(Eq,PartialEq,Debug,Hash,RustcEncodable,RustcDecodable)]
@@ -87,6 +82,15 @@ pub struct WorldState {
 
 const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
 const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 };
+
+macro_rules! match_agent {
+    ( $agent:expr, $($team:ident, $job:ident => $val:expr),* ) => {
+        match $agent {
+            $( Agent { team: Team::$team , job_description: JobDescription::$job } => $val ),*
+
+        }
+    }
+}
 
 impl WorldState {
     pub fn new() -> Self {
@@ -168,87 +172,42 @@ impl WorldState {
     }
 
     pub fn agent_to_pinfield_ref(&self, agent: Agent) -> &Pinfield {
-        match agent {
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Servant } =>
-                &self.orange_servants,
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Pony } =>
-                &self.orange_ponies,
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Scholar } =>
-                &self.orange_scholars,
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Cop } =>
-                &self.orange_cops,
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Princess } =>
-                &self.orange_princesses,
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Figurehead } =>
-                &self.orange_figurehead,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Servant } =>
-                &self.blue_servants,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Pony } =>
-                &self.blue_ponies,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Scholar } =>
-                &self.blue_scholars,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Cop } =>
-                &self.blue_cops,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Princess } =>
-                &self.blue_princesses,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Figurehead } =>
-                &self.blue_figurehead,
-        }
+        match_agent!(
+            agent, 
+            Orange, Servant => &self.orange_servants,
+            Orange, Pony => &self.orange_ponies,
+            Orange, Scholar => &self.orange_scholars,
+            Orange, Cop => &self.orange_cops,
+            Orange, Princess => &self.orange_princesses,
+            Orange, Figurehead => &self.orange_figurehead,
+            Blue, Servant => &self.blue_servants,
+            Blue, Pony => &self.blue_ponies,
+            Blue, Scholar => &self.blue_scholars,
+            Blue, Cop => &self.blue_cops,
+            Blue, Princess => &self.blue_princesses,
+            Blue, Figurehead => &self.blue_figurehead
+            )
     }
 
-    // XXX this code-duplication is hideous, but what can you do in
-    // this language? My problem is exactly that I don't know
+    // XXX Less code duplication, but still not ideal. the macro system is really confusing
+    // to me: it looks like you can have a macro that generates code that compiles, but that
+    // the code with the macro does not compile. O.o
     pub fn agent_to_pinfield_mutref(&mut self, agent: Agent) -> &mut Pinfield {
-        match agent {
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Servant } =>
-                &mut self.orange_servants,
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Pony } =>
-                &mut self.orange_ponies,
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Scholar } =>
-                &mut self.orange_scholars,
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Cop } =>
-                &mut self.orange_cops,
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Princess } =>
-                &mut self.orange_princesses,
-            Agent{ team: Team::Orange,
-                   job_description: JobDescription::Figurehead } =>
-                &mut self.orange_figurehead,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Servant } =>
-                &mut self.blue_servants,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Pony } =>
-                &mut self.blue_ponies,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Scholar } =>
-                &mut self.blue_scholars,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Cop } =>
-                &mut self.blue_cops,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Princess } =>
-                &mut self.blue_princesses,
-            Agent{ team: Team::Blue,
-                   job_description: JobDescription::Figurehead } =>
-                &mut self.blue_figurehead,
-        }
+        match_agent!(
+            agent, 
+            Orange, Servant => &mut self.orange_servants,
+            Orange, Pony => &mut self.orange_ponies,
+            Orange, Scholar => &mut self.orange_scholars,
+            Orange, Cop => &mut self.orange_cops,
+            Orange, Princess => &mut self.orange_princesses,
+            Orange, Figurehead => &mut self.orange_figurehead,
+            Blue, Servant => &mut self.blue_servants,
+            Blue, Pony => &mut self.blue_ponies,
+            Blue, Scholar => &mut self.blue_scholars,
+            Blue, Cop => &mut self.blue_cops,
+            Blue, Princess => &mut self.blue_princesses,
+            Blue, Figurehead => &mut self.blue_figurehead
+            )
     }
 
     pub fn is_being_leered_at_by(&self, locale: Locale, team: Team) -> bool {

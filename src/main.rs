@@ -9,11 +9,15 @@ extern crate ansi_term;
 extern crate rustc_serialize;
 extern crate time;
 
+#[macro_use]
+mod macros;
+
 mod space;
 mod identity;
 mod motion;
 mod life;
 mod mind;
+
 
 use std::io;
 use std::io::Write;
@@ -26,8 +30,6 @@ use time::*;
 use identity::Agent;
 use life::{WorldState, Commit, Patch};
 use mind::kickoff;
-
-
 
 fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
     let start_thinking = time::get_time();
