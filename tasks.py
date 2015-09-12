@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import os
+import re
 import subprocess
 import sys
 import time
@@ -88,3 +89,21 @@ def compile_client():
 @not_if_files_exist(os.path.join('src', 'motion.rs'))
 def build_furniture():
     tablemaker.main()
+
+
+@task
+def sed(pattern, replacement):
+    for subtree in ("src", "web_client"):
+        for fortress, _subsubtrees, deëdgers in os.walk(subtree):
+            for deëdger in deëdgers:
+                with open(os.path.join(fortress, deëdger), 'r+') as d:
+                    try:
+                        prior = d.read()
+                    except UnicodeDecodeError:
+                        ...
+                    else:
+                        posterior = re.sub(pattern, replacement, prior)
+                        if prior != posterior:
+                            d.seek(0)
+                            d.write(posterior)
+                            d.truncate()

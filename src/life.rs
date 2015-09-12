@@ -67,8 +67,8 @@ pub struct WorldState {
     pub orange_cops: Pinfield,
     pub orange_princesses: Pinfield,
     pub orange_figurehead: Pinfield,
-    pub orange_can_kcastle: bool,
-    pub orange_can_qcastle: bool,
+    pub orange_east_service_eligibility: bool,
+    pub orange_west_service_eligibility: bool,
 
     pub blue_servants: Pinfield,
     pub blue_ponies: Pinfield,
@@ -76,8 +76,8 @@ pub struct WorldState {
     pub blue_cops: Pinfield,
     pub blue_princesses: Pinfield,
     pub blue_figurehead: Pinfield,
-    pub blue_can_kcastle: bool,
-    pub blue_can_qcastle: bool,
+    pub blue_east_service_eligibility: bool,
+    pub blue_west_service_eligibility: bool,
 }
 
 const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
@@ -120,8 +120,8 @@ impl WorldState {
                 &vec![Locale { rank: 0, file: 3 }]),
             orange_figurehead: Pinfield::init(
                 &vec![ORANGE_FIGUREHEAD_START]),
-            orange_can_kcastle: true,
-            orange_can_qcastle: true,
+            orange_east_service_eligibility: true,
+            orange_west_service_eligibility: true,
 
             blue_servants: Pinfield::init(&blue_servant_locales),
             blue_ponies: Pinfield::init(
@@ -140,8 +140,8 @@ impl WorldState {
                 &vec![Locale { rank: 7, file: 3 }]),
             blue_figurehead: Pinfield::init(
                 &vec![BLUE_FIGUREHEAD_START]),
-            blue_can_kcastle: true,
-            blue_can_qcastle: true,
+            blue_east_service_eligibility: true,
+            blue_west_service_eligibility: true,
         }
     }
 
@@ -157,8 +157,8 @@ impl WorldState {
             orange_cops: Pinfield::new(),
             orange_princesses: Pinfield::new(),
             orange_figurehead: Pinfield::new(),
-            orange_can_kcastle: false,
-            orange_can_qcastle: false,
+            orange_east_service_eligibility: false,
+            orange_west_service_eligibility: false,
 
             blue_servants: Pinfield::new(),
             blue_ponies: Pinfield::new(),
@@ -166,14 +166,14 @@ impl WorldState {
             blue_cops: Pinfield::new(),
             blue_princesses: Pinfield::new(),
             blue_figurehead: Pinfield::new(),
-            blue_can_kcastle: false,
-            blue_can_qcastle: false,
+            blue_east_service_eligibility: false,
+            blue_west_service_eligibility: false,
         }
     }
 
     pub fn agent_to_pinfield_ref(&self, agent: Agent) -> &Pinfield {
         match_agent!(
-            agent, 
+            agent,
             Orange, Servant => &self.orange_servants,
             Orange, Pony => &self.orange_ponies,
             Orange, Scholar => &self.orange_scholars,
@@ -194,7 +194,7 @@ impl WorldState {
     // the code with the macro does not compile. O.o
     pub fn agent_to_pinfield_mutref(&mut self, agent: Agent) -> &mut Pinfield {
         match_agent!(
-            agent, 
+            agent,
             Orange, Servant => &mut self.orange_servants,
             Orange, Pony => &mut self.orange_ponies,
             Orange, Scholar => &mut self.orange_scholars,
@@ -269,8 +269,8 @@ impl WorldState {
         book.push(' ');
         let mut any_service = false;
         for &(service_eligibility, eligibility_rune) in [
-            (self.orange_can_kcastle, 'K'), (self.orange_can_qcastle, 'Q'),
-            (self.blue_can_kcastle, 'k'), (self.blue_can_qcastle, 'q')].iter() {
+            (self.orange_east_service_eligibility, 'K'), (self.orange_west_service_eligibility, 'Q'),
+            (self.blue_east_service_eligibility, 'k'), (self.blue_west_service_eligibility, 'q')].iter() {
             if service_eligibility {
                 book.push(eligibility_rune);
                 if !any_service {
@@ -334,10 +334,10 @@ impl WorldState {
         let secret_service_eligibilities = volumes.next().unwrap();
         for eligibility in secret_service_eligibilities.chars() {
             match eligibility {
-                'K' => { world.orange_can_kcastle = true; },
-                'Q' => { world.orange_can_qcastle = true; },
-                'k' => { world.blue_can_kcastle = true; },
-                'q' => { world.blue_can_qcastle = true; },
+                'K' => { world.orange_east_service_eligibility = true; },
+                'Q' => { world.orange_west_service_eligibility = true; },
+                'k' => { world.blue_east_service_eligibility = true; },
+                'q' => { world.blue_west_service_eligibility = true; },
                 '-' => { break; },
                 r @ _ => {
                     moral_panic!(
@@ -400,19 +400,19 @@ impl WorldState {
             JobDescription::Figurehead => {
                 match patch.star.team {
                     Team::Orange => {
-                        tree.orange_can_kcastle = false; tree.orange_can_qcastle = false;
+                        tree.orange_east_service_eligibility = false; tree.orange_west_service_eligibility = false;
                     },
                     Team::Blue => {
-                        tree.blue_can_kcastle = false; tree.blue_can_qcastle = false;
+                        tree.blue_east_service_eligibility = false; tree.blue_west_service_eligibility = false;
                     }
                 }
             },
             JobDescription::Cop => {
                 match (patch.whence.file, patch.star.team) {
-                    (0, Team::Orange) => { tree.orange_can_qcastle = false; },
-                    (7, Team::Orange) => { tree.orange_can_kcastle = false; },
-                    (0, Team::Blue) => { tree.blue_can_qcastle = false; },
-                    (7, Team::Blue) => { tree.blue_can_kcastle = false; },
+                    (0, Team::Orange) => { tree.orange_west_service_eligibility = false; },
+                    (7, Team::Orange) => { tree.orange_east_service_eligibility = false; },
+                    (0, Team::Blue) => { tree.blue_west_service_eligibility = false; },
+                    (7, Team::Blue) => { tree.blue_east_service_eligibility = false; },
                     _ => {},
                 }
             },
@@ -715,12 +715,14 @@ impl WorldState {
         )
     }
 
-    pub fn castle_lookahead(&self, team: Team, nihilistically: bool) -> Vec<Commit> {
+    pub fn service_lookahead(&self, team: Team, nihilistically: bool) -> Vec<Commit> {
         let mut premonitions = Vec::<Commit>::new();
 
-        let (kcastle, qcastle) = match team {
-            Team::Orange => (self.orange_can_kcastle, self.orange_can_qcastle),
-            Team::Blue => (self.blue_can_kcastle, self.blue_can_qcastle),
+        let (east_service, west_service) = match team {
+            Team::Orange => (self.orange_east_service_eligibility,
+                             self.orange_west_service_eligibility),
+            Team::Blue => (self.blue_east_service_eligibility,
+                           self.blue_west_service_eligibility),
         };
 
         let agent = Agent {
@@ -735,8 +737,8 @@ impl WorldState {
         };
 
         // the king must be on the home square, having never moved before;
-        // otherwise we wouldnt have gotten here because `TEAM_can_castle` is true.
-        if kcastle || qcastle {
+        // otherwise we wouldnt have gotten here because `TEAM_can_service` is true.
+        if east_service || west_service {
             debug_assert!(
                 self.agent_to_pinfield_ref(agent).query(
                     Locale { rank: home_rank, file: 4 })
@@ -746,7 +748,7 @@ impl WorldState {
         }
 
         let mut locales_to_query = Vec::new();
-        if qcastle {
+        if west_service {
             locales_to_query.push(
                 (vec![
                  Locale { rank: home_rank, file: 1 },
@@ -758,7 +760,7 @@ impl WorldState {
                      whither: Locale { rank: home_rank, file: 2 }
                  }));
         }
-        if kcastle {
+        if east_service {
             locales_to_query.push(
                 (vec![
                  Locale { rank: home_rank, file: 5 },
@@ -824,7 +826,7 @@ impl WorldState {
         let mut premonitions = self.
             lookahead_without_secret_service( nihilistically);
         premonitions.extend(
-            self.castle_lookahead(self.to_move, nihilistically));
+            self.service_lookahead(self.to_move, nihilistically));
         premonitions
     }
 
@@ -950,10 +952,10 @@ mod tests {
 
     #[test]
     fn concerning_castling_legality() {
-        assert_eq!(true, WorldState::new().orange_can_kcastle);
-        assert_eq!(true, WorldState::new().blue_can_kcastle);
-        assert_eq!(true, WorldState::new().orange_can_qcastle);
-        assert_eq!(true, WorldState::new().blue_can_qcastle);
+        assert_eq!(true, WorldState::new().orange_east_service_eligibility);
+        assert_eq!(true, WorldState::new().blue_east_service_eligibility);
+        assert_eq!(true, WorldState::new().orange_west_service_eligibility);
+        assert_eq!(true, WorldState::new().blue_west_service_eligibility);
     }
 
     #[test]
@@ -967,7 +969,7 @@ mod tests {
             whither: Locale { rank: 0, file: 5 }
         };
 
-        assert_eq!(false, ws.apply(patch).tree.orange_can_kcastle);
+        assert_eq!(false, ws.apply(patch).tree.orange_east_service_eligibility);
 
         let patch = Patch {
             star: Agent { team: Team::Orange,
@@ -975,36 +977,36 @@ mod tests {
             whence: Locale { rank: 0, file: 7 },
             whither: Locale { rank: 0, file: 6 }
         };
-        assert_eq!(false, ws.apply(patch).tree.orange_can_kcastle);
+        assert_eq!(false, ws.apply(patch).tree.orange_east_service_eligibility);
     }
 
     #[test]
     fn concerning_castling_availability() {
         let mut ws = WorldState::reconstruct(
             "8/8/4k3/8/8/8/8/4K2R w K".to_string());
-        let mut prems = ws.castle_lookahead(Team::Orange, false);
+        let mut prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
         ws = WorldState::reconstruct(
             "8/8/4k3/8/8/8/8/R3K2R w KQ".to_string());
-        prems = ws.castle_lookahead(Team::Orange, false);
+        prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(2, prems.len());
 
         ws = WorldState::reconstruct(
             "8/8/4k3/8/8/8/8/R3KN1R w Q".to_string());
-        prems = ws.castle_lookahead(Team::Orange, false);
+        prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
         ws = WorldState::reconstruct(
             "8/8/4k3/8/8/4b3/8/R3KN1R w Q".to_string());
         // can't move into endangerment
-        prems = ws.castle_lookahead(Team::Orange, false);
+        prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
 
         ws = WorldState::reconstruct(
             "8/8/4k3/8/b7/8/8/R3KN1R w Q - 0 1".to_string());
         // can't move through endangerment, either!
-        prems = ws.castle_lookahead(Team::Orange, false);
+        prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
     }
 
@@ -1012,10 +1014,10 @@ mod tests {
     fn concerning_castling_actually_working() {
         let ws = WorldState::reconstruct(
             "8/8/4k3/8/8/8/8/4K2R w K".to_string());
-        assert!(ws.orange_can_kcastle);
-        let prems = ws.castle_lookahead(Team::Orange, false);
+        assert!(ws.orange_east_service_eligibility);
+        let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
-        assert_eq!(false, prems[0].tree.orange_can_kcastle);
+        assert_eq!(false, prems[0].tree.orange_east_service_eligibility);
         prems[0].tree.display();
         assert_eq!("8/8/4k3/8/8/8/8/5RK1 b -", prems[0].tree.preserve());
     }
@@ -1024,8 +1026,8 @@ mod tests {
     fn concerning_castling_out_of_check() {
         let ws = WorldState::reconstruct(
             "8/8/4k3/8/4r3/8/8/4K2R w K".to_string());
-        assert!(ws.orange_can_kcastle);
-        let prems = ws.castle_lookahead(Team::Orange, false);
+        assert!(ws.orange_east_service_eligibility);
+        let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
     }
 

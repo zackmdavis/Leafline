@@ -206,10 +206,10 @@ mod tests {
         fn no_castling_at_all(&mut self) {
             // Mutating in place?? &mut self?? this kind of atrocity must never live
             // outside of a tests module!
-            self.orange_can_kcastle = false;
-            self.orange_can_qcastle = false;
-            self.blue_can_kcastle = false;
-            self.blue_can_qcastle = false;
+            self.orange_east_service_eligibility = false;
+            self.orange_west_service_eligibility = false;
+            self.blue_east_service_eligibility = false;
+            self.blue_west_service_eligibility = false;
         }
     }
 
