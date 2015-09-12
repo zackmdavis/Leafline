@@ -256,6 +256,16 @@ mod tests {
     }
 
     #[test]
+    fn concerning_servant_ascension_choices() {
+        let ws = WorldState::reconstruct("8/q1P1k/8/8/8/8/6PP/7K w -".to_string());
+        // looking ahead 3 moves allows leafline to catch the split
+        let (ref best_move, score) = kickoff(&ws, 3, true)[0];
+        println!("{:?}", best_move);
+        assert!(score > 0.0);
+        assert_eq!(best_move.tree.preserve(), "2N5/q3k/8/8/8/8/6PP/7K b -");
+    }
+
+    #[test]
     fn experimentally_about_kickoff() {
         let mut world = WorldState::new_except_empty();
         // SCENARIO: let's imagine Orange (to move) has separate attacks against

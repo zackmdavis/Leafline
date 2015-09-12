@@ -93,6 +93,7 @@ fn main() {
     // For now, use 0 like None.
     let mut lookahead_depth: u8 = 0;
     let mut postcard: String = "".to_string();
+    let mut from: String = "".to_string();
     {
         let mut parser = ArgumentParser::new();
         parser.set_description("Leafline: an oppositional strategy game engine");
@@ -106,6 +107,10 @@ fn main() {
             "just output the serialization of the AI's top \
              move in response to the given serialized \
              world-state");
+        parser.refer(&mut from).add_option(
+            &["--from"],
+            Store,
+            "start a game from the given preservation rune");
         parser.parse_args_or_exit();
     }
 
@@ -114,7 +119,12 @@ fn main() {
         process::exit(0);
     }
 
-    let mut world = WorldState::new();
+    let mut world: WorldState;
+    if !from.is_empty() {
+        world = WorldState::reconstruct(from);
+    } else {
+        world = WorldState::new();
+    }
     let mut premonitions: Vec<Commit>;
     loop {
         match lookahead_depth {

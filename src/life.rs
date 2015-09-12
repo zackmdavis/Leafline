@@ -84,9 +84,6 @@ impl fmt::Display for Commit {
 pub struct WorldState {
     pub to_move: Team,
 
-    // XXX? this is not Python, presumably `pub` is a keyword for a
-    // reason; maybe provide figurine-placement methods and then lock
-    // these down?
     pub orange_servants: Pinfield,
     pub orange_ponies: Pinfield,
     pub orange_scholars: Pinfield,
@@ -108,15 +105,6 @@ pub struct WorldState {
 
 const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
 const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 };
-
-macro_rules! match_agent {
-    ( $agent:expr, $($team:ident, $job:ident => $val:expr),* ) => {
-        match $agent {
-            $( Agent { team: Team::$team,
-                       job_description: JobDescription::$job } => $val ),*
-        }
-    }
-}
 
 impl WorldState {
     pub fn new() -> Self {
@@ -898,10 +886,9 @@ impl WorldState {
 
     // XXX TODO FIXME: Orange should appear at the bottom and we
     // should use the fmt::Display trait
-    #[allow(dead_code)]
     pub fn display(&self) {
         println!("  a b c d e f g h");
-        for rank in 0..8 {
+        for rank in (0..8).rev() {
             print!("{} ", rank+1);
             for file in 0..8 {
                 let locale = Locale { rank: rank, file: file };
