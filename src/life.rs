@@ -417,12 +417,21 @@ impl WorldState {
         self.occupied().invert()
     }
 
-    pub fn occupying_agent(&self, at: Locale) -> Option<Agent> {
-        for team in Team::league().into_iter() {
-            for agent in Agent::dramatis_personæ(team).into_iter() {
-                if self.agent_to_pinfield_ref(agent).query(at) {
-                    return Some(agent)
-                }
+    pub fn occupying_affiliated_agent(
+            &self, at: Locale, team: Team) -> Option<Agent> {
+        for agent in Agent::dramatis_personæ(team).into_iter() {
+            if self.agent_to_pinfield_ref(agent).query(at) {
+                return Some(agent)
+            }
+        }
+        None
+    }
+
+    fn occupying_agent(&self, at: Locale) -> Option<Agent> {
+        for &team in &Team::league() {
+            let agent_maybe = self.occupying_affiliated_agent(at, team);
+            if agent_maybe.is_some() {
+                return agent_maybe;
             }
         }
         None
@@ -488,24 +497,19 @@ impl WorldState {
             tree = tree.except_replaced_subboard(cop_agent,
                                                  secret_derived_subboard);
         }
-        tree.to_move = tree.to_move.opposition();
 
         // was anyone stunned?
-        let hospitalization = self.occupying_agent(patch.whither);
+        let opposition = tree.to_move.opposition();
+        let hospitalization = self.occupying_affiliated_agent(
+            patch.whither, opposition);
         if let Some(stunned) = hospitalization {
-            if stunned.team == patch.star.team {
-                panic!("{:?} tried to stun friendly figurine \
-                        {:?} at {:?}.\
-                        This shouldn't happen!",
-                       patch.star, hospitalization, patch.whither);
-            }
-
             // if someone was stunned, put her or him in the hospital
             let further_derived_subboard = tree.agent_to_pinfield_ref(stunned)
                                                .quench(patch.whither);
             tree = tree.except_replaced_subboard(
                 stunned, further_derived_subboard);
         }
+        tree.to_move = opposition;
         Commit { patch: patch, tree: tree,
                  hospitalization: hospitalization, ascension: None }
     }
