@@ -1,5 +1,7 @@
 #![feature(test)]
 #![feature(non_ascii_idents)]
+#![allow(unused_features)]
+
 
 #[macro_use]
 extern crate itertools;
@@ -8,6 +10,7 @@ extern crate argparse;
 extern crate ansi_term;
 extern crate rustc_serialize;
 extern crate time;
+
 
 #[macro_use]
 mod macros;
@@ -30,6 +33,7 @@ use time::*;
 use identity::Agent;
 use life::{WorldState, Commit, Patch};
 use mind::kickoff;
+
 
 fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
     let start_thinking = time::get_time();
