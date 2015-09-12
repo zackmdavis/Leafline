@@ -525,7 +525,7 @@ impl WorldState {
         }
     }
 
-    fn aspire_maybe(&self, premonitions: &mut Vec<Commit>, premonition: Commit) {
+    fn subpredict(&self, premonitions: &mut Vec<Commit>, premonition: Commit) {
         if premonition.patch.concerns_servant_ascension() {
             for ascended in Agent::dramatis_personæ(premonition.patch.star.team) {
                 if ascended.job_description == JobDescription::Servant ||
@@ -534,16 +534,16 @@ impl WorldState {
                 }
                 let mut ascendency = premonition.clone();
                 ascendency.ascension = Some(ascended);
-                let vessel_pinfield = self.agent_to_pinfield_ref(
+                let vessel_pinfield = premonition.tree.agent_to_pinfield_ref(
                     premonition.patch.star).quench(premonition.patch.whither);
-                let ascended_pinfield = self.agent_to_pinfield_ref(ascended)
-                                            .alight(premonition.patch.whither);
+                let ascended_pinfield = premonition.tree
+                    .agent_to_pinfield_ref(ascended)
+                    .alight(premonition.patch.whither);
                 ascendency.tree = ascendency.tree
-                                            .except_replaced_subboard(
-                                                premonition.patch.star,
-                                                vessel_pinfield)
-                                            .except_replaced_subboard(
-                                                ascended, ascended_pinfield);
+                    .except_replaced_subboard(
+                        premonition.patch.star, vessel_pinfield)
+                    .except_replaced_subboard(
+                        ascended, ascended_pinfield);
                 premonitions.push(ascendency);
             }
         } else {
@@ -555,11 +555,11 @@ impl WorldState {
                    nihilistically: bool) {
         if nihilistically {  // enjoy Arby's
             let premonition = self.apply(patch);
-            self.aspire_maybe(premonitions, premonition);
+            self.subpredict(premonitions, premonition);
         } else {
             let premonition_maybe = self.careful_apply(patch);
             if let Some(premonition) = premonition_maybe {
-                self.aspire_maybe(premonitions, premonition);
+                self.subpredict(premonitions, premonition);
             }
         }
     }
@@ -888,8 +888,7 @@ impl WorldState {
         self.underlookahead(true)
     }
 
-    // XXX TODO FIXME: Orange should appear at the bottom and we
-    // should use the fmt::Display trait
+    // TODO: we should use the fmt::Display trait
     pub fn display(&self) {
         println!("  a b c d e f g h");
         for rank in (0..8).rev() {

@@ -253,19 +253,22 @@ mod tests {
     #[test]
     #[allow(float_cmp)]
     fn concerning_fairness_of_the_initial_position() {
-        // its okay to assume this is *really* 0.0. floats may be imprecise,
-        // but they do have well-defined behaviour.
+        // It's okay to assume this is really 0.0. Floats may be imprecise,
+        // but they do have well-defined behavior.
         assert_eq!(0.0, score(WorldState::new()));
     }
 
     #[test]
     fn concerning_servant_ascension_choices() {
         let ws = WorldState::reconstruct("8/q1P1k/8/8/8/8/6PP/7K w -".to_owned());
-        // looking ahead 3 moves allows leafline to catch the split
+        // looking ahead 3 moves allows the Leafline AI to catch the
+        // split, whereby transforming into a pony (rather than
+        // transitioning into a princess, as would usually be
+        // expected) endangers both the blue princess and figurehead
         let (ref best_move, score) = kickoff(&ws, 3, true)[0];
         println!("{:?}", best_move);
         assert!(score > 0.0);
-        assert_eq!(best_move.tree.preserve(), "2N5/q3k/8/8/8/8/6PP/7K b -");
+        assert_eq!(best_move.tree.preserve(), "2N5/q3k3/8/8/8/8/6PP/7K b -");
     }
 
     #[test]
