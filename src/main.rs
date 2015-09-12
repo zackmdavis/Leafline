@@ -1,5 +1,7 @@
 #![feature(test)]
 #![feature(non_ascii_idents)]
+#![feature(plugin)]
+#![plugin(clippy)]
 #![allow(unused_features)]
 
 
@@ -92,8 +94,8 @@ fn main() {
     //
     // For now, use 0 like None.
     let mut lookahead_depth: u8 = 0;
-    let mut postcard: String = "".to_string();
-    let mut from: String = "".to_string();
+    let mut postcard: String = "".to_owned();
+    let mut from: String = "".to_owned();
     {
         let mut parser = ArgumentParser::new();
         parser.set_description("Leafline: an oppositional strategy game engine");
@@ -134,7 +136,7 @@ fn main() {
             // than just advising every movement
             0 => {
                 premonitions = world.lookahead();
-                if premonitions.len() == 0 {
+                if premonitions.is_empty() {
                     // XXX distinguish between stalemate and
                     // checkm^H^H^H^H^H^Hultimate endangerment
                     the_end();
@@ -163,11 +165,12 @@ fn main() {
                     premonitions.push(prem_score.0);
                 }
 
-                if premonitions.len() == 0 {
+                if premonitions.is_empty() {
                     the_end();
                 }
             }
         }
+
         loop {
             print!("\nSelect a move>> ");
             io::stdout().flush().ok().expect("couldn't flush stdout");

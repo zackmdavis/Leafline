@@ -17,9 +17,9 @@ impl Team {
     }
 
     pub fn opposition(&self) -> Self {
-        match self {
-            &Team::Orange => Team::Blue,
-            &Team::Blue => Team::Orange,
+        match *self {
+            Team::Orange => Team::Blue,
+            Team::Blue => Team::Orange,
         }
     }
 }
@@ -125,8 +125,8 @@ impl Agent {
 
 impl fmt::Display for Agent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let caricature = match self {
-            &Agent { team: Team::Orange, .. } => {
+        let caricature = match *self {
+            Agent { team: Team::Orange, .. } => {
                 match self.job_description {
                     JobDescription::Servant => Color::Yellow.paint("♙"),
                     JobDescription::Pony => Color::Yellow.paint("♘"),
@@ -136,7 +136,7 @@ impl fmt::Display for Agent {
                     JobDescription::Figurehead => Color::Yellow.paint("♔"),
                 }
             }
-            &Agent { team: Team::Blue, .. } => {
+            Agent { team: Team::Blue, .. } => {
                 match self.job_description {
                     JobDescription::Servant => Color::Cyan.paint("♟"),
                     JobDescription::Pony => Color::Cyan.paint("♞"),

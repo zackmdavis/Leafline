@@ -251,13 +251,16 @@ mod tests {
     }
 
     #[test]
+    #[allow(float_cmp)]
     fn concerning_fairness_of_the_initial_position() {
+        // its okay to assume this is *really* 0.0. floats may be imprecise,
+        // but they do have well-defined behaviour.
         assert_eq!(0.0, score(WorldState::new()));
     }
 
     #[test]
     fn concerning_servant_ascension_choices() {
-        let ws = WorldState::reconstruct("8/q1P1k/8/8/8/8/6PP/7K w -".to_string());
+        let ws = WorldState::reconstruct("8/q1P1k/8/8/8/8/6PP/7K w -".to_owned());
         // looking ahead 3 moves allows leafline to catch the split
         let (ref best_move, score) = kickoff(&ws, 3, true)[0];
         println!("{:?}", best_move);
