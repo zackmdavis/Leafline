@@ -47,7 +47,7 @@ impl fmt::Display for Commit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let hospital_report = match self.hospitalization {
             Some(stunning_victim) => format!(", stunning {}", stunning_victim),
-            None => "".to_string(),
+            None => "".to_owned(),
         };
         let ascension_report = match self.ascension {
             Some(ascended_form) => {
@@ -65,7 +65,7 @@ impl fmt::Display for Commit {
                         "servant ascending to figurehead"),
                 }
             }
-            None => "".to_string(),
+            None => "".to_owned(),
         };
         let report = hospital_report + &ascension_report;
         write!(
@@ -197,7 +197,7 @@ impl WorldState {
             Blue, Cop => &self.blue_cops,
             Blue, Princess => &self.blue_princesses,
             Blue, Figurehead => &self.blue_figurehead
-            )
+        )
     }
 
     // XXX Less code duplication, but still not ideal. the macro
@@ -279,11 +279,11 @@ impl WorldState {
         book.push(to_move_indication_rune);
         book.push(' ');
         let mut any_service = false;
-        for &(service_eligibility, eligibility_rune) in [
+        for &(service_eligibility, eligibility_rune) in &[
             (self.orange_east_service_eligibility, 'K'),
             (self.orange_west_service_eligibility, 'Q'),
             (self.blue_east_service_eligibility, 'k'),
-            (self.blue_west_service_eligibility, 'q')].iter() {
+            (self.blue_west_service_eligibility, 'q')] {
             if service_eligibility {
                 book.push(eligibility_rune);
                 if !any_service {
@@ -343,7 +343,7 @@ impl WorldState {
                         agent, derived_pinfield);
                     file += 1;
                 }
-                r @ _ => moral_panic!(format!("Unexpected rune '{}'", r)),
+                r => moral_panic!(format!("Unexpected rune '{}'", r)),
             }
         }
         let rune_of_those_with_initiative = volumes.next()
@@ -375,7 +375,7 @@ impl WorldState {
                 '-' => {
                     break;
                 }
-                r @ _ => {
+                r => {
                     moral_panic!(
                         format!("non-eligibility rune '{}'", r)
                     );
@@ -514,7 +514,7 @@ impl WorldState {
         let mut contingency = *self;
         contingency.to_move = team.opposition();
         let premonitions = contingency.reckless_lookahead();
-        for premonition in premonitions.iter() {
+        for premonition in &premonitions {
             if let Some(patient) = premonition.hospitalization {
                 if patient.job_description == JobDescription::Figurehead {
                     return true;
@@ -535,7 +535,7 @@ impl WorldState {
 
     fn aspire_maybe(&self, premonitions: &mut Vec<Commit>, premonition: Commit) {
         if premonition.patch.concerns_servant_ascension() {
-            for &ascended in Agent::dramatis_personæ(premonition.patch.star.team).iter() {
+            for ascended in Agent::dramatis_personæ(premonition.patch.star.team) {
                 if ascended.job_description == JobDescription::Servant ||
                    ascended.job_description == JobDescription::Figurehead {
                     continue;
@@ -633,7 +633,7 @@ impl WorldState {
                 }
             }
 
-            for &stun_offset in stun_offsets.iter() {
+            for &stun_offset in &stun_offsets {
                 let stun_destination_maybe = start_locale.displace(stun_offset);
                 if let Some(stun_destination) = stun_destination_maybe {
                     if self.occupied_by(team.opposition()).query(
@@ -700,7 +700,7 @@ impl WorldState {
                                `princesslike_lookahead`"),
         };
         for start_locale in positional_chart.to_locales().into_iter() {
-            for &offset in offsets.iter() {
+            for &offset in &offsets {
                 let mut venture = 1;
                 loop {
                     let destination_maybe = start_locale.multidisplace(
@@ -908,9 +908,8 @@ impl WorldState {
                 if self.occupied().invert().query(locale) {
                     print!("_ ");
                 } else {
-                    for &team in [Team::Orange, Team::Blue].iter() {
-                        for &figurine_class in Agent::dramatis_personæ(
-                                team).iter() {
+                    for &team in &[Team::Orange, Team::Blue] {
+                        for &figurine_class in &Agent::dramatis_personæ(team) {
                             if self.agent_to_pinfield_ref(figurine_class)
                                    .query(locale) {
                                 print!("{} ", figurine_class)
@@ -939,25 +938,25 @@ mod tests {
 
     #[bench]
     fn benchmark_servant_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_owned());
         b.iter(|| ws.servant_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_pony_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_owned());
         b.iter(|| ws.pony_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_scholar_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_owned());
         b.iter(|| ws.scholar_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_cop_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_owned());
         ws.cop_lookahead(Team::Orange, false);
         ws.cop_lookahead(Team::Orange, false);
         ws.cop_lookahead(Team::Orange, false);
@@ -967,13 +966,13 @@ mod tests {
 
     #[bench]
     fn benchmark_princess_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_owned());
         b.iter(|| ws.princess_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_figurehead_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_owned());
         b.iter(|| ws.figurehead_lookahead(Team::Orange, false));
     }
 
@@ -985,13 +984,13 @@ mod tests {
 
     #[bench]
     fn benchmark_non_new_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_owned());
         b.iter(|| ws.lookahead());
     }
 
     #[bench]
     fn benchmark_ultimate_endangerment(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_owned());
         b.iter(|| ws.in_critical_endangerment(Team::Orange));
     }
 
@@ -1013,8 +1012,8 @@ mod tests {
     fn concerning_castling_restrictions() {
         let ws = WorldState::reconstruct(
             "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPBPPP/RNBQK2R w KQkq"
-                .to_string());
-        let patch = Patch {
+                .to_owned());
+        let service_patch = Patch {
             star: Agent {
                 team: Team::Orange,
                 job_description: JobDescription::Figurehead,
@@ -1023,9 +1022,10 @@ mod tests {
             whither: Locale { rank: 0, file: 5 },
         };
 
-        assert_eq!(false, ws.apply(patch).tree.orange_east_service_eligibility);
+        assert_eq!(false, ws.apply(
+            service_patch).tree.orange_east_service_eligibility);
 
-        let patch = Patch {
+        let service_patch = Patch {
             star: Agent {
                 team: Team::Orange,
                 job_description: JobDescription::Cop,
@@ -1033,31 +1033,32 @@ mod tests {
             whence: Locale { rank: 0, file: 7 },
             whither: Locale { rank: 0, file: 6 },
         };
-        assert_eq!(false, ws.apply(patch).tree.orange_east_service_eligibility);
+        assert_eq!(false, ws.apply(
+            service_patch).tree.orange_east_service_eligibility);
     }
 
     #[test]
     fn concerning_castling_availability() {
         let mut ws = WorldState::reconstruct(
-            "8/8/4k3/8/8/8/8/4K2R w K".to_string());
+            "8/8/4k3/8/8/8/8/4K2R w K".to_owned());
         let mut prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
-        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3K2R w KQ".to_string());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3K2R w KQ".to_owned());
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(2, prems.len());
 
-        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3KN1R w Q".to_string());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3KN1R w Q".to_owned());
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
-        ws = WorldState::reconstruct("8/8/4k3/8/8/4b3/8/R3KN1R w Q".to_string());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/4b3/8/R3KN1R w Q".to_owned());
         // can't move into endangerment
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
 
         ws = WorldState::reconstruct(
-            "8/8/4k3/8/b7/8/8/R3KN1R w Q - 0 1".to_string());
+            "8/8/4k3/8/b7/8/8/R3KN1R w Q - 0 1".to_owned());
         // can't move through endangerment, either!
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
@@ -1065,7 +1066,7 @@ mod tests {
 
     #[test]
     fn concerning_castling_actually_working() {
-        let ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K".to_string());
+        let ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K".to_owned());
         assert!(ws.orange_east_service_eligibility);
         let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
@@ -1077,7 +1078,7 @@ mod tests {
     #[test]
     fn concerning_castling_out_of_check() {
         let ws = WorldState::reconstruct(
-            "8/8/4k3/8/4r3/8/8/4K2R w K".to_string());
+            "8/8/4k3/8/4r3/8/8/4K2R w K".to_owned());
         assert!(ws.orange_east_service_eligibility);
         let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
@@ -1089,15 +1090,14 @@ mod tests {
         let derived_subfield = worldstate.orange_servants
                                          .alight(
                                              Locale::from_algebraic(
-                                                 "a7".to_string()));
+                                                 "a7".to_owned()));
         worldstate = worldstate.except_replaced_subboard(
             Agent { team: Team::Orange,
                     job_description: JobDescription::Servant },
             derived_subfield);
         let premonitions = worldstate.servant_lookahead(Team::Orange, true);
-        assert!(premonitions.len() != 0);
         assert!(premonitions.iter().all(
-            |p| p.patch.whither == Locale::from_algebraic("a8".to_string())));
+            |p| p.patch.whither == Locale::from_algebraic("a8".to_owned())));
         for (&expected_ascension, commit) in [JobDescription::Pony, JobDescription::Scholar, JobDescription::Cop, JobDescription::Princess].iter().zip(premonitions.iter()) {
             assert_eq!(expected_ascension,
                        commit.ascension.expect(
@@ -1161,12 +1161,12 @@ mod tests {
         world.orange_scholars = world.orange_scholars
             .alight(
                 Locale::from_algebraic(
-                    "e1".to_string()));
+                    "e1".to_owned()));
         world.orange_princesses = world.orange_princesses
             .alight(
-                Locale::from_algebraic("c3".to_string()));
+                Locale::from_algebraic("c3".to_owned()));
         world.blue_princesses = world.blue_princesses
-            .alight(Locale::from_algebraic("g3".to_string()));
+            .alight(Locale::from_algebraic("g3".to_owned()));
         let premonitions = world.scholar_lookahead(Team::Orange, false);
         let expected = vec!["d2", "f2", "g3"]
                            .iter()
@@ -1232,18 +1232,18 @@ mod tests {
         };
         let orange_begins = Patch {
             star: orange_servant_agent,
-            whence: Locale::from_algebraic("e2".to_string()),
-            whither: Locale::from_algebraic("e4".to_string()),
+            whence: Locale::from_algebraic("e2".to_owned()),
+            whither: Locale::from_algebraic("e4".to_owned()),
         };
         let blue_replies = Patch {
             star: blue_servant_agent,
-            whence: Locale::from_algebraic("d7".to_string()),
-            whither: Locale::from_algebraic("d5".to_string()),
+            whence: Locale::from_algebraic("d7".to_owned()),
+            whither: Locale::from_algebraic("d5".to_owned()),
         };
         let orange_counterreplies = Patch {
             star: orange_servant_agent,
-            whence: Locale::from_algebraic("e4".to_string()),
-            whither: Locale::from_algebraic("d5".to_string()),
+            whence: Locale::from_algebraic("e4".to_owned()),
+            whither: Locale::from_algebraic("d5".to_owned()),
         };
 
         let first_commit = state.apply(orange_begins);
@@ -1263,7 +1263,7 @@ mod tests {
             available_stunnings[0].hospitalization.unwrap()
         );
         assert_eq!(
-            Locale::from_algebraic("d5".to_string()),
+            Locale::from_algebraic("d5".to_owned()),
             available_stunnings[0].patch.whither
         );
 
@@ -1272,7 +1272,7 @@ mod tests {
         assert_eq!(Agent { team: Team::Orange,
                            job_description: JobDescription::Servant },
                    new_state.occupying_agent(
-                       Locale::from_algebraic("d5".to_string())).unwrap());
+                       Locale::from_algebraic("d5".to_owned())).unwrap());
         let stunned = crucial_commit.hospitalization.unwrap();
         assert_eq!(Agent { team: Team::Blue,
                            job_description: JobDescription::Servant },
@@ -1285,16 +1285,16 @@ mod tests {
         let fools_patchset = vec![
             Patch { star: Agent { team: Team::Orange,
                                   job_description: JobDescription::Servant },
-                    whence: Locale::from_algebraic("f2".to_string()),
-                    whither: Locale::from_algebraic("f3".to_string()) },
+                    whence: Locale::from_algebraic("f2".to_owned()),
+                    whither: Locale::from_algebraic("f3".to_owned()) },
             Patch { star: Agent { team: Team::Blue,
                                   job_description: JobDescription::Servant },
-                    whence: Locale::from_algebraic("e7".to_string()),
-                    whither: Locale::from_algebraic("e5".to_string()) },
+                    whence: Locale::from_algebraic("e7".to_owned()),
+                    whither: Locale::from_algebraic("e5".to_owned()) },
             Patch { star: Agent { team: Team::Orange,
                                   job_description: JobDescription::Servant },
-                    whence: Locale::from_algebraic("g2".to_string()),
-                    whither: Locale::from_algebraic("g4".to_string()) },
+                    whence: Locale::from_algebraic("g2".to_owned()),
+                    whither: Locale::from_algebraic("g4".to_owned()) },
         ];
         for patch in fools_patchset.into_iter() {
             world = world.careful_apply(patch).unwrap().tree;
@@ -1309,8 +1309,8 @@ mod tests {
                        team: Team::Blue,
                        job_description: JobDescription::Princess,
                    },
-                   whence: Locale::from_algebraic("d8".to_string()),
-                   whither: Locale::from_algebraic("h4".to_string()),
+                   whence: Locale::from_algebraic("d8".to_owned()),
+                   whither: Locale::from_algebraic("h4".to_owned()),
                })
                .tree
     }
@@ -1337,32 +1337,32 @@ mod tests {
     fn concerning_preservation_and_reconstruction_of_historical_worlds() {
         // en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation#Examples
         let eden = WorldState::new();
-        let book_of_eden = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq".to_string();
+        let book_of_eden = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq".to_owned();
         assert_eq!(book_of_eden, eden.preserve());
         assert_eq!(eden, WorldState::reconstruct(book_of_eden));
 
         let patchset = vec![
             Patch { star: Agent { team: Team::Orange,
                                   job_description: JobDescription::Servant },
-                    whence: Locale::from_algebraic("e2".to_string()),
-                    whither: Locale::from_algebraic("e4".to_string()) },
+                    whence: Locale::from_algebraic("e2".to_owned()),
+                    whither: Locale::from_algebraic("e4".to_owned()) },
             Patch { star: Agent { team: Team::Blue,
                                   job_description: JobDescription::Servant },
-                    whence: Locale::from_algebraic("c7".to_string()),
-                    whither: Locale::from_algebraic("c5".to_string()) },
+                    whence: Locale::from_algebraic("c7".to_owned()),
+                    whither: Locale::from_algebraic("c5".to_owned()) },
             Patch { star: Agent { team: Team::Orange,
                                   job_description: JobDescription::Pony },
-                    whence: Locale::from_algebraic("g1".to_string()),
-                    whither: Locale::from_algebraic("f3".to_string()) },
+                    whence: Locale::from_algebraic("g1".to_owned()),
+                    whither: Locale::from_algebraic("f3".to_owned()) },
         ];
 
         let book_of_patches = vec![
             "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq" // e3 0 1
-                .to_string(),
+                .to_owned(),
             "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq" // c6 0 2
-                .to_string(),
+                .to_owned(),
             "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq" // - 1 2
-                .to_string(),
+                .to_owned(),
         ];
 
         let mut world = eden;

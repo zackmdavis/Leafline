@@ -24,7 +24,7 @@ impl Locale {
         let rank_note = notation_pieces.next().unwrap();
         Locale {
             rank: (rank_note as u8) - 49, // 49 == '1'
-            file: (file_note as u8) - 97, /* 97 == 'a' */
+            file: (file_note as u8) - 97, // 97 == 'a'
         }
     }
 
@@ -200,10 +200,10 @@ mod tests {
                          .map(|t| Locale { rank: t.0, file: t.1 })
                          .map(|l| l.to_algebraic());
         for (expectation, actuality) in ALGEBRAICS.iter().zip(actual) {
-            // TODO: it's more elegant if the `.to_string` happens in
+            // TODO: it's more elegant if the conversion happens in
             // the iterator rather than the body of this
             // assertion-iteration
-            assert_eq!(expectation.to_string(), actuality);
+            assert_eq!(expectation.to_owned(), actuality);
         }
     }
 
@@ -214,7 +214,7 @@ mod tests {
         for (expectation, actuality) in expected.zip(ALGEBRAICS.iter()) {
             assert_eq!(
                 expectation,
-                // TODO: again, `to_string` in iterator
+                // TODO: again, conversion in iterator
                 Locale::from_algebraic(actuality.to_string())
             );
         }
@@ -269,7 +269,7 @@ mod tests {
                             Locale{ rank: 3, file: 4 },
                             Locale{ rank: 5, file: 6 }];
         let stage = Pinfield::init(&starters);
-        for &starter in starters.iter() {
+        for &starter in &starters {
             assert!(stage.query(starter));
         }
     }

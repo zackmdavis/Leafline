@@ -17,9 +17,9 @@ impl Team {
     }
 
     pub fn opposition(&self) -> Self {
-        match self {
-            &Team::Orange => Team::Blue,
-            &Team::Blue => Team::Orange,
+        match *self {
+            Team::Orange => Team::Blue,
+            Team::Blue => Team::Orange,
         }
     }
 }
@@ -62,23 +62,23 @@ impl Agent {
         //      such boilerplate
         //   many agents     very repeat
         //                  wow
-        match self {
-            &Agent { team: Team::Orange,
+        match *self {
+            Agent { team: Team::Orange,
                     // 'P' is for "peon"
                     job_description: JobDescription::Servant } => 'P',
-            &Agent { team: Team::Orange,
+            Agent { team: Team::Orange,
                     // 'N' is for "neigh"
                     job_description: JobDescription::Pony } => 'N',
-            &Agent { team: Team::Orange,
+            Agent { team: Team::Orange,
                     // 'B' is for "book"
                     job_description: JobDescription::Scholar } => 'B',
-            &Agent { team: Team::Orange,
+            Agent { team: Team::Orange,
                     // 'R' is for "the Rule of law"
                     job_description: JobDescription::Cop } => 'R',
-            &Agent { team: Team::Orange,
+            Agent { team: Team::Orange,
                     // 'Q' is the Princess's favorite letter of the alphabet
                     job_description: JobDescription::Princess } => 'Q',
-            &Agent { team: Team::Orange,
+            Agent { team: Team::Orange,
                     // 'K' in baseball notation indicates a strikeout,
                     // which is bad; if the figurehead is in critical
                     // endangerment, his team loses the game, which is
@@ -88,17 +88,17 @@ impl Agent {
             // except in lowercase; this is because lowercase characters
             // have higher ASCII values, just as blue light has a higher
             // frequency than orange light
-            &Agent { team: Team::Blue,
+            Agent { team: Team::Blue,
                     job_description: JobDescription::Servant } => 'p',
-            &Agent { team: Team::Blue,
+            Agent { team: Team::Blue,
                     job_description: JobDescription::Pony } => 'n',
-            &Agent { team: Team::Blue,
+            Agent { team: Team::Blue,
                     job_description: JobDescription::Scholar } => 'b',
-            &Agent { team: Team::Blue,
+            Agent { team: Team::Blue,
                     job_description: JobDescription::Cop } => 'r',
-            &Agent { team: Team::Blue,
+            Agent { team: Team::Blue,
                     job_description: JobDescription::Princess } => 'q',
-            &Agent { team: Team::Blue,
+            Agent { team: Team::Blue,
                     job_description: JobDescription::Figurehead } => 'k',
         }
     }
@@ -141,8 +141,8 @@ impl Agent {
 
 impl fmt::Display for Agent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let caricature = match self {
-            &Agent { team: Team::Orange, .. } => {
+        let caricature = match *self {
+            Agent { team: Team::Orange, .. } => {
                 match self.job_description {
                     JobDescription::Servant => Color::Yellow.paint("♙"),
                     JobDescription::Pony => Color::Yellow.paint("♘"),
@@ -152,7 +152,7 @@ impl fmt::Display for Agent {
                     JobDescription::Figurehead => Color::Yellow.paint("♔"),
                 }
             }
-            &Agent { team: Team::Blue, .. } => {
+            Agent { team: Team::Blue, .. } => {
                 match self.job_description {
                     JobDescription::Servant => Color::Cyan.paint("♟"),
                     JobDescription::Pony => Color::Cyan.paint("♞"),
