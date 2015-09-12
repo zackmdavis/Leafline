@@ -4,7 +4,10 @@ use ansi_term::Colour as Color;  // this is America
 
 
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
-pub enum Team { Orange, Blue }
+pub enum Team {
+    Orange,
+    Blue,
+}
 
 impl Team {
     pub fn league() -> Vec<Self> {
@@ -16,7 +19,7 @@ impl Team {
     pub fn opposition(&self) -> Self {
         match self {
             &Team::Orange => Team::Blue,
-            &Team::Blue => Team::Orange
+            &Team::Blue => Team::Orange,
         }
     }
 }
@@ -28,13 +31,13 @@ pub enum JobDescription {
     Scholar,  // ♀
     Cop,  // ♂
     Princess,  // ♀
-    Figurehead  // ♂
+    Figurehead, // ♂
 }
 
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub struct Agent {
     pub team: Team,
-    pub job_description: JobDescription
+    pub job_description: JobDescription,
 }
 
 impl Agent {
@@ -148,7 +151,7 @@ impl fmt::Display for Agent {
                     JobDescription::Princess => Color::Yellow.paint("♕"),
                     JobDescription::Figurehead => Color::Yellow.paint("♔"),
                 }
-            },
+            }
             &Agent { team: Team::Blue, .. } => {
                 match self.job_description {
                     JobDescription::Servant => Color::Cyan.paint("♟"),

@@ -1,7 +1,7 @@
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub struct Locale {
     pub rank: u8,
-    pub file: u8
+    pub file: u8,
 }
 
 static INDEX_TO_FILE_NAME: [char; 8] = [
@@ -23,8 +23,8 @@ impl Locale {
         let file_note = notation_pieces.next().unwrap();
         let rank_note = notation_pieces.next().unwrap();
         Locale {
-            rank: (rank_note as u8) - 49,  // 49 == '1'
-            file: (file_note as u8) - 97  // 97 == 'a'
+            rank: (rank_note as u8) - 49, // 49 == '1'
+            file: (file_note as u8) - 97, /* 97 == 'a' */
         }
     }
 
@@ -47,7 +47,7 @@ impl Locale {
             // give it in this program, but in the interests of Safety,
             // this is an overflow bug (-1i8 as u8 == 255u8)
             rank: (self.rank as i8 + rank_offset) as u8,
-            file: (self.file as i8 + file_offset) as u8
+            file: (self.file as i8 + file_offset) as u8,
         };
         if potential_locale.is_legal() {
             Some(potential_locale)
@@ -56,15 +56,15 @@ impl Locale {
         }
     }
 
-    pub fn multidisplace(&self, offset: (i8, i8),
-                         factor: i8) -> Option<Self> {
+    pub fn multidisplace(&self, offset: (i8, i8), factor: i8) -> Option<Self> {
         let (rank_offset, file_offset) = offset;
-        let (real_rank, real_file) = (factor*rank_offset, factor*file_offset);
+        let (real_rank, real_file) = (factor * rank_offset,
+                                      factor * file_offset);
 
         let potential_locale = Locale {
             // XXX: could overflow given unrealistic arguments
             rank: (self.rank as i8 + real_rank) as u8,
-            file: (self.file as i8 + real_file) as u8
+            file: (self.file as i8 + real_file) as u8,
         };
         if potential_locale.is_legal() {
             Some(potential_locale)
@@ -196,8 +196,9 @@ mod tests {
 
     #[test]
     fn concerning_converting_to_algebraic() {
-        let actual = iproduct!(0..8, 0..8).map(
-            |t| Locale { rank: t.0, file: t.1 }).map(|l| l.to_algebraic());
+        let actual = iproduct!(0..8, 0..8)
+                         .map(|t| Locale { rank: t.0, file: t.1 })
+                         .map(|l| l.to_algebraic());
         for (expectation, actuality) in ALGEBRAICS.iter().zip(actual) {
             // TODO: it's more elegant if the `.to_string` happens in
             // the iterator rather than the body of this
@@ -242,7 +243,7 @@ mod tests {
 
     #[test]
     fn concerning_multidisplacement() {
-        for i in 0..8{
+        for i in 0..8 {
             assert_eq!(
                 Some(Locale { rank: i as u8, file: i as u8 }),
                 Locale{ rank: 0, file: 0 }.multidisplace((1, 1), i)

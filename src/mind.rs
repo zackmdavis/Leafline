@@ -11,7 +11,7 @@ use space::Pinfield;
 pub fn orientation(team: Team) -> f32 {
     match team {
         Team::Orange => 1.0,
-        Team::Blue => -1.0
+        Team::Blue => -1.0,
     }
 }
 
@@ -24,7 +24,7 @@ pub fn figurine_valuation(agent: Agent) -> f32 {
         JobDescription::Scholar => 3.3,
         JobDescription::Cop => 5.1,
         JobDescription::Princess => 8.8,
-        JobDescription::Figurehead => 20000.0
+        JobDescription::Figurehead => 20000.0,
     };
     orientation(agent.team) * value
 }
@@ -38,11 +38,13 @@ pub fn score(world: WorldState) -> f32 {
                 agent).pincount() as f32 * figurine_valuation(agent);
         }
         // breadth of scholarship bonus
-        if world.agent_to_pinfield_ref(
-            Agent { team: team,
-                    job_description: JobDescription::Scholar }
-            ).to_locales().len() >= 2 {
-                valuation += orientation(team) * 0.5
+        if world.agent_to_pinfield_ref(Agent {
+                    team: team,
+                    job_description: JobDescription::Scholar,
+                })
+                .to_locales()
+                .len() >= 2 {
+            valuation += orientation(team) * 0.5
         }
     }
 
@@ -62,15 +64,18 @@ pub fn score(world: WorldState) -> f32 {
 fn mmv_lva_heuristic(commit: &Commit) -> f32 {
     // https://chessprogramming.wikispaces.com/MVV-LVA
     match commit.hospitalization {
-        Some(patient) => (figurine_valuation(patient) -
-                          figurine_valuation(commit.patch.star)),
-        None => 0.0
+        Some(patient) => (
+            figurine_valuation(patient) - figurine_valuation(commit.patch.star)),
+        None => 0.0,
     }
 }
 
 fn order_moves(commits: &mut Vec<Commit>) {
-    commits.sort_by(|a, b| mmv_lva_heuristic(
-        &b).partial_cmp(&mmv_lva_heuristic(&a)).unwrap_or(Ordering::Equal));
+    commits.sort_by(|a, b| {
+        mmv_lva_heuristic(&b)
+            .partial_cmp(&mmv_lva_heuristic(&a))
+            .unwrap_or(Ordering::Equal)
+    });
 }
 
 
@@ -85,7 +90,7 @@ pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
     let mut optimum = NEG_INFINITY;
     let mut optimand = None;
     for premonition in premonitions.into_iter() {
-        let (_after, mut value) = negamax_search(premonition.tree, depth-1);
+        let (_after, mut value) = negamax_search(premonition.tree, depth - 1);
         value = -value;
         if value > optimum {
             optimum = value;
@@ -96,11 +101,12 @@ pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
 }
 
 
-pub fn α_β_negamax_search(
-    world: WorldState, depth: u8,
-    alpha: f32, beta: f32,
-    deja_vu_table: &mut HashMap<WorldState, f32>) -> (Option<Commit>, f32)
-{
+pub fn α_β_negamax_search(world: WorldState,
+                            depth: u8,
+                            alpha: f32,
+                            beta: f32,
+                            deja_vu_table: &mut HashMap<WorldState, f32>)
+                            -> (Option<Commit>, f32) {
 
     // RESEARCH: I don't really care that much right now, but can you
     // mutate (reassign) an argument name, and if so, what is the syntax?
@@ -122,7 +128,7 @@ pub fn α_β_negamax_search(
                 Some(&cached_value) => {
                     cached = true;
                     value = cached_value;
-                },
+                }
                 None => {
                     cached = false;
                     // XXX fake assignment to work around the compiler's
@@ -133,9 +139,11 @@ pub fn α_β_negamax_search(
         }
 
         if !cached {
-            let (_, acquired_value) = α_β_negamax_search(
-                premonition.tree, depth-1, -beta, -experienced_alpha,
-                deja_vu_table);
+            let (_, acquired_value) = α_β_negamax_search(premonition.tree,
+                                                         depth - 1,
+                                                         -beta,
+                                                         -experienced_alpha,
+                                                         deja_vu_table);
             value = -acquired_value;
             deja_vu_table.insert(premonition.tree, value);
         }
@@ -161,8 +169,7 @@ pub fn α_β_negamax_search(
 // optimality, but that we don't want to bother with all that bookkeeping
 // for subsequent levels of the game tree; minimax is expensive enough
 // already!!
-pub fn kickoff(world: &WorldState,
-               depth: u8,
+pub fn kickoff(world: &WorldState, depth: u8,
                nihilistically: bool) -> Vec<(Commit, f32)> {
     // when we get non-ASCII identifiers: `déjà_vu_table`
     let mut deja_vu_table: HashMap<WorldState, f32> = HashMap::new();
@@ -175,10 +182,11 @@ pub fn kickoff(world: &WorldState,
     order_moves(&mut premonitions);
     let mut forecasts = Vec::new();
     for premonition in premonitions.into_iter() {
-        let (_grandchild, mut value) = α_β_negamax_search(
-            premonition.tree, depth-1, NEG_INFINITY, INFINITY,
-            &mut deja_vu_table
-        );
+        let (_grandchild, mut value) = α_β_negamax_search(premonition.tree,
+                                                          depth - 1,
+                                                          NEG_INFINITY,
+                                                          INFINITY,
+                                                          &mut deja_vu_table);
         value = -value;
         forecasts.push((premonition, value));
     }
@@ -204,8 +212,6 @@ mod tests {
 
     impl WorldState {
         fn no_castling_at_all(&mut self) {
-            // Mutating in place?? &mut self?? this kind of atrocity must never live
-            // outside of a tests module!
             self.orange_east_service_eligibility = false;
             self.orange_west_service_eligibility = false;
             self.blue_east_service_eligibility = false;
@@ -259,24 +265,19 @@ mod tests {
 
         // scholar endangers pony
         world.blue_ponies = world.blue_ponies.alight(
-            Locale { rank: 0, file: 0 }
-        );
+            Locale { rank: 0, file: 0 });
         world.orange_scholars = world.orange_scholars.alight(
-            Locale { rank: 2, file: 2 }
-        );
+            Locale { rank: 2, file: 2 });
 
         // pony endangers servant
         world.blue_servants = world.blue_servants.alight(
-            Locale { rank: 7, file: 1 }
-        );
+            Locale { rank: 7, file: 1 });
         world.orange_ponies = world.orange_ponies.alight(
-            Locale { rank: 5, file: 2 }
-        );
+            Locale { rank: 5, file: 2 });
 
         // Blue has another servant sitting nowhere interesting
         world.blue_servants = world.blue_servants.alight(
-            Locale { rank: 3, file: 6 }
-        );
+            Locale { rank: 3, file: 6 });
         world.no_castling_at_all();
 
         let depth = 2;
@@ -299,24 +300,19 @@ mod tests {
 
         // scholar endangers pony
         negaworld.orange_ponies = negaworld.orange_ponies.alight(
-            Locale { rank: 0, file: 0 }
-        );
+            Locale { rank: 0, file: 0 });
         negaworld.blue_scholars = negaworld.blue_scholars.alight(
-            Locale { rank: 2, file: 2 }
-        );
+            Locale { rank: 2, file: 2 });
 
         // pony endangers servant
         negaworld.orange_servants = negaworld.orange_servants.alight(
-            Locale { rank: 7, file: 1 }
-        );
+            Locale { rank: 7, file: 1 });
         negaworld.blue_ponies = negaworld.blue_ponies.alight(
-            Locale { rank: 5, file: 2 }
-        );
+            Locale { rank: 5, file: 2 });
 
         // Orange has another servant sitting nowhere interesting
         negaworld.orange_servants = negaworld.orange_servants.alight(
-            Locale { rank: 3, file: 6 }
-        );
+            Locale { rank: 3, file: 6 });
         negaworld.to_move = Team::Blue;
 
         negaworld.no_castling_at_all();

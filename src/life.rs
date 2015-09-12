@@ -11,19 +11,19 @@ use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 pub struct Patch {
     pub star: Agent,
     pub whence: Locale,
-    pub whither: Locale
+    pub whither: Locale,
 }
 
 impl Patch {
     pub fn concerns_secret_service(&self) -> bool {
         self.star.job_description == JobDescription::Figurehead &&
-            (self.whence.file as i8 - self.whither.file as i8).abs() == 2
+        (self.whence.file as i8 - self.whither.file as i8).abs() == 2
     }
 
     pub fn concerns_servant_ascension(&self) -> bool {
         let admirality = match self.star.team {
             Team::Orange => 7,
-            Team::Blue => 0
+            Team::Blue => 0,
         };
         self.star.job_description == JobDescription::Servant &&
             self.whither.rank == admirality
@@ -40,14 +40,14 @@ pub struct Commit {
     pub patch: Patch,
     pub tree: WorldState,
     pub hospitalization: Option<Agent>,
-    pub ascension: Option<Agent>
+    pub ascension: Option<Agent>,
 }
 
 impl fmt::Display for Commit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let hospital_report = match self.hospitalization {
             Some(stunning_victim) => format!(", stunning {}", stunning_victim),
-            None => "".to_string()
+            None => "".to_string(),
         };
         let ascension_report = match self.ascension {
             Some(ascended_form) => {
@@ -55,17 +55,17 @@ impl fmt::Display for Commit {
                     JobDescription::Servant => moral_panic!(
                         "servant purportedly 'ascending'\
                          to his own station (?!)"),
-                    JobDescription::Pony =>
-                        format!(", transforming into {}", ascended_form),
-                    JobDescription::Cop =>
-                        format!(", being brevetted to {}", ascended_form),
+                    JobDescription::Pony => format!(
+                        ", transforming into {}", ascended_form),
+                    JobDescription::Cop => format!(
+                        ", being brevetted to {}", ascended_form),
                     JobDescription::Scholar | JobDescription::Princess =>
                         format!(", transitioning into {}", ascended_form),
                     JobDescription::Figurehead => moral_panic!(
-                        "servant ascending to figurehead")
+                        "servant ascending to figurehead"),
                 }
-            },
-            None => "".to_string()
+            }
+            None => "".to_string(),
         };
         let report = hospital_report + &ascension_report;
         write!(
@@ -112,8 +112,8 @@ const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 };
 macro_rules! match_agent {
     ( $agent:expr, $($team:ident, $job:ident => $val:expr),* ) => {
         match $agent {
-            $( Agent { team: Team::$team , job_description: JobDescription::$job } => $val ),*
-
+            $( Agent { team: Team::$team,
+                       job_description: JobDescription::$job } => $val ),*
         }
     }
 }
@@ -130,42 +130,27 @@ impl WorldState {
             to_move: Team::Orange,
 
             orange_servants: Pinfield::init(&orange_servant_locales),
-            orange_ponies: Pinfield::init(
-                &vec![Locale { rank: 0, file: 1 },
-                      Locale { rank: 0, file: 6 }]
-            ),
-            orange_scholars: Pinfield::init(
-                &vec![Locale { rank: 0, file: 2 },
-                      Locale { rank: 0, file: 5 }]
-            ),
-            orange_cops: Pinfield::init(
-                &vec![Locale { rank: 0, file: 0 },
-                      Locale { rank: 0, file: 7 }]
-            ),
+            orange_ponies: Pinfield::init(&vec![Locale { rank: 0, file: 1 },
+                      Locale { rank: 0, file: 6 }]),
+            orange_scholars: Pinfield::init(&vec![Locale { rank: 0, file: 2 },
+                      Locale { rank: 0, file: 5 }]),
+            orange_cops: Pinfield::init(&vec![Locale { rank: 0, file: 0 },
+                      Locale { rank: 0, file: 7 }]),
             orange_princesses: Pinfield::init(
                 &vec![Locale { rank: 0, file: 3 }]),
-            orange_figurehead: Pinfield::init(
-                &vec![ORANGE_FIGUREHEAD_START]),
+            orange_figurehead: Pinfield::init(&vec![ORANGE_FIGUREHEAD_START]),
             orange_east_service_eligibility: true,
             orange_west_service_eligibility: true,
 
             blue_servants: Pinfield::init(&blue_servant_locales),
-            blue_ponies: Pinfield::init(
-                &vec![Locale { rank: 7, file: 1 },
-                      Locale { rank: 7, file: 6 }]
-            ),
-            blue_scholars: Pinfield::init(
-                &vec![Locale { rank: 7, file: 2 },
-                      Locale { rank: 7, file: 5 }]
-            ),
-            blue_cops: Pinfield::init(
-                &vec![Locale { rank: 7, file: 0 },
-                      Locale { rank: 7, file: 7 }]
-            ),
-            blue_princesses: Pinfield::init(
-                &vec![Locale { rank: 7, file: 3 }]),
-            blue_figurehead: Pinfield::init(
-                &vec![BLUE_FIGUREHEAD_START]),
+            blue_ponies: Pinfield::init(&vec![Locale { rank: 7, file: 1 },
+                      Locale { rank: 7, file: 6 }]),
+            blue_scholars: Pinfield::init(&vec![Locale { rank: 7, file: 2 },
+                      Locale { rank: 7, file: 5 }]),
+            blue_cops: Pinfield::init(&vec![Locale { rank: 7, file: 0 },
+                      Locale { rank: 7, file: 7 }]),
+            blue_princesses: Pinfield::init(&vec![Locale { rank: 7, file: 3 }]),
+            blue_figurehead: Pinfield::init(&vec![BLUE_FIGUREHEAD_START]),
             blue_east_service_eligibility: true,
             blue_west_service_eligibility: true,
         }
@@ -215,9 +200,10 @@ impl WorldState {
             )
     }
 
-    // XXX Less code duplication, but still not ideal. the macro system is really confusing
-    // to me: it looks like you can have a macro that generates code that compiles, but that
-    // the code with the macro does not compile. O.o
+    // XXX Less code duplication, but still not ideal. the macro
+    // system is really confusing to me: it looks like you can have a
+    // macro that generates code that compiles, but that the code with
+    // the macro does not compile. O.o
     pub fn agent_to_pinfield_mutref(&mut self, agent: Agent) -> &mut Pinfield {
         match_agent!(
             agent,
@@ -254,10 +240,10 @@ impl WorldState {
         }
 
         let mut book = String::with_capacity(
-            // pessimistic board storage + rank delimiters + metadata
+            // pessimistic board storage + rank delimiters +
+            // metadata
             // ≟ 64 + 7 + 14 =
-            85
-        );
+            85);
 
         let mut void_run_length = 0;
         for rank in (0..8).rev() {
@@ -271,15 +257,14 @@ impl WorldState {
                                 &mut book, &mut void_run_length);
                         }
                         book.push(agent.to_preservation_rune());
-                    },
+                    }
                     None => {
                         void_run_length += 1;
                     }
                 }
             }
             if void_run_length > 0 {
-                void_void_run_length(
-                    &mut book, &mut void_run_length);
+                void_void_run_length(&mut book, &mut void_run_length);
             }
             if rank > 0 {
                 book.push('/')
@@ -295,8 +280,10 @@ impl WorldState {
         book.push(' ');
         let mut any_service = false;
         for &(service_eligibility, eligibility_rune) in [
-            (self.orange_east_service_eligibility, 'K'), (self.orange_west_service_eligibility, 'Q'),
-            (self.blue_east_service_eligibility, 'k'), (self.blue_west_service_eligibility, 'q')].iter() {
+            (self.orange_east_service_eligibility, 'K'),
+            (self.orange_west_service_eligibility, 'Q'),
+            (self.blue_east_service_eligibility, 'k'),
+            (self.blue_west_service_eligibility, 'q')].iter() {
             if service_eligibility {
                 book.push(eligibility_rune);
                 if !any_service {
@@ -321,17 +308,28 @@ impl WorldState {
                 '/' => {
                     file = 0;
                     rank -= 1;
-                },
+                }
                 empty_locales @ '0' ... '8' => {
-                    let file_offset: u8 = empty_locales
-                        .to_string().parse().unwrap();
+                    let file_offset: u8 = empty_locales.to_string()
+                                                       .parse()
+                                                       .unwrap();
                     file += file_offset;
                 }
                 // XXX "If you use `@` with `|`, you need to make sure
                 // the name is bound in each part of the pattern" oh like
                 // that's ergonomic
-                r @ 'P' | r @ 'N' | r @ 'B' | r @ 'R' | r @ 'Q' | r @ 'K' |
-                r @ 'p' | r @ 'n' | r @ 'b' | r @ 'r' | r @ 'q' | r @ 'k' => {
+                r @ 'P' |
+                r @ 'N' |
+                r @ 'B' |
+                r @ 'R' |
+                r @ 'Q' |
+                r @ 'K' |
+                r @ 'p' |
+                r @ 'n' |
+                r @ 'b' |
+                r @ 'r' |
+                r @ 'q' |
+                r @ 'k' => {
                     let agent = Agent::from_preservation_rune(r);
                     let derived_pinfield;
                     {
@@ -342,15 +340,17 @@ impl WorldState {
                     // XXX: this isn't Clojure; copying a
                     // datastructure with a small diff actually has costs
                     world = world.except_replaced_subboard(
-                        agent, derived_pinfield
-                    );
+                        agent, derived_pinfield);
                     file += 1;
-                },
+                }
                 r @ _ => moral_panic!(format!("Unexpected rune '{}'", r)),
             }
         }
-        let rune_of_those_with_initiative = volumes
-            .next().unwrap().chars().next().unwrap();
+        let rune_of_those_with_initiative = volumes.next()
+                                                   .unwrap()
+                                                   .chars()
+                                                   .next()
+                                                   .unwrap();
         world.to_move = match rune_of_those_with_initiative {
             'w' => Team::Orange,
             'b' => Team::Blue,
@@ -360,11 +360,21 @@ impl WorldState {
         let secret_service_eligibilities = volumes.next().unwrap();
         for eligibility in secret_service_eligibilities.chars() {
             match eligibility {
-                'K' => { world.orange_east_service_eligibility = true; },
-                'Q' => { world.orange_west_service_eligibility = true; },
-                'k' => { world.blue_east_service_eligibility = true; },
-                'q' => { world.blue_west_service_eligibility = true; },
-                '-' => { break; },
+                'K' => {
+                    world.orange_east_service_eligibility = true;
+                }
+                'Q' => {
+                    world.orange_west_service_eligibility = true;
+                }
+                'k' => {
+                    world.blue_east_service_eligibility = true;
+                }
+                'q' => {
+                    world.blue_west_service_eligibility = true;
+                }
+                '-' => {
+                    break;
+                }
                 r @ _ => {
                     moral_panic!(
                         format!("non-eligibility rune '{}'", r)
@@ -384,13 +394,18 @@ impl WorldState {
 
     pub fn occupied_by(&self, team: Team) -> Pinfield {
         match team {
-            Team::Orange => self.orange_servants.union(
-                self.orange_ponies).union(
-                    self.orange_scholars).union(self.orange_cops).union(
-                        self.orange_princesses).union(self.orange_figurehead),
-            Team::Blue => self.blue_servants.union(self.blue_ponies).union(
-                    self.blue_scholars).union(self.blue_cops).union(
-                            self.blue_princesses).union(self.blue_figurehead)
+            Team::Orange => self.orange_servants
+                                .union(self.orange_ponies)
+                                .union(self.orange_scholars)
+                                .union(self.orange_cops)
+                                .union(self.orange_princesses)
+                                .union(self.orange_figurehead),
+            Team::Blue => self.blue_servants
+                              .union(self.blue_ponies)
+                              .union(self.blue_scholars)
+                              .union(self.blue_cops)
+                              .union(self.blue_princesses)
+                              .union(self.blue_figurehead),
         }
     }
 
@@ -419,51 +434,59 @@ impl WorldState {
         // subboard of moving figurine after move
         let derived_subboard = backstory.transit(patch.whence, patch.whither);
         // insert subboard into post-patch world-model
-        let mut tree = self.except_replaced_subboard(
-            patch.star, derived_subboard
-        );
+        let mut tree = self.except_replaced_subboard(patch.star,
+                                                     derived_subboard);
         match patch.star.job_description {
             JobDescription::Figurehead => {
                 match patch.star.team {
                     Team::Orange => {
-                        tree.orange_east_service_eligibility = false; tree.orange_west_service_eligibility = false;
-                    },
+                        tree.orange_east_service_eligibility = false;
+                        tree.orange_west_service_eligibility = false;
+                    }
                     Team::Blue => {
-                        tree.blue_east_service_eligibility = false; tree.blue_west_service_eligibility = false;
+                        tree.blue_east_service_eligibility = false;
+                        tree.blue_west_service_eligibility = false;
                     }
                 }
-            },
+            }
             JobDescription::Cop => {
                 match (patch.whence.file, patch.star.team) {
-                    (0, Team::Orange) => { tree.orange_west_service_eligibility = false; },
-                    (7, Team::Orange) => { tree.orange_east_service_eligibility = false; },
-                    (0, Team::Blue) => { tree.blue_west_service_eligibility = false; },
-                    (7, Team::Blue) => { tree.blue_east_service_eligibility = false; },
-                    _ => {},
+                    (0, Team::Orange) => {
+                        tree.orange_west_service_eligibility = false;
+                    }
+                    (7, Team::Orange) => {
+                        tree.orange_east_service_eligibility = false;
+                    }
+                    (0, Team::Blue) => {
+                        tree.blue_west_service_eligibility = false;
+                    }
+                    (7, Team::Blue) => {
+                        tree.blue_east_service_eligibility = false;
+                    }
+                    _ => {}
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
 
 
         if patch.concerns_secret_service() {
-            let cop_agent = Agent {
-                team: patch.star.team,
-                job_description: JobDescription::Cop };
+            let cop_agent = Agent { team: patch.star.team,
+                                    job_description: JobDescription::Cop };
             let (start_file, end_file) = match patch.whither.file {
                 6 => (7, 5),
                 2 => (0, 3),
                 _ => moral_panic!("This looked like a Secret Service commit, \
-                                   but it is not")
+                                   but it is not"),
             };
 
-            let secret_derived_subboard = tree.agent_to_pinfield_ref(cop_agent).transit(
-                Locale { rank: patch.whither.rank, file: start_file },
-                Locale { rank: patch.whither.rank, file: end_file });
-            tree = tree.except_replaced_subboard(
-                cop_agent, secret_derived_subboard
-            );
-
+            let secret_derived_subboard = tree.agent_to_pinfield_ref(
+                cop_agent)
+                .transit(
+                    Locale { rank: patch.whither.rank, file: start_file, },
+                    Locale { rank: patch.whither.rank, file: end_file, });
+            tree = tree.except_replaced_subboard(cop_agent,
+                                                 secret_derived_subboard);
         }
         tree.to_move = tree.to_move.opposition();
 
@@ -478,11 +501,10 @@ impl WorldState {
             }
 
             // if someone was stunned, put her or him in the hospital
-            let further_derived_subboard = tree.agent_to_pinfield_ref(
-                stunned).quench(patch.whither);
+            let further_derived_subboard = tree.agent_to_pinfield_ref(stunned)
+                                               .quench(patch.whither);
             tree = tree.except_replaced_subboard(
-                stunned, further_derived_subboard
-            );
+                stunned, further_derived_subboard);
         }
         Commit { patch: patch, tree: tree,
                  hospitalization: hospitalization, ascension: None }
@@ -513,22 +535,23 @@ impl WorldState {
 
     fn aspire_maybe(&self, premonitions: &mut Vec<Commit>, premonition: Commit) {
         if premonition.patch.concerns_servant_ascension() {
-            for &ascended in Agent::dramatis_personæ(
-                    premonition.patch.star.team).iter() {
+            for &ascended in Agent::dramatis_personæ(premonition.patch.star.team).iter() {
                 if ascended.job_description == JobDescription::Servant ||
-                    ascended.job_description == JobDescription::Figurehead {
-                        continue;
+                   ascended.job_description == JobDescription::Figurehead {
+                    continue;
                 }
                 let mut ascendency = premonition.clone();
                 ascendency.ascension = Some(ascended);
                 let vessel_pinfield = self.agent_to_pinfield_ref(
                     premonition.patch.star).quench(premonition.patch.whither);
-                let ascended_pinfield = self.agent_to_pinfield_ref(
-                    ascended).alight(premonition.patch.whither);
-                ascendency.tree = ascendency.tree.except_replaced_subboard(
-                    premonition.patch.star,
-                    vessel_pinfield).except_replaced_subboard(
-                        ascended, ascended_pinfield);
+                let ascended_pinfield = self.agent_to_pinfield_ref(ascended)
+                                            .alight(premonition.patch.whither);
+                ascendency.tree = ascendency.tree
+                                            .except_replaced_subboard(
+                                                premonition.patch.star,
+                                                vessel_pinfield)
+                                            .except_replaced_subboard(
+                                                ascended, ascended_pinfield);
                 premonitions.push(ascendency);
             }
         } else {
@@ -562,7 +585,7 @@ impl WorldState {
                 standard_offset = (1, 0);
                 boost_offset = (2, 0);
                 stun_offsets = [(1, -1), (1, 1)];
-            },
+            }
             Team::Blue => {
                 initial_rank = 6;
                 standard_offset = (-1, 0);
@@ -570,8 +593,8 @@ impl WorldState {
                 stun_offsets = [(-1, -1), (-1, 1)];
             }
         }
-        let servant_agent = Agent {
-            team: team, job_description: JobDescription::Servant };
+        let servant_agent = Agent { team: team,
+                                    job_description: JobDescription::Servant };
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(
             servant_agent);
         let mut premonitions = Vec::new();
@@ -580,15 +603,13 @@ impl WorldState {
             let std_destination_maybe = start_locale.displace(standard_offset);
             if let Some(destination_locale) = std_destination_maybe {
                 if self.unoccupied().query(destination_locale) {
-                    self.predict(
-                        &mut premonitions,
-                        Patch {
-                            star: servant_agent,
-                            whence: start_locale,
-                            whither: destination_locale
-                        },
-                        nihilistically
-                    );
+                    self.predict(&mut premonitions,
+                                 Patch {
+                                     star: servant_agent,
+                                     whence: start_locale,
+                                     whither: destination_locale,
+                                 },
+                                 nihilistically);
                 }
             }
 
@@ -596,21 +617,19 @@ impl WorldState {
             if start_locale.rank == initial_rank {
                 // safe to unwrap because we know that we're at the
                 // initial rank
-                let boost_destination = start_locale.displace(
-                    boost_offset).unwrap();
-                let standard_destination = start_locale.displace(
-                    standard_offset).unwrap();
+                let boost_destination = start_locale.displace(boost_offset)
+                                                    .unwrap();
+                let standard_destination = start_locale.displace(standard_offset)
+                                                       .unwrap();
                 if self.unoccupied().query(boost_destination) &&
-                    self.unoccupied().query(standard_destination) {
-                    self.predict(
-                        &mut premonitions,
-                        Patch {
-                            star: servant_agent,
-                            whence: start_locale,
-                            whither: boost_destination
-                        },
-                        nihilistically
-                    );
+                   self.unoccupied().query(standard_destination) {
+                    self.predict(&mut premonitions,
+                                 Patch {
+                                     star: servant_agent,
+                                     whence: start_locale,
+                                     whither: boost_destination,
+                                 },
+                                 nihilistically);
                 }
             }
 
@@ -619,15 +638,13 @@ impl WorldState {
                 if let Some(stun_destination) = stun_destination_maybe {
                     if self.occupied_by(team.opposition()).query(
                             stun_destination) {
-                        self.predict(
-                            &mut premonitions,
-                            Patch {
-                                star: servant_agent,
-                                whence: start_locale,
-                                whither: stun_destination
-                            },
-                            nihilistically
-                        )
+                        self.predict(&mut premonitions,
+                                     Patch {
+                                         star: servant_agent,
+                                         whence: start_locale,
+                                         whither: stun_destination,
+                                     },
+                                     nihilistically)
                     }
                 }
             }
@@ -643,27 +660,24 @@ impl WorldState {
             JobDescription::Pony => PONY_MOVEMENT_TABLE,
             JobDescription::Figurehead => FIGUREHEAD_MOVEMENT_TABLE,
             _ => moral_panic!("non-ponylike agent passed to \
-                               `ponylike_lookahead`")
+                               `ponylike_lookahead`"),
         };
         for start_locale in positional_chart.to_locales().into_iter() {
-            let destinations = self.occupied_by(
-                agent.team).invert().intersection(
-                    Pinfield(movement_table[
-                        start_locale.pindex() as usize])).to_locales();
+            let destinations = self.occupied_by(agent.team)
+                                   .invert()
+                                   .intersection(Pinfield(movement_table[
+                        start_locale.pindex() as usize]))
+                                   .to_locales();
             for destination in destinations.into_iter() {
-                self.predict(
-                    &mut premonitions,
-                    Patch {
-                        star: agent,
-                        whence: start_locale,
-                        whither: destination
-                    },
-                    nihilistically
-                );
+                self.predict(&mut premonitions,
+                             Patch { star: agent,
+                                     whence: start_locale,
+                                     whither: destination },
+                             nihilistically);
             }
         }
         premonitions
-   }
+    }
 
     fn princesslike_lookahead(&self, agent: Agent,
                               nihilistically: bool) -> Vec<Commit> {
@@ -683,7 +697,7 @@ impl WorldState {
                 (0, 1), (1, -1), (1, 0), (1, 1)
             ],
             _ => moral_panic!("non-princesslike agent passed to \
-                               `princesslike_lookahead`")
+                               `princesslike_lookahead`"),
         };
         for start_locale in positional_chart.to_locales().into_iter() {
             for &offset in offsets.iter() {
@@ -693,31 +707,36 @@ impl WorldState {
                         offset, venture);
                     match destination_maybe {
                         Some(destination) => {
-                            // Beware: I tried to "fix" this by making it reuse pinfields instead
-                            // of recalculating (`unoccupied` is just `occupied().invert()`, of
-                            // which we're already calculating half.) This appears to slow things
-                            // down! I also tried only making the occupied_by call if empty were
-                            // false, but that also slows things down?? That one I can see being
-                            // maybe a code size issue or something? I'm very confused.
+                            // Beware: I tried to "fix" this by making
+                            // it reuse pinfields instead of
+                            // recalculating (`unoccupied` is just
+                            // `occupied().invert()`, of which we're
+                            // already calculating half.) This appears
+                            // to slow things down! I also tried only
+                            // making the occupied_by call if empty
+                            // were false, but that also slows things
+                            // down?? That one I can see being maybe a
+                            // code size issue or something? I'm very
+                            // confused.
                             let empty = self.unoccupied().query(destination);
-                            let friend = self.occupied_by(
-                                agent.team).query(destination);
+                            let friend = self.occupied_by(agent.team)
+                                             .query(destination);
                             if empty || !friend {
-                                self.predict(
-                                    &mut premonitions,
-                                    Patch {
-                                        star: agent,
-                                        whence: start_locale,
-                                        whither: destination
-                                    },
-                                    nihilistically
-                                );
+                                self.predict(&mut premonitions,
+                                             Patch {
+                                                 star: agent,
+                                                 whence: start_locale,
+                                                 whither: destination,
+                                             },
+                                             nihilistically);
                             }
                             if !empty {
                                 break;
                             }
-                        },
-                        None => { break; }
+                        }
+                        None => {
+                            break;
+                        }
                     }
                     venture += 1;
                 }
@@ -730,43 +749,39 @@ impl WorldState {
                           nihilistically: bool) -> Vec<Commit> {
         self.ponylike_lookahead(
             Agent { team: team, job_description: JobDescription::Pony },
-            nihilistically
-        )
+            nihilistically)
     }
 
     pub fn scholar_lookahead(&self, team: Team,
                              nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
             Agent { team: team, job_description: JobDescription::Scholar },
-            nihilistically
-        )
+            nihilistically)
     }
 
     pub fn cop_lookahead(&self, team: Team,
                          nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
             Agent { team: team, job_description: JobDescription::Cop },
-            nihilistically
-        )
+            nihilistically)
     }
 
     pub fn princess_lookahead(&self, team: Team,
                               nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
             Agent { team: team, job_description: JobDescription::Princess },
-            nihilistically
-        )
+            nihilistically)
     }
 
     pub fn figurehead_lookahead(&self, team: Team,
                                 nihilistically: bool) -> Vec<Commit> {
         self.ponylike_lookahead(
             Agent { team: team, job_description: JobDescription::Figurehead },
-            nihilistically
-        )
+            nihilistically)
     }
 
-    pub fn service_lookahead(&self, team: Team, nihilistically: bool) -> Vec<Commit> {
+    pub fn service_lookahead(&self, team: Team,
+                             nihilistically: bool) -> Vec<Commit> {
         let mut premonitions = Vec::<Commit>::new();
 
         let (east_service, west_service) = match team {
@@ -776,19 +791,16 @@ impl WorldState {
                            self.blue_west_service_eligibility),
         };
 
-        let agent = Agent {
-            team: team,
-            job_description: JobDescription::Figurehead
-        };
-
+        let agent = Agent { team: team,
+                            job_description: JobDescription::Figurehead };
 
         let home_rank = match team {
             Team::Orange => 0,
-            Team::Blue => 7
+            Team::Blue => 7,
         };
 
-        // the king must be on the home square, having never moved before;
-        // otherwise we wouldnt have gotten here because `TEAM_can_service` is true.
+        // the king must be on the home square, having never moved
+        // before; otherwise we wouldnt have gotten here
         if east_service || west_service {
             debug_assert!(
                 self.agent_to_pinfield_ref(agent).query(
@@ -801,26 +813,23 @@ impl WorldState {
         let mut locales_to_query = Vec::new();
         if west_service {
             locales_to_query.push(
-                (vec![
-                 Locale { rank: home_rank, file: 1 },
-                 Locale { rank: home_rank, file: 2 },
-                 Locale { rank: home_rank, file: 3 }],
-                 Patch {
-                     star: agent,
-                     whence: Locale { rank: home_rank, file: 4 },
-                     whither: Locale { rank: home_rank, file: 2 }
-                 }));
+                (vec![Locale { rank: home_rank, file: 1 },
+                      Locale { rank: home_rank, file: 2 },
+                      Locale { rank: home_rank, file: 3 }],
+                 Patch { star: agent,
+                         whence: Locale { rank: home_rank, file: 4 },
+                         whither: Locale { rank: home_rank, file: 2 } })
+            );
         }
         if east_service {
             locales_to_query.push(
-                (vec![
-                 Locale { rank: home_rank, file: 5 },
-                 Locale { rank: home_rank, file: 6 }],
+                (vec![Locale { rank: home_rank, file: 5 },
+                      Locale { rank: home_rank, file: 6 }],
                  Patch {
                      star: agent,
                      whence: Locale { rank: home_rank, file: 4 },
-                     whither: Locale { rank: home_rank, file: 6 }
-                 }));
+                     whither: Locale { rank: home_rank, file: 6 } })
+            );
         }
         let unoc = self.unoccupied();
         let mut being_leered_at = None;
@@ -830,20 +839,21 @@ impl WorldState {
                     None => {
                         being_leered_at = Some(
                             self.is_being_leered_at_by(
-                                Locale { rank: home_rank, file: 4 }, team.opposition()))
+                                Locale {
+                                    rank: home_rank,
+                                    file: 4,
+                                },
+                                team.opposition())
+                        )
                     },
-                    _ => {},
+                    _ => {}
                 }
                 if being_leered_at.unwrap() {
                     return premonitions;
                 }
                 if !locales.iter().any(
-                        |l| self.is_being_leered_at_by(*l, team.opposition())) {
-                    self.predict(
-                        &mut premonitions,
-                        patch,
-                        nihilistically
-                    );
+                    |l| self.is_being_leered_at_by(*l, team.opposition())) {
+                    self.predict(&mut premonitions, patch, nihilistically);
                 }
             }
         }
@@ -851,33 +861,30 @@ impl WorldState {
         premonitions
     }
 
-    fn lookahead_without_secret_service(&self, nihilistically: bool) -> Vec<Commit> {
+    fn lookahead_without_secret_service(&self,
+                                        nihilistically: bool) -> Vec<Commit> {
         // Would it be profitable to make this return an iterator (so
         // that you could break without generating all the premonitions
         // if something overwhelmingly important came up, like ultimate
         // endangerment)?
         let mut premonitions = Vec::new();
         let moving_team = self.to_move;
-        premonitions.extend(self.servant_lookahead(
+        premonitions.extend(self.servant_lookahead(moving_team, nihilistically));
+        premonitions.extend(self.pony_lookahead(moving_team, nihilistically));
+        premonitions.extend(self.scholar_lookahead(moving_team, nihilistically));
+        premonitions.extend(self.cop_lookahead(moving_team, nihilistically));
+        premonitions.extend(self.princess_lookahead(
             moving_team, nihilistically));
-        premonitions.extend(self.pony_lookahead(
+        premonitions.extend(self.figurehead_lookahead(
             moving_team, nihilistically));
-        premonitions.extend(
-            self.scholar_lookahead(moving_team, nihilistically));
-        premonitions.extend(
-            self.cop_lookahead(moving_team, nihilistically));
-        premonitions.extend(
-            self.princess_lookahead(moving_team, nihilistically));
-        premonitions.extend(
-            self.figurehead_lookahead(moving_team, nihilistically));
         premonitions
     }
 
     fn underlookahead(&self, nihilistically: bool) -> Vec<Commit> {
-        let mut premonitions = self.
-            lookahead_without_secret_service( nihilistically);
-        premonitions.extend(
-            self.service_lookahead(self.to_move, nihilistically));
+        let mut premonitions = self.lookahead_without_secret_service(
+            nihilistically);
+        premonitions.extend(self.service_lookahead(
+            self.to_move, nihilistically));
         premonitions
     }
 
@@ -902,12 +909,12 @@ impl WorldState {
                     print!("_ ");
                 } else {
                     for &team in [Team::Orange, Team::Blue].iter() {
-                        for &figurine_class in
-                            Agent::dramatis_personæ(team).iter() {
-                                if self.agent_to_pinfield_ref(
-                                    figurine_class).query(locale) {
-                                        print!("{} ", figurine_class)
-                                }
+                        for &figurine_class in Agent::dramatis_personæ(
+                                team).iter() {
+                            if self.agent_to_pinfield_ref(figurine_class)
+                                   .query(locale) {
+                                print!("{} ", figurine_class)
+                            }
                         }
                     }
                 }
@@ -938,22 +945,19 @@ mod tests {
 
     #[bench]
     fn benchmark_pony_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(
-            VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_string());
         b.iter(|| ws.pony_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_scholar_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(
-            VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_string());
         b.iter(|| ws.scholar_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_cop_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(
-            VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_string());
         ws.cop_lookahead(Team::Orange, false);
         ws.cop_lookahead(Team::Orange, false);
         ws.cop_lookahead(Team::Orange, false);
@@ -963,15 +967,13 @@ mod tests {
 
     #[bench]
     fn benchmark_princess_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(
-            VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_string());
         b.iter(|| ws.princess_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_figurehead_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(
-            VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_string());
         b.iter(|| ws.figurehead_lookahead(Team::Orange, false));
     }
 
@@ -983,15 +985,13 @@ mod tests {
 
     #[bench]
     fn benchmark_non_new_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(
-            VISION.to_string());
+        let ws = WorldState::reconstruct(VISION.to_string());
         b.iter(|| ws.lookahead());
     }
 
     #[bench]
-    fn benchmark_ultimate_endangerment(b: &mut Bencher ){
-        let ws = WorldState::reconstruct(
-            VISION.to_string());
+    fn benchmark_ultimate_endangerment(b: &mut Bencher) {
+        let ws = WorldState::reconstruct(VISION.to_string());
         b.iter(|| ws.in_critical_endangerment(Team::Orange));
     }
 
@@ -1012,21 +1012,26 @@ mod tests {
     #[test]
     fn concerning_castling_restrictions() {
         let ws = WorldState::reconstruct(
-            "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPBPPP/RNBQK2R w KQkq".to_string());
+            "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPBPPP/RNBQK2R w KQkq"
+                .to_string());
         let patch = Patch {
-            star: Agent { team: Team::Orange,
-                          job_description: JobDescription::Figurehead },
+            star: Agent {
+                team: Team::Orange,
+                job_description: JobDescription::Figurehead,
+            },
             whence: Locale { rank: 0, file: 4 },
-            whither: Locale { rank: 0, file: 5 }
+            whither: Locale { rank: 0, file: 5 },
         };
 
         assert_eq!(false, ws.apply(patch).tree.orange_east_service_eligibility);
 
         let patch = Patch {
-            star: Agent { team: Team::Orange,
-                          job_description: JobDescription::Cop },
+            star: Agent {
+                team: Team::Orange,
+                job_description: JobDescription::Cop,
+            },
             whence: Locale { rank: 0, file: 7 },
-            whither: Locale { rank: 0, file: 6 }
+            whither: Locale { rank: 0, file: 6 },
         };
         assert_eq!(false, ws.apply(patch).tree.orange_east_service_eligibility);
     }
@@ -1038,18 +1043,15 @@ mod tests {
         let mut prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
-        ws = WorldState::reconstruct(
-            "8/8/4k3/8/8/8/8/R3K2R w KQ".to_string());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3K2R w KQ".to_string());
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(2, prems.len());
 
-        ws = WorldState::reconstruct(
-            "8/8/4k3/8/8/8/8/R3KN1R w Q".to_string());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3KN1R w Q".to_string());
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
-        ws = WorldState::reconstruct(
-            "8/8/4k3/8/8/4b3/8/R3KN1R w Q".to_string());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/4b3/8/R3KN1R w Q".to_string());
         // can't move into endangerment
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
@@ -1063,8 +1065,7 @@ mod tests {
 
     #[test]
     fn concerning_castling_actually_working() {
-        let ws = WorldState::reconstruct(
-            "8/8/4k3/8/8/8/8/4K2R w K".to_string());
+        let ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K".to_string());
         assert!(ws.orange_east_service_eligibility);
         let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
@@ -1085,13 +1086,14 @@ mod tests {
     #[test]
     fn concerning_servant_ascension() {
         let mut worldstate = WorldState::new_except_empty();
-        let derived_subfield = worldstate.orange_servants.alight(
-            Locale::from_algebraic("a7".to_string()));
+        let derived_subfield = worldstate.orange_servants
+                                         .alight(
+                                             Locale::from_algebraic(
+                                                 "a7".to_string()));
         worldstate = worldstate.except_replaced_subboard(
             Agent { team: Team::Orange,
                     job_description: JobDescription::Servant },
-            derived_subfield
-        );
+            derived_subfield);
         let premonitions = worldstate.servant_lookahead(Team::Orange, true);
         assert!(premonitions.len() != 0);
         assert!(premonitions.iter().all(
@@ -1137,8 +1139,9 @@ mod tests {
         let state = WorldState::new();
         let premonitions = state.pony_lookahead(Team::Orange, false);
         assert_eq!(4, premonitions.len());
-        let collected = premonitions.iter().map(
-            |p| p.tree.orange_ponies.to_locales()).collect::<Vec<_>>();
+        let collected = premonitions.iter()
+                                    .map(|p| p.tree.orange_ponies.to_locales())
+                                    .collect::<Vec<_>>();
         assert_eq!(
             vec![vec![Locale { rank: 0, file: 6 },
                       Locale { rank: 2, file: 0 }],
@@ -1155,20 +1158,23 @@ mod tests {
     #[test]
     fn concerning_scholar_lookahead() {
         let mut world = WorldState::new_except_empty();
-        world.orange_scholars = world.orange_scholars.alight(
-            Locale::from_algebraic("e1".to_string())
-        );
-        world.orange_princesses = world.orange_princesses.alight(
-            Locale::from_algebraic("c3".to_string())
-        );
-        world.blue_princesses = world.blue_princesses.alight(
-            Locale::from_algebraic("g3".to_string())
-        );
+        world.orange_scholars = world.orange_scholars
+            .alight(
+                Locale::from_algebraic(
+                    "e1".to_string()));
+        world.orange_princesses = world.orange_princesses
+            .alight(
+                Locale::from_algebraic("c3".to_string()));
+        world.blue_princesses = world.blue_princesses
+            .alight(Locale::from_algebraic("g3".to_string()));
         let premonitions = world.scholar_lookahead(Team::Orange, false);
-        let expected = vec!["d2", "f2", "g3"].iter().map(
-            |a| Locale::from_algebraic(a.to_string())).collect::<Vec<_>>();
-        let actual = premonitions.iter().map(
-            |p| p.tree.orange_scholars.to_locales()[0]).collect::<Vec<_>>();
+        let expected = vec!["d2", "f2", "g3"]
+                           .iter()
+                           .map(|a| Locale::from_algebraic(a.to_string()))
+                           .collect::<Vec<_>>();
+        let actual = premonitions.iter()
+                                 .map(|p| p.tree.orange_scholars.to_locales()[0])
+                                 .collect::<Vec<_>>();
         assert_eq!(expected, actual);
     }
 
@@ -1201,10 +1207,10 @@ mod tests {
         let patch = Patch {
             star: Agent {
                 team: Team::Orange,
-                job_description: JobDescription::Servant
+                job_description: JobDescription::Servant,
             },
             whence: e2,
-            whither: e4
+            whither: e4,
         };
         let new_state = state.apply(patch).tree;
         assert_eq!(Agent { team: Team::Orange,
@@ -1217,39 +1223,40 @@ mod tests {
     fn concerning_stunning_in_natural_setting() {
         let state = WorldState::new();
         let orange_servant_agent = Agent {
-                team: Team::Orange,
-                job_description: JobDescription::Servant
+            team: Team::Orange,
+            job_description: JobDescription::Servant,
         };
         let blue_servant_agent = Agent {
-                team: Team::Blue,
-                job_description: JobDescription::Servant
+            team: Team::Blue,
+            job_description: JobDescription::Servant,
         };
         let orange_begins = Patch {
             star: orange_servant_agent,
             whence: Locale::from_algebraic("e2".to_string()),
-            whither: Locale::from_algebraic("e4".to_string())
+            whither: Locale::from_algebraic("e4".to_string()),
         };
         let blue_replies = Patch {
             star: blue_servant_agent,
             whence: Locale::from_algebraic("d7".to_string()),
-            whither: Locale::from_algebraic("d5".to_string())
+            whither: Locale::from_algebraic("d5".to_string()),
         };
         let orange_counterreplies = Patch {
             star: orange_servant_agent,
             whence: Locale::from_algebraic("e4".to_string()),
-            whither: Locale::from_algebraic("d5".to_string())
+            whither: Locale::from_algebraic("d5".to_string()),
         };
 
         let first_commit = state.apply(orange_begins);
         assert_eq!(None, first_commit.hospitalization);
-        let second_commit = first_commit.tree.apply(
-            blue_replies);
+        let second_commit = first_commit.tree.apply(blue_replies);
         assert_eq!(None, second_commit.hospitalization);
 
         let precrucial_state = second_commit.tree;
         let available_stunnings = precrucial_state.servant_lookahead(
-            Team::Orange, false).into_iter().filter(
-                |p| p.hospitalization.is_some()).collect::<Vec<_>>();
+            Team::Orange, false)
+            .into_iter()
+            .filter(|p| p.hospitalization.is_some())
+            .collect::<Vec<_>>();
         assert_eq!(1, available_stunnings.len());
         assert_eq!(
             blue_servant_agent,
@@ -1260,8 +1267,7 @@ mod tests {
             available_stunnings[0].patch.whither
         );
 
-        let crucial_commit = precrucial_state.apply(
-            orange_counterreplies);
+        let crucial_commit = precrucial_state.apply(orange_counterreplies);
         let new_state = crucial_commit.tree;
         assert_eq!(Agent { team: Team::Orange,
                            job_description: JobDescription::Servant },
@@ -1298,12 +1304,15 @@ mod tests {
 
     fn death_of_a_fool() -> WorldState {
         let prelude = prelude_to_the_death_of_a_fool();
-        prelude.apply(
-            Patch { star: Agent { team: Team::Blue,
-                                  job_description: JobDescription::Princess },
-                    whence: Locale::from_algebraic("d8".to_string()),
-                    whither: Locale::from_algebraic("h4".to_string()) }
-        ).tree
+        prelude.apply(Patch {
+                   star: Agent {
+                       team: Team::Blue,
+                       job_description: JobDescription::Princess,
+                   },
+                   whence: Locale::from_algebraic("d8".to_string()),
+                   whither: Locale::from_algebraic("h4".to_string()),
+               })
+               .tree
     }
 
     #[test]
@@ -1328,9 +1337,7 @@ mod tests {
     fn concerning_preservation_and_reconstruction_of_historical_worlds() {
         // en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation#Examples
         let eden = WorldState::new();
-        let book_of_eden =
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq" // TODO - 0 1
-            .to_string();
+        let book_of_eden = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq".to_string();
         assert_eq!(book_of_eden, eden.preserve());
         assert_eq!(eden, WorldState::reconstruct(book_of_eden));
 
@@ -1360,7 +1367,7 @@ mod tests {
 
         let mut world = eden;
         for (patch, book) in patchset.into_iter().zip(
-                book_of_patches.into_iter()) {
+            book_of_patches.into_iter()) {
             world = world.careful_apply(patch).unwrap().tree;
             assert_eq!(book, world.preserve());
             assert_eq!(WorldState::reconstruct(book), world);

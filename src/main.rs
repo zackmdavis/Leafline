@@ -63,7 +63,7 @@ struct Postcard {
     world: String,
     patch: Patch,
     hospitalization: Option<Agent>,
-    thinking_time: u64
+    thinking_time: u64,
 }
 
 
@@ -74,7 +74,7 @@ fn correspond(reminder: String, depth: u8) -> String {
         world: commit.tree.preserve(),
         patch: commit.patch,
         hospitalization: commit.hospitalization,
-        thinking_time: sidereal.num_milliseconds() as u64
+        thinking_time: sidereal.num_milliseconds() as u64,
     };
     json::encode(&postcard).unwrap()
 }
@@ -97,14 +97,15 @@ fn main() {
         let mut parser = ArgumentParser::new();
         parser.set_description("Leafline: an oppositional strategy game engine");
         parser.refer(&mut lookahead_depth).add_option(
-            &["--lookahead"], Store,
-            "rank moves using AI minimax lookahead this deep."
-        );
+            &["--lookahead"],
+            Store,
+            "rank moves using AI minimax lookahead this deep.");
         parser.refer(&mut postcard).add_option(
-            &["--correspond"], Store,
-            "just output the serialization of the AI's top move in response \
-             to the given serialized world-state"
-        );
+            &["--correspond"],
+            Store,
+            "just output the serialization of the AI's top \
+             move in response to the given serialized \
+             world-state");
         parser.parse_args_or_exit();
     }
 
@@ -133,17 +134,19 @@ fn main() {
                 for (index, premonition) in premonitions.iter().enumerate() {
                     println!("{:>2}. {}", index, premonition)
                 }
-            },
+            }
             _ => {
                 let (forecasts,
-                     thinking_time) = forecast(world, lookahead_depth);
+                     thinking_time) = forecast(world,
+                                               lookahead_depth);
                 world.display();
                 println!(
                     "(scoring alternatives {} levels deep took {} ms)",
                     lookahead_depth, thinking_time.num_milliseconds()
                  );
                 for (index, prem_score) in forecasts.iter().enumerate() {
-                    println!("{:>2}. {} (score {})", index, prem_score.0, prem_score.1);
+                    println!("{:>2}. {} (score {})",
+                             index, prem_score.0, prem_score.1);
                 }
                 premonitions = vec!();
                 for prem_score in forecasts {
@@ -154,7 +157,6 @@ fn main() {
                     the_end();
                 }
             }
-
         }
         loop {
             print!("\nSelect a move>> ");
@@ -162,7 +164,8 @@ fn main() {
             let mut input_buffer = String::new();
             io::stdin()
                 .read_line(&mut input_buffer)
-                .ok().expect("couldn't read input");
+                .ok()
+                .expect("couldn't read input");
 
             if input_buffer.trim() == "quit" {
                 the_end();
