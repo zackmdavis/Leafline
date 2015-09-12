@@ -7,7 +7,7 @@ use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 
 
 /// represents the movement of a figurine
-#[derive(Eq,PartialEq,Debug,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub struct Patch {
     pub star: Agent,
     pub whence: Locale,
@@ -16,11 +16,17 @@ pub struct Patch {
 
 impl Patch {
     pub fn concerns_secret_service(&self) -> bool {
-        if self.star.job_description != JobDescription::Figurehead {
-            false
-        } else {
+        self.star.job_description == JobDescription::Figurehead &&
             (self.whence.file as i8 - self.whither.file as i8).abs() == 2
-        }
+    }
+
+    pub fn concerns_servant_ascension(&self) -> bool {
+        let admirality = match self.star.team {
+            Team::Orange => 7,
+            Team::Blue => 0
+        };
+        self.star.job_description == JobDescription::Servant &&
+            self.whither.rank == admirality
     }
 }
 
@@ -29,11 +35,12 @@ impl Patch {
 /// the figurine moved, the state of the world after the turn (`tree`),
 /// and whether an opposing figurine was stunned and put in the hospital,
 /// and if so, which one
-#[derive(Eq,PartialEq,Debug,Hash)]
+#[derive(Eq,PartialEq,Debug,Clone,Hash)]
 pub struct Commit {
     pub patch: Patch,
     pub tree: WorldState,
-    pub hospitalization: Option<Agent>
+    pub hospitalization: Option<Agent>,
+    pub ascension: Option<Agent>
 }
 
 impl fmt::Display for Commit {
@@ -42,13 +49,32 @@ impl fmt::Display for Commit {
             Some(stunning_victim) => format!(", stunning {}", stunning_victim),
             None => "".to_string()
         };
+        let ascension_report = match self.ascension {
+            Some(ascended_form) => {
+                match ascended_form.job_description {
+                    JobDescription::Servant => moral_panic!(
+                        "servant purportedly 'ascending'\
+                         to his own station (?!)"),
+                    JobDescription::Pony =>
+                        format!(", transforming into {}", ascended_form),
+                    JobDescription::Cop =>
+                        format!(", being brevetted to {}", ascended_form),
+                    JobDescription::Scholar | JobDescription::Princess =>
+                        format!(", transitioning into {}", ascended_form),
+                    JobDescription::Figurehead => moral_panic!(
+                        "servant ascending to figurehead")
+                }
+            },
+            None => "".to_string()
+        };
+        let report = hospital_report + &ascension_report;
         write!(
             f,
             "{} from {} to {}{}",
             self.patch.star,
             self.patch.whence.to_algebraic(),
             self.patch.whither.to_algebraic(),
-            hospital_report
+            report
         )
     }
 }
@@ -459,7 +485,7 @@ impl WorldState {
             );
         }
         Commit { patch: patch, tree: tree,
-                 hospitalization: hospitalization }
+                 hospitalization: hospitalization, ascension: None }
     }
 
     pub fn in_critical_endangerment(&self, team: Team) -> bool {
@@ -485,15 +511,40 @@ impl WorldState {
         }
     }
 
+    fn aspire_maybe(&self, premonitions: &mut Vec<Commit>, premonition: Commit) {
+        if premonition.patch.concerns_servant_ascension() {
+            for &ascended in Agent::dramatis_personæ(
+                    premonition.patch.star.team).iter() {
+                if ascended.job_description == JobDescription::Servant ||
+                    ascended.job_description == JobDescription::Figurehead {
+                        continue;
+                }
+                let mut ascendency = premonition.clone();
+                ascendency.ascension = Some(ascended);
+                let vessel_pinfield = self.agent_to_pinfield_ref(
+                    premonition.patch.star).quench(premonition.patch.whither);
+                let ascended_pinfield = self.agent_to_pinfield_ref(
+                    ascended).alight(premonition.patch.whither);
+                ascendency.tree = ascendency.tree.except_replaced_subboard(
+                    premonition.patch.star,
+                    vessel_pinfield).except_replaced_subboard(
+                        ascended, ascended_pinfield);
+                premonitions.push(ascendency);
+            }
+        } else {
+            premonitions.push(premonition);
+        }
+    }
+
     pub fn predict(&self, premonitions: &mut Vec<Commit>, patch: Patch,
                    nihilistically: bool) {
         if nihilistically {  // enjoy Arby's
             let premonition = self.apply(patch);
-            premonitions.push(premonition);
+            self.aspire_maybe(premonitions, premonition);
         } else {
             let premonition_maybe = self.careful_apply(patch);
             if let Some(premonition) = premonition_maybe {
-                premonitions.push(premonition);
+                self.aspire_maybe(premonitions, premonition);
             }
         }
     }
@@ -1029,6 +1080,27 @@ mod tests {
         assert!(ws.orange_east_service_eligibility);
         let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
+    }
+
+    #[test]
+    fn concerning_servant_ascension() {
+        let mut worldstate = WorldState::new_except_empty();
+        let derived_subfield = worldstate.orange_servants.alight(
+            Locale::from_algebraic("a7".to_string()));
+        worldstate = worldstate.except_replaced_subboard(
+            Agent { team: Team::Orange,
+                    job_description: JobDescription::Servant },
+            derived_subfield
+        );
+        let premonitions = worldstate.servant_lookahead(Team::Orange, true);
+        assert!(premonitions.len() != 0);
+        assert!(premonitions.iter().all(
+            |p| p.patch.whither == Locale::from_algebraic("a8".to_string())));
+        for (&expected_ascension, commit) in [JobDescription::Pony, JobDescription::Scholar, JobDescription::Cop, JobDescription::Princess].iter().zip(premonitions.iter()) {
+            assert_eq!(expected_ascension,
+                       commit.ascension.expect(
+                           "expected an ascension").job_description);
+        }
     }
 
     #[test]
