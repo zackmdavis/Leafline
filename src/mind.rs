@@ -63,7 +63,7 @@ pub fn score(world: WorldState) -> f32 {
 
 fn mmv_lva_heuristic(commit: &Commit) -> f32 {
     // https://chessprogramming.wikispaces.com/MVV-LVA
-    match commit.hospitalization {
+    match commit.patch.hospitalization {
         Some(patient) => (
             figurine_valuation(patient) - figurine_valuation(commit.patch.star)),
         None => 0.0,
@@ -101,22 +101,18 @@ pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
 }
 
 
-pub fn α_β_negamax_search(world: WorldState,
-                            depth: u8,
-                            alpha: f32,
-                            beta: f32,
-                            deja_vu_table: &mut HashMap<WorldState, f32>)
-                            -> (Option<Commit>, f32) {
-
-    // RESEARCH: I don't really care that much right now, but can you
-    // mutate (reassign) an argument name, and if so, what is the syntax?
-    let mut experienced_alpha = alpha;
+pub fn α_β_negamax_search(
+        world: WorldState, depth: u8, α: f32, β: f32,
+        deja_vu_table: &mut HashMap<WorldState, f32>) -> (Option<Commit>, f32) {
+    let mut experienced_α = α;
     let team = world.to_move;
     let mut premonitions = world.reckless_lookahead();
     order_moves(&mut premonitions);
+
     if depth == 0 || premonitions.is_empty() {
         return (None, orientation(team) * score(world))
     };
+
     let mut optimum = NEG_INFINITY;
     let mut optimand = None;
     for premonition in premonitions.into_iter() {
@@ -141,8 +137,8 @@ pub fn α_β_negamax_search(world: WorldState,
         if !cached {
             let (_, acquired_value) = α_β_negamax_search(premonition.tree,
                                                          depth - 1,
-                                                         -beta,
-                                                         -experienced_alpha,
+                                                         -β,
+                                                         -experienced_α,
                                                          deja_vu_table);
             value = -acquired_value;
             deja_vu_table.insert(premonition.tree, value);
@@ -152,10 +148,10 @@ pub fn α_β_negamax_search(world: WorldState,
             optimum = value;
             optimand = Some(premonition);
         }
-        if value > experienced_alpha {
-            experienced_alpha = value;
+        if value > experienced_α {
+            experienced_α = value;
         }
-        if experienced_alpha >= beta {
+        if experienced_α >= β {
             break;
         }
     }
@@ -219,31 +215,33 @@ mod tests {
         }
     }
 
-
+    #[ignore]
     #[bench]
     fn benchmark_scoring(b: &mut Bencher) {
         b.iter(|| score(WorldState::new()));
     }
 
+    #[ignore]
     #[bench]
     fn benchmark_kickoff_depth_1(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| kickoff(&ws, 1, true));
     }
 
+    #[ignore]
     #[bench]
     fn benchmark_kickoff_depth_2_arbys(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| kickoff(&ws, 2, true));
     }
 
+    #[ignore]
     #[bench]
     fn benchmark_kickoff_depth_2_carefully(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| kickoff(&ws, 2, false));
     }
 
-    #[ignore]
     #[bench]
     fn benchmark_kickoff_depth_3(b: &mut Bencher) {
         let ws = WorldState::new();

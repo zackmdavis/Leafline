@@ -64,7 +64,7 @@ fn oppose(in_medias_res: WorldState, depth: u8) -> (Commit, Duration) {
 struct Postcard {
     world: String,
     patch: Patch,
-    hospitalization: Option<Agent>,
+    // hospitalization: Option<Agent>,
     thinking_time: u64,
 }
 
@@ -75,7 +75,7 @@ fn correspond(reminder: String, depth: u8) -> String {
     let postcard = Postcard {
         world: commit.tree.preserve(),
         patch: commit.patch,
-        hospitalization: commit.hospitalization,
+        // hospitalization: commit.patch.hospitalization,
         thinking_time: sidereal.num_milliseconds() as u64,
     };
     json::encode(&postcard).unwrap()
@@ -156,7 +156,7 @@ fn main() {
                     lookahead_depth, thinking_time.num_milliseconds()
                  );
                 for (index, prem_score) in forecasts.iter().enumerate() {
-                    println!("{:>2}. {} (score {})",
+                    println!("{:>2}. {} (score {:.1})",
                              index, prem_score.0, prem_score.1);
                 }
                 premonitions = vec!();

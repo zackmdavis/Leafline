@@ -109,6 +109,12 @@ impl Pinfield {
         Pinfield(!our_bits)
     }
 
+    pub fn difference(&self, other: Pinfield) -> Pinfield {
+        let Pinfield(our_bits) = *self;
+        let Pinfield(their_bits) = other;
+        Pinfield(our_bits & !their_bits)
+    }
+
     pub fn alight(&self, station: Locale) -> Pinfield {
         // classic `|= (1 << n)` would probably be more efficient, huh &c.
         self.union(station.pinpoint())
@@ -183,6 +189,7 @@ mod tests {
         "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"
     ];
 
+    #[ignore]
     #[bench]
     fn benchmark_to_locales(b: &mut Bencher) {
         let mut stage = Pinfield(0);
