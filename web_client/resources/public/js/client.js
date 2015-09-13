@@ -80,6 +80,7 @@ function localeToAlgebraic(locale) {
 }
 
 function sendPostcard(news) {
+    $message.text('');
     $.ajax({
         url: "/write/",
         method: 'POST',
@@ -103,6 +104,10 @@ function sendPostcard(news) {
                 commentary
             );
             transpireYear();
+        },
+        error: function (jqxhr, textStatus, errorThrown) {
+            $spinner.hide();
+            $message.text(errorThrown);
         }
     });
 }
@@ -131,6 +136,7 @@ function dropHandler(whence, whither, agentRune,
 }
 
 const $history = $('#history');
+const $message = $('#message');
 const $spinner = $('#spinner');
 
 function getYear() {
