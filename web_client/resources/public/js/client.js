@@ -93,6 +93,7 @@ function sendPostcard(news) {
             world.multifield.position(newField);
             world.preservedServiceEligibilities = newEligibilities;
             let commentary = ` (after ${data.thinking_time} ms thinking time)`;
+            $spinner.hide();
             printHeadline(
                 "Blue",
                 data.patch.star,
@@ -121,6 +122,7 @@ function dropHandler(whence, whither, agentRune,
         world.multifield.position(news, false);
         world.cedeInitiative();
         sendPostcard(news);
+        $spinner.show();
         printHeadline(
             "Orange", guiAgentRuneToLeaflineAgent(agentRune),
             whence, whither, patient, null
@@ -129,6 +131,7 @@ function dropHandler(whence, whither, agentRune,
 }
 
 const $history = $('#history');
+const $spinner = $('#spinner');
 
 function getYear() {
     return parseInt($history.attr('data-year'));
