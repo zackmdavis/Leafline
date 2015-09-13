@@ -78,39 +78,13 @@ fn order_moves(commits: &mut Vec<Commit>) {
     });
 }
 
-
-#[allow(dead_code)]  // somehow feel like leaving this checked in for now
-pub fn negamax_search(world: WorldState, depth: u8) -> (Option<Commit>, f32) {
-    let team = world.to_move;
-    let mut premonitions = world.reckless_lookahead();
-    order_moves(&mut premonitions);
-    if depth == 0 || premonitions.is_empty() {
-        return (None, orientation(team) * score(world))
-    }
-    let mut optimum = NEG_INFINITY;
-    let mut optimand = None;
-    for premonition in premonitions.into_iter() {
-        let (_after, mut value) = negamax_search(premonition.tree, depth - 1);
-        value = -value;
-        if value > optimum {
-            optimum = value;
-            optimand = Some(premonition);
-        }
-    }
-    (optimand, optimum)
-}
-
-
 pub fn α_β_negamax_search(world: WorldState,
-                            depth: u8,
-                            alpha: f32,
-                            beta: f32,
-                            deja_vu_table: &mut HashMap<WorldState, f32>)
-                            -> (Option<Commit>, f32) {
-
-    // RESEARCH: I don't really care that much right now, but can you
-    // mutate (reassign) an argument name, and if so, what is the syntax?
-    let mut experienced_alpha = alpha;
+                          depth: u8,
+                          α: f32,
+                          β: f32,
+                          déjà_vu_table: &mut HashMap<WorldState, f32>)
+                          -> (Option<Commit>, f32) {
+    let mut experienced_α = α;
     let team = world.to_move;
     let mut premonitions = world.reckless_lookahead();
     order_moves(&mut premonitions);
@@ -123,7 +97,7 @@ pub fn α_β_negamax_search(world: WorldState,
         let mut value: f32;
         let cached: bool;
         {
-            let cached_value_maybe = deja_vu_table.get(&premonition.tree);
+            let cached_value_maybe = déjà_vu_table.get(&premonition.tree);
             match cached_value_maybe {
                 Some(&cached_value) => {
                     cached = true;
@@ -141,21 +115,21 @@ pub fn α_β_negamax_search(world: WorldState,
         if !cached {
             let (_, acquired_value) = α_β_negamax_search(premonition.tree,
                                                          depth - 1,
-                                                         -beta,
-                                                         -experienced_alpha,
-                                                         deja_vu_table);
+                                                         -β,
+                                                         -experienced_α,
+                                                         déjà_vu_table);
             value = -acquired_value;
-            deja_vu_table.insert(premonition.tree, value);
+            déjà_vu_table.insert(premonition.tree, value);
         }
 
         if value > optimum {
             optimum = value;
             optimand = Some(premonition);
         }
-        if value > experienced_alpha {
-            experienced_alpha = value;
+        if value > experienced_α {
+            experienced_α = value;
         }
-        if experienced_alpha >= beta {
+        if experienced_α >= β {
             break;
         }
     }
@@ -171,8 +145,7 @@ pub fn α_β_negamax_search(world: WorldState,
 // already!!
 pub fn kickoff(world: &WorldState, depth: u8,
                nihilistically: bool) -> Vec<(Commit, f32)> {
-    // when we get non-ASCII identifiers: `déjà_vu_table`
-    let mut deja_vu_table: HashMap<WorldState, f32> = HashMap::new();
+    let mut déjà_vu_table: HashMap<WorldState, f32> = HashMap::new();
     let mut premonitions;
     if nihilistically {
         premonitions = world.reckless_lookahead();
@@ -186,7 +159,7 @@ pub fn kickoff(world: &WorldState, depth: u8,
                                                           depth - 1,
                                                           NEG_INFINITY,
                                                           INFINITY,
-                                                          &mut deja_vu_table);
+                                                          &mut déjà_vu_table);
         value = -value;
         forecasts.push((premonition, value));
     }

@@ -156,7 +156,7 @@ fn main() {
                     lookahead_depth, thinking_time.num_milliseconds()
                  );
                 for (index, prem_score) in forecasts.iter().enumerate() {
-                    println!("{:>2}. {} (score {})",
+                    println!("{:>2}. {} (score {:.1})",
                              index, prem_score.0, prem_score.1);
                 }
                 premonitions = vec!();
