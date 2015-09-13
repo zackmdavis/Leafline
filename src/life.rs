@@ -796,7 +796,8 @@ impl WorldState {
         if east_service || west_service {
             debug_assert!(
                 self.agent_to_pinfield_ref(agent).query(
-                    Locale { rank: home_rank, file: 4 })
+                    Locale { rank: home_rank, file: 4 }) ||
+                        self.agent_to_pinfield_ref(agent).0 == 0
             );
         } else {
             return premonitions;
@@ -888,31 +889,35 @@ impl WorldState {
         self.underlookahead(true)
     }
 
-    // TODO: we should use the fmt::Display trait
-    pub fn display(&self) {
-        println!("  a b c d e f g h");
+}
+
+impl fmt::Display for WorldState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut output = String::new();
+        output.push_str("  a b c d e f g h\n");
         for rank in (0..8).rev() {
-            print!("{} ", rank+1);
+            output.push_str(&*format!("{} ", rank+1));
             for file in 0..8 {
                 let locale = Locale { rank: rank, file: file };
                 if self.occupied().invert().query(locale) {
-                    print!("_ ");
+                    output.push_str(&*format!("_ "));
                 } else {
                     for &team in &[Team::Orange, Team::Blue] {
                         for &figurine_class in &Agent::dramatis_personæ(team) {
                             if self.agent_to_pinfield_ref(figurine_class)
                                    .query(locale) {
-                                print!("{} ", figurine_class)
+                                output.push_str(
+                                    &*format!("{} ", figurine_class));
                             }
                         }
                     }
                 }
             }
-            println!("");
+            output.push('\n');
         }
+        write!(f, "{}", output)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -1061,7 +1066,6 @@ mod tests {
         let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
         assert_eq!(false, prems[0].tree.orange_east_service_eligibility);
-        prems[0].tree.display();
         assert_eq!("8/8/4k3/8/8/8/8/5RK1 b -", prems[0].tree.preserve());
     }
 

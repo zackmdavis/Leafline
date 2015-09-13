@@ -299,8 +299,6 @@ mod tests {
         let depth = 2;
         let advisory = kickoff(&world, depth, true);
 
-        world.display();
-        advisory[0].0.tree.display();
         // taking the pony is the right thing to do
         assert_eq!(Locale { rank: 0, file: 0 }, advisory[0].0.patch.whither);
 

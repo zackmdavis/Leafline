@@ -141,8 +141,7 @@ fn main() {
                     // checkm^H^H^H^H^H^Hultimate endangerment
                     the_end();
                 }
-                world.display();
-                println!("");
+                println!("{}", world);
                 for (index, premonition) in premonitions.iter().enumerate() {
                     println!("{:>2}. {}", index, premonition)
                 }
@@ -151,7 +150,7 @@ fn main() {
                 let (forecasts,
                      thinking_time) = forecast(world,
                                                lookahead_depth);
-                world.display();
+                println!("{}", world);
                 println!(
                     "(scoring alternatives {} levels deep took {} ms)",
                     lookahead_depth, thinking_time.num_milliseconds()
