@@ -29,16 +29,12 @@ class WorldState {
     }
 
     cedeInitiative() {
-        this.initiative = (this.initiative == Team.Orange) ? Team.Blue : Team.Orange;
+        this.initiative = (this.initiative === Team.Orange) ? Team.Blue : Team.Orange;
     }
 }
 
 let world = new WorldState();
 
-function guiAgentRuneToIcon(agentRune) {
-    return $('<img>').attr('src', `img/figurines/${agentRune}.png`)
-        .addClass('agent-icon');
-}
 
 function leaflineAgentToGuiAgentRune(agent) {
     let teamToPrefix = {'Orange': "w", 'Blue': "b"};
@@ -54,8 +50,27 @@ function leaflineAgentToGuiAgentRune(agent) {
             jobDescriptionToTail[agent.job_description]);
 }
 
-function leaflineAgentToIcon(agent) {
-    return guiAgentRuneToIcon(leaflineAgentToGuiAgentRune(agent));
+function guiAgentRuneToLeaflineAgent(rune) {
+    let prefixToTeam = {'w': Team.Orange, 'b': Team.Blue};
+    let tailToJobDescription = {
+        'P': "Servant",
+        'N': "Pony",
+        'B': "Scholar",
+        'R': "Cop",
+        'Q': "Princess",
+        'K': "Figurehead",
+    };
+    let [prefix, tail] = rune;
+    return {'team': prefixToTeam[prefix],
+            'job_description': tailToJobDescription[tail]};
+}
+
+function teamAndOppositionFromPrefix(prefix) {
+    if (prefix === 'w') {
+        return [Team.Orange, Team.Blue];
+    } else if (prefix === 'b') {
+        return [Team.Blue, Team.Orange];
+    }
 }
 
 function localeToAlgebraic(locale) {
@@ -65,7 +80,6 @@ function localeToAlgebraic(locale) {
 }
 
 function sendPostcard(news) {
-    console.log(`sending postcard about ${news}`);
     $.ajax({
         url: "/write/",
         method: 'POST',
@@ -79,21 +93,12 @@ function sendPostcard(news) {
             world.multifield.position(newField);
             world.preservedServiceEligibilities = newEligibilities;
             let commentary = ` (after ${data.thinking_time} ms thinking time)`;
-            // XXX we are not really respecting the separation of
-            // concerns here; mixing logic and presentation will only
-            // create a maintenence burden later
-            let hospital_mugshot;
-            if (data.hospitalization) {
-                hospital_mugshot = leaflineAgentToIcon(data.hospitalization);
-            } else {
-                hospital_mugshot = null;
-            }
             printHeadline(
                 "Blue",
-                leaflineAgentToIcon(data.patch.star),
+                data.patch.star,
                 localeToAlgebraic(data.patch.whence),
                 localeToAlgebraic(data.patch.whither),
-                hospital_mugshot,
+                data.hospitalization,
                 commentary
             );
             transpireYear();
@@ -101,15 +106,24 @@ function sendPostcard(news) {
     });
 }
 
-function dropHandler(whence, whither, agent,
-                     news, _previously, _orientation) {
+function dropHandler(whence, whither, agentRune,
+                     news, previously, _orientation) {
     if (whence != whither && whither != 'offboard') {
+        let [team, opposition] = teamAndOppositionFromPrefix(agentRune[0]);
+        let occupyingWhither = previously[whither];
+        let patient;
+        if (occupyingWhither) {
+            let [patientTeam, _patientJobDescription] = occupyingWhither;
+            patient = guiAgentRuneToLeaflineAgent(occupyingWhither)
+        } else {
+            patient = null;
+        }
         world.multifield.position(news, false);
         world.cedeInitiative();
         sendPostcard(news);
         printHeadline(
-            "Orange", guiAgentRuneToIcon(agent),
-            whence, whither, null, null
+            "Orange", guiAgentRuneToLeaflineAgent(agentRune),
+            whence, whither, patient, null
         );
     }
 }
@@ -124,7 +138,17 @@ function transpireYear() {
     $history.attr('data-year', getYear() + 1);
 }
 
-function printHeadline(team, figurine, whence, whither,
+
+function guiAgentRuneToIcon(agentRune) {
+    return $('<img>').attr('src', `img/figurines/${agentRune}.png`)
+        .addClass('agent-icon');
+}
+
+function leaflineAgentToIcon(agent) {
+    return guiAgentRuneToIcon(leaflineAgentToGuiAgentRune(agent));
+}
+
+function printHeadline(team, agent, whence, whither,
                        hospitalization, commentary) {
     let year = getYear();
     let $headline = $('<div />').addClass("headline")
@@ -137,15 +161,16 @@ function printHeadline(team, figurine, whence, whither,
     }
     $headline.append($('<strong />').text(dateline));
 
-    $headline.append(figurine);
+    $headline.append(leaflineAgentToIcon(agent));
     let newsEvent = ` from ${whence} to ${whither}`;
     $headline.append($('<span />').text(newsEvent));
 
     if (hospitalization) {
+        let hospitalMugshot = leaflineAgentToIcon(hospitalization);
         $headline.append(
             $('<span />').text(`, stunning `)
         );
-        $headline.append(hospitalization);
+        $headline.append(hospitalMugshot);
     }
 
     if (commentary) {
