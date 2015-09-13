@@ -34,12 +34,23 @@ use time::*;
 
 use identity::Agent;
 use life::{WorldState, Commit, Patch};
-use mind::kickoff;
+use mind::{kickoff, iterative_deepening_kickoff};
 
 
-fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
+fn forecast(world: WorldState,
+            depth: Option<u8>, seconds: Option<u8>)
+            -> (Vec<(Commit, f32)>, Duration) {
     let start_thinking = time::get_time();
-    let forecasts: Vec<(Commit, f32)> = kickoff(&world, depth, false);
+    let forecasts;
+    if depth.is_some() && seconds.is_none() {
+        forecasts = kickoff(&world, depth.unwrap(), false);
+    } else if seconds.is_some() && depth.is_none() {
+        forecasts = iterative_deepening_kickoff(
+            &world, Duration::seconds(seconds.unwrap() as i64), false);
+    } else {
+        moral_panic!("both `depth` and `seconds` supplied, \
+                      rather than only one of these");
+    }
     let stop_thinking = time::get_time();
     let thinking_time = stop_thinking - start_thinking;
     (forecasts, thinking_time)
@@ -47,7 +58,8 @@ fn forecast(world: WorldState, depth: u8) -> (Vec<(Commit, f32)>, Duration) {
 
 
 fn oppose(in_medias_res: WorldState, depth: u8) -> (Commit, Duration) {
-    let (mut forecasts, thinking_time) = forecast(in_medias_res, depth);
+    let (mut forecasts, thinking_time) = forecast(
+        in_medias_res, Some(depth), None);
     let determination_and_karma;
     if !forecasts.is_empty() {
         determination_and_karma = forecasts.swap_remove(0);
@@ -94,15 +106,20 @@ fn main() {
     //
     // For now, use 0 like None.
     let mut lookahead_depth: u8 = 0;
+    let mut lookahead_seconds: u8 = 0;
     let mut postcard: String = "".to_owned();
     let mut from: String = "".to_owned();
     {
         let mut parser = ArgumentParser::new();
         parser.set_description("Leafline: an oppositional strategy game engine");
         parser.refer(&mut lookahead_depth).add_option(
-            &["--lookahead"],
+            &["--depth"],
             Store,
-            "rank moves using AI minimax lookahead this deep.");
+            "rank moves using AI minimax lookahead this deep");
+        parser.refer(&mut lookahead_seconds).add_option(
+            &["--seconds"],
+            Store,
+            "rank moves using AI minimax for about this many seconds");
         parser.refer(&mut postcard).add_option(
             &["--correspond"],
             Store,
@@ -112,7 +129,7 @@ fn main() {
         parser.refer(&mut from).add_option(
             &["--from"],
             Store,
-            "start a game from the given preservation rune");
+            "start a game from the given book of preservation runes");
         parser.parse_args_or_exit();
     }
 
@@ -129,44 +146,56 @@ fn main() {
     }
     let mut premonitions: Vec<Commit>;
     loop {
-        match lookahead_depth {
-            // XXX can we unify the scored and unscored logic? Useful
-            // not only on general DRYness principles, but perhaps also
-            // toward supporting human vs. computer playish things rather
-            // than just advising every movement
-            0 => {
-                premonitions = world.lookahead();
-                if premonitions.is_empty() {
-                    // XXX distinguish between stalemate and
-                    // checkm^H^H^H^H^H^Hultimate endangerment
-                    the_end();
-                }
-                println!("{}", world);
-                for (index, premonition) in premonitions.iter().enumerate() {
-                    println!("{:>2}. {}", index, premonition)
-                }
+        if lookahead_depth == 0 && lookahead_seconds == 0 {
+            premonitions = world.lookahead();
+            if premonitions.is_empty() {
+                // XXX TODO distinguish between deadlock and
+                // ultimate endangerment
+                the_end();
             }
-            _ => {
-                let (forecasts,
-                     thinking_time) = forecast(world,
-                                               lookahead_depth);
+            println!("{}", world);
+            for (index, premonition) in premonitions.iter().enumerate() {
+                println!("{:>2}. {}", index, premonition)
+            }
+        }
+        else {
+            let forecasts;
+            if lookahead_depth != 0 && lookahead_seconds == 0 {
+                let (our_forecasts, thinking_time) = forecast(
+                    world, Some(lookahead_depth), None);
+                forecasts = our_forecasts;
                 println!("{}", world);
                 println!(
                     "(scoring alternatives {} levels deep took {} ms)",
                     lookahead_depth, thinking_time.num_milliseconds()
-                 );
-                for (index, prem_score) in forecasts.iter().enumerate() {
-                    println!("{:>2}. {} (score {:.1})",
-                             index, prem_score.0, prem_score.1);
-                }
-                premonitions = vec!();
-                for prem_score in forecasts {
-                    premonitions.push(prem_score.0);
-                }
+                );
+            } else if lookahead_seconds != 0 && lookahead_depth == 0 {
+                let (our_forecasts, thinking_time) = forecast(
+                    world, None, Some(lookahead_seconds));
+                forecasts = our_forecasts;
+                println!("{}", world);
+                println!(
+                    // XXX we want to know how many depths we got out
+                    // of those seconds
+                    "(scoring alternatives took {} ms)",
+                    thinking_time.num_milliseconds()
+                );
+            } else {
+                println!("Supply only one of `--seconds` and `--depth`.");
+                process::exit(1);
+            }
 
-                if premonitions.is_empty() {
-                    the_end();
-                }
+            for (index, prem_score) in forecasts.iter().enumerate() {
+                println!("{:>2}. {} (score {:.1})",
+                         index, prem_score.0, prem_score.1);
+            }
+            premonitions = vec!();
+            for prem_score in forecasts {
+                premonitions.push(prem_score.0);
+            }
+
+            if premonitions.is_empty() {
+                the_end();
             }
         }
 

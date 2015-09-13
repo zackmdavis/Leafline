@@ -2,6 +2,8 @@ use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+use time;
+
 use identity::{Team, JobDescription, Agent};
 use life::{Commit, WorldState};
 use motion::CENTER_OF_THE_WORLD;
@@ -138,13 +140,10 @@ pub fn α_β_negamax_search(world: WorldState,
 }
 
 
-// The vision here is that for the turn I'm immediately going to take,
-// I want a report of all possible moves ranked by negamax-computed
-// optimality, but that we don't want to bother with all that bookkeeping
-// for subsequent levels of the game tree; minimax is expensive enough
-// already!!
-pub fn kickoff(world: &WorldState, depth: u8,
-               nihilistically: bool) -> Vec<(Commit, f32)> {
+pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
+                                     nihilistically: bool,
+                                     deadline_maybe: Option<time::Timespec>)
+                                     -> Option<Vec<(Commit, f32)>> {
     let mut déjà_vu_table: HashMap<WorldState, f32> = HashMap::new();
     let mut premonitions;
     if nihilistically {
@@ -155,6 +154,11 @@ pub fn kickoff(world: &WorldState, depth: u8,
     order_moves(&mut premonitions);
     let mut forecasts = Vec::new();
     for premonition in premonitions.into_iter() {
+        if let Some(deadline) = deadline_maybe {
+            if time::get_time() > deadline {
+                return None;
+            }
+        }
         let (_grandchild, mut value) = α_β_negamax_search(premonition.tree,
                                                           depth - 1,
                                                           NEG_INFINITY,
@@ -163,14 +167,30 @@ pub fn kickoff(world: &WorldState, depth: u8,
         value = -value;
         forecasts.push((premonition, value));
     }
-    // The circumlocution (thanks to
-    // https://www.reddit.com/r/rust/comments/29kia3/no_ord_for_f32/ for
-    // the suggestion) is because Rust is sanctimonious about IEEE 754
-    // floats not being totally ordered
     forecasts.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
-    forecasts
+    Some(forecasts)
 }
 
+
+pub fn kickoff(world: &WorldState, depth: u8,
+               nihilistically: bool) -> Vec<(Commit, f32)> {
+    potentially_timebound_kickoff(world, depth, nihilistically, None).unwrap()
+}
+
+
+pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
+                                   nihilistically: bool) -> Vec<(Commit, f32)> {
+    let deadline = time::get_time() + timeout;
+    let mut depth = 1;
+    let mut forecasts = potentially_timebound_kickoff(
+        world, depth, nihilistically, None).unwrap();
+    while let Some(prophecy) = potentially_timebound_kickoff(
+            world, depth, nihilistically, Some(deadline)) {
+        forecasts = prophecy;
+        depth += 1;
+    }
+    forecasts
+}
 
 
 #[cfg(test)]

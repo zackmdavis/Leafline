@@ -18,7 +18,7 @@
   ;; TODO validate world, 400 if bad
   (let [world (str (get-in request [:params :world])
                    " b")  ; the AI plays blue (by convention, for now)
-        mail-call ["./leafline" "--lookahead" "5" "--correspond" world]]
+        mail-call ["./leafline" "--depth" "5" "--correspond" world]]
     (timbre/info "got postcard about " world
                  "; invoking Leafline with" mail-call)
     (let [dictation (apply sh mail-call)]
