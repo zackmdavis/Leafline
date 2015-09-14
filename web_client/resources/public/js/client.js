@@ -35,6 +35,9 @@ class WorldState {
 
 let world = new WorldState();
 
+const $history = $('#history');
+const $message = $('#message');
+const $spinner = $('#spinner');
 
 function leaflineAgentToGuiAgentRune(agent) {
     let teamToPrefix = {'Orange': "w", 'Blue': "b"};
@@ -79,6 +82,20 @@ function localeToAlgebraic(locale) {
     return file + rank;
 }
 
+function getLookaheadBound() {
+    let nature;
+    if ($('#depth-radio-button').is(':checked')) {
+        nature = "depth";
+    } else if ($('#seconds-radio-button').is(':checked')) {
+        nature = "seconds";
+    } else {
+        throw "need to select a lookahead bound–nature"
+    }
+    let value = parseInt($('#bound-input').val());
+    return { nature: nature, value: value }
+}
+
+
 function sendPostcard(news) {
     $message.text('');
     $.ajax({
@@ -86,6 +103,7 @@ function sendPostcard(news) {
         method: 'POST',
         data: {
             world: world.preserve(),
+            bound: getLookaheadBound()
         },
         success: function (data, textStatus, jqxhr) {
             let [newField, _initiative,
@@ -93,7 +111,8 @@ function sendPostcard(news) {
             world.cedeInitiative();
             world.multifield.position(newField);
             world.preservedServiceEligibilities = newEligibilities;
-            let commentary = ` (after ${data.thinking_time} ms thinking time)`;
+            let commentary = ` (after searching ${data.depth} plies in ` +
+                             `${data.thinking_time} ms)`;
             $spinner.hide();
             printHeadline(
                 "Blue",
@@ -134,10 +153,6 @@ function dropHandler(whence, whither, agentRune,
         );
     }
 }
-
-const $history = $('#history');
-const $message = $('#message');
-const $spinner = $('#spinner');
 
 function getYear() {
     return parseInt($history.attr('data-year'));

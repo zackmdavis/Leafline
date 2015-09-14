@@ -26,18 +26,7 @@
     margin: 0px;
 }
 
-#indicator-panel {
-    margin: 12px;
-    padding: 6px;
-    border-style: solid;
-    border-width: 1px;
-    width: 200px;
-    height: 32px;
-    float: right;
-}
-
 #spinner {
     width: 20px;
     height: auto;
-    float: right;
 }

@@ -17,9 +17,30 @@
     <div class="row">
       <div class="small-6 column">
         <div id="world" style="width: 400px"></div>
-        <div id="indicator-panel">
-          <div id="message"></div>
-          <img id="spinner" src="/img/spinner.gif" style="display: none;"/>
+        <h5><strong>AI lookahead</strong></h5>
+        <div class="row">
+          <div class="small-4 column">
+            <label for="bound" class="right">search</label>
+            <input id="bound-input"
+                   name="bound" class="right" size="3" value="4" />
+          </div>
+          <div class="small-4 column">
+            <div>
+              <input id="depth-radio-button"
+                     type="radio" name="lookahead" value="depth" checked />
+              Depth
+            </div>
+            <div>
+              <input id="seconds-radio-button"
+                     type="radio" name="lookahead" value="seconds" />
+              Seconds
+            </div>
+          </div>
+          <div class="small-4 column">
+            <img id="spinner" src="/img/spinner.gif" style="display: none;"/>
+          </div>
+        </div>
+        <div id="message" class="row">
         </div>
       </div>
       <div id="history" class="small-6 column" data-year="1">

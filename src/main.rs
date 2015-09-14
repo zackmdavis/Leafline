@@ -28,7 +28,7 @@ use std::io;
 use std::io::Write;
 use std::process;
 
-use argparse::{ArgumentParser, Store};
+use argparse::{ArgumentParser, Store, StoreTrue};
 use rustc_serialize::json;
 use time::*;
 
@@ -75,9 +75,19 @@ fn forecast(world: WorldState, bound: LookaheadBound)
 }
 
 
-fn oppose(in_medias_res: WorldState, depth: u8) -> (Commit, Duration) {
-    let (mut forecasts, _depth, thinking_time) = forecast(
-        in_medias_res, LookaheadBound::Depth(depth));
+#[derive(RustcEncodable, RustcDecodable)]
+struct Postcard {
+    world: String,
+    patch: Patch,
+    hospitalization: Option<Agent>,
+    thinking_time: u64,
+    depth: u8
+}
+
+
+fn correspondence(reminder: String, bound: LookaheadBound) -> String {
+    let in_medias_res = WorldState::reconstruct(reminder);
+    let (mut forecasts, depth, sidereal) = forecast(in_medias_res, bound);
     let determination_and_karma;
     if !forecasts.is_empty() {
         determination_and_karma = forecasts.swap_remove(0);
@@ -86,27 +96,12 @@ fn oppose(in_medias_res: WorldState, depth: u8) -> (Commit, Duration) {
         panic!("Cannot oppose with no moves");
     }
     let (determination, _karma) = determination_and_karma;
-    (determination, thinking_time)
-}
-
-
-#[derive(RustcEncodable, RustcDecodable)]
-struct Postcard {
-    world: String,
-    patch: Patch,
-    hospitalization: Option<Agent>,
-    thinking_time: u64,
-}
-
-
-fn correspond(reminder: String, depth: u8) -> String {
-    let world = WorldState::reconstruct(reminder);
-    let (commit, sidereal) = oppose(world, depth);
     let postcard = Postcard {
-        world: commit.tree.preserve(),
-        patch: commit.patch,
-        hospitalization: commit.hospitalization,
+        world: determination.tree.preserve(),
+        patch: determination.patch,
+        hospitalization: determination.hospitalization,
         thinking_time: sidereal.num_milliseconds() as u64,
+        depth: depth
     };
     json::encode(&postcard).unwrap()
 }
@@ -125,8 +120,8 @@ fn main() {
     // For now, use 0 like None.
     let mut lookahead_depth: u8 = 0;
     let mut lookahead_seconds: u8 = 0;
-    let mut postcard: String = "".to_owned();
     let mut from: String = "".to_owned();
+    let mut correspond: bool = false;
     {
         let mut parser = ArgumentParser::new();
         parser.set_description("Leafline: an oppositional strategy game engine");
@@ -138,12 +133,11 @@ fn main() {
             &["--seconds"],
             Store,
             "rank moves using AI minimax for about this many seconds");
-        parser.refer(&mut postcard).add_option(
+        parser.refer(&mut correspond).add_option(
             &["--correspond"],
-            Store,
+            StoreTrue,
             "just output the serialization of the AI's top \
-             move in response to the given serialized \
-             world-state");
+             move");
         parser.refer(&mut from).add_option(
             &["--from"],
             Store,
@@ -151,8 +145,18 @@ fn main() {
         parser.parse_args_or_exit();
     }
 
-    if !postcard.is_empty() {
-        println!("{}", correspond(postcard, lookahead_depth));
+    if correspond {
+        let bound;
+        if lookahead_depth != 0 && lookahead_seconds == 0 {
+            bound = LookaheadBound::Depth(lookahead_depth)
+        } else if lookahead_seconds != 0 && lookahead_depth == 0 {
+            bound = LookaheadBound::Seconds(lookahead_seconds)
+        } else {
+            println!("`--correspond` requires exactly one of \
+                      `--depth` and `--seconds`");
+            process::exit(1);
+        }
+        println!("{}", correspondence(from, bound));
         process::exit(0);
     }
 
