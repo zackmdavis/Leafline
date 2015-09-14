@@ -82,11 +82,10 @@ fn order_moves(commits: &mut Vec<Commit>) {
 
 pub fn α_β_negamax_search(world: WorldState,
                           depth: u8,
-                          α: f32,
+                          mut α: f32,
                           β: f32,
                           déjà_vu_table: &mut HashMap<WorldState, f32>)
                           -> (Option<Commit>, f32) {
-    let mut experienced_α = α;
     let team = world.to_move;
     let mut premonitions = world.reckless_lookahead();
     order_moves(&mut premonitions);
@@ -118,7 +117,7 @@ pub fn α_β_negamax_search(world: WorldState,
             let (_, acquired_value) = α_β_negamax_search(premonition.tree,
                                                          depth - 1,
                                                          -β,
-                                                         -experienced_α,
+                                                         -α,
                                                          déjà_vu_table);
             value = -acquired_value;
             déjà_vu_table.insert(premonition.tree, value);
@@ -128,10 +127,10 @@ pub fn α_β_negamax_search(world: WorldState,
             optimum = value;
             optimand = Some(premonition);
         }
-        if value > experienced_α {
-            experienced_α = value;
+        if value > α {
+            α = value;
         }
-        if experienced_α >= β {
+        if α >= β {
             break;
         }
     }
