@@ -37,29 +37,47 @@ use life::{WorldState, Commit, Patch};
 use mind::{kickoff, iterative_deepening_kickoff};
 
 
-fn forecast(world: WorldState,
-            depth: Option<u8>, seconds: Option<u8>)
-            -> (Vec<(Commit, f32)>, Duration) {
+enum LookaheadBound {
+    Depth(u8),
+    Seconds(u8)
+}
+
+impl LookaheadBound {
+    pub fn duration(&self) -> Duration {
+        match *self {
+            LookaheadBound::Seconds(secs) => Duration::seconds(secs as i64),
+            _ => moral_panic!("`duration()` called on non-Seconds \
+                               LookaheadBound variant")
+        }
+    }
+}
+
+fn forecast(world: WorldState, bound: LookaheadBound)
+            -> (Vec<(Commit, f32)>, u8, Duration) {
     let start_thinking = time::get_time();
     let forecasts;
-    if depth.is_some() && seconds.is_none() {
-        forecasts = kickoff(&world, depth.unwrap(), false);
-    } else if seconds.is_some() && depth.is_none() {
-        forecasts = iterative_deepening_kickoff(
-            &world, Duration::seconds(seconds.unwrap() as i64), false);
-    } else {
-        moral_panic!("both `depth` and `seconds` supplied, \
-                      rather than only one of these");
+    let depth;
+    match bound {
+        LookaheadBound::Depth(ds) => {
+            forecasts = kickoff(&world, ds, false);
+            depth = ds;
+        },
+        LookaheadBound::Seconds(_) => {
+            let (fs, ds) = iterative_deepening_kickoff(
+                &world, bound.duration(), false);
+            forecasts = fs;
+            depth = ds;
+        }
     }
     let stop_thinking = time::get_time();
     let thinking_time = stop_thinking - start_thinking;
-    (forecasts, thinking_time)
+    (forecasts, depth, thinking_time)
 }
 
 
 fn oppose(in_medias_res: WorldState, depth: u8) -> (Commit, Duration) {
-    let (mut forecasts, thinking_time) = forecast(
-        in_medias_res, Some(depth), None);
+    let (mut forecasts, _depth, thinking_time) = forecast(
+        in_medias_res, LookaheadBound::Depth(depth));
     let determination_and_karma;
     if !forecasts.is_empty() {
         determination_and_karma = forecasts.swap_remove(0);
@@ -160,9 +178,10 @@ fn main() {
         }
         else {
             let forecasts;
+            // XXX TODO FIXME clean up duplication
             if lookahead_depth != 0 && lookahead_seconds == 0 {
-                let (our_forecasts, thinking_time) = forecast(
-                    world, Some(lookahead_depth), None);
+                let (our_forecasts, _depth, thinking_time) = forecast(
+                    world, LookaheadBound::Depth(lookahead_depth));
                 forecasts = our_forecasts;
                 println!("{}", world);
                 println!(
@@ -170,15 +189,13 @@ fn main() {
                     lookahead_depth, thinking_time.num_milliseconds()
                 );
             } else if lookahead_seconds != 0 && lookahead_depth == 0 {
-                let (our_forecasts, thinking_time) = forecast(
-                    world, None, Some(lookahead_seconds));
+                let (our_forecasts, depth, thinking_time) = forecast(
+                    world, LookaheadBound::Seconds(lookahead_seconds));
                 forecasts = our_forecasts;
                 println!("{}", world);
                 println!(
-                    // XXX we want to know how many depths we got out
-                    // of those seconds
-                    "(scoring alternatives took {} ms)",
-                    thinking_time.num_milliseconds()
+                    "(scoring alternatives {} levels deep took {} ms)",
+                    depth, thinking_time.num_milliseconds()
                 );
             } else {
                 println!("Supply only one of `--seconds` and `--depth`.");

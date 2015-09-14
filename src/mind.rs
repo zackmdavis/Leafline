@@ -179,7 +179,8 @@ pub fn kickoff(world: &WorldState, depth: u8,
 
 
 pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
-                                   nihilistically: bool) -> Vec<(Commit, f32)> {
+                                   nihilistically: bool)
+                                   -> (Vec<(Commit, f32)>, u8) {
     let deadline = time::get_time() + timeout;
     let mut depth = 1;
     let mut forecasts = potentially_timebound_kickoff(
@@ -189,7 +190,7 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
         forecasts = prophecy;
         depth += 1;
     }
-    forecasts
+    (forecasts, depth)
 }
 
 
