@@ -88,10 +88,11 @@ pub fn α_β_negamax_search(world: WorldState,
                           -> (Option<Commit>, f32) {
     let mut experienced_α = α;
     let team = world.to_move;
+    let potential_score = orientation(team) * score(world);
     let mut premonitions = world.reckless_lookahead();
     order_moves(&mut premonitions);
     if depth == 0 || premonitions.is_empty() {
-        return (None, orientation(team) * score(world))
+        return (None, potential_score)
     };
     let mut optimum = NEG_INFINITY;
     let mut optimand = None;
@@ -134,6 +135,9 @@ pub fn α_β_negamax_search(world: WorldState,
         if experienced_α >= β {
             break;
         }
+        if (20000.0 - experienced_α.abs()).abs() < 30.0 {
+            break;
+        };
     }
 
     (optimand, optimum)
@@ -199,6 +203,7 @@ mod tests {
     extern crate test;
     use self::test::Bencher;
 
+    use time;
     use super::{kickoff, score};
     use space::Locale;
     use life::WorldState;
@@ -242,6 +247,15 @@ mod tests {
     fn benchmark_kickoff_depth_3(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| kickoff(&ws, 3, true));
+    }
+
+    #[test]
+    fn concerning_short_circuiting_upon_finding_mate() {
+        let ws = WorldState::reconstruct("7K/r7/1r6/8/8/8/8/7k b -".to_owned());
+        let start = time::get_time();
+        kickoff(&ws, 30, true);
+        let duration = time::get_time() - start;
+        assert!(duration.num_seconds() < 20);
     }
 
     #[test]
