@@ -135,7 +135,7 @@ pub fn α_β_negamax_search(world: WorldState,
         if experienced_α >= β {
             break;
         }
-        if (20000.0 - experienced_α.abs()).abs() < 30.0 {
+        if (20000.0 - experienced_α.abs()).abs() < 1000.0 {
             break;
         };
     }
