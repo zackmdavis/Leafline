@@ -4,6 +4,7 @@ use std::fmt;
 use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
 use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
+use ansi_term::Colour as Color;
 
 
 /// represents the movement of a figurine
@@ -893,14 +894,18 @@ impl WorldState {
 
 impl fmt::Display for WorldState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let _colors = vec![Color::Yellow, Color::Cyan];
+        let mut colors = _colors.iter().cycle();
+        let mut color: &Color;
         let mut output = String::new();
         output.push_str("  a b c d e f g h\n");
         for rank in (0..8).rev() {
             output.push_str(&*format!("{} ", rank+1));
             for file in 0..8 {
+                color = colors.next().expect("Cycles cannot run out!");
                 let locale = Locale { rank: rank, file: file };
                 if self.occupied().invert().query(locale) {
-                    output.push_str(&*format!("_ "));
+                    output.push_str(&*format!("{}", color.paint("█ ")));
                 } else {
                     for &team in &[Team::Orange, Team::Blue] {
                         for &figurine_class in &Agent::dramatis_personæ(team) {
@@ -913,6 +918,7 @@ impl fmt::Display for WorldState {
                     }
                 }
             }
+            colors.next();
             output.push('\n');
         }
         write!(f, "{}", output)
