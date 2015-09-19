@@ -2,6 +2,7 @@ use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::sync::mpsc;
 use std::thread;
 
 use time;
@@ -148,23 +149,35 @@ pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
     }
     order_moves(&mut premonitions);
     let mut forecasts = Vec::new();
+    let (tx, rx) = mpsc::channel();
     for &premonition in &premonitions {
-        if let Some(deadline) = deadline_maybe {
-            if time::get_time() > deadline {
-                return None;
-            }
-        }
         let travel_bank = memory_bank.clone();
-        let thread_handle = thread::spawn(move || {
-            α_β_negamax_search(
+        let explorer_radio = tx.clone();
+        thread::spawn(move || {
+            let search_hit = α_β_negamax_search(
                 premonition.tree, depth - 1,
                 NEG_INFINITY, INFINITY,
                 travel_bank
-            )
+            );
+            explorer_radio.send(search_hit).ok();
         });
-        let (_grandchild, mut value) = thread_handle.join().ok().unwrap();
-        value = -value;
-        forecasts.push((premonition, value));
+        loop {  // polling for results
+            if let Some(deadline) = deadline_maybe {
+                if time::get_time() > deadline {
+                    return None;
+                }
+            }
+            let search_hit_maybe = rx.try_recv().ok();
+            match search_hit_maybe {
+                Some(search_hit) => {
+                    let (_grandchild, mut value) = search_hit;
+                    value = -value;
+                    forecasts.push((premonition, value));
+                    break;
+                },
+                None => { thread::sleep_ms(2); }
+            }
+        }
     }
     forecasts.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     Some(forecasts)
@@ -189,7 +202,7 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
         forecasts = prophecy;
         depth += 1;
     }
-    (forecasts, depth)
+    (forecasts, depth-1)
 }
 
 
