@@ -1,6 +1,7 @@
 use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use time;
@@ -83,7 +84,7 @@ fn order_moves(commits: &mut Vec<Commit>) {
 
 pub fn α_β_negamax_search(
     world: WorldState, depth: u8, mut α: f32, β: f32,
-    /* déjà_vu_table: &mut HashMap<WorldState, f32> */) -> (Option<Commit>, f32) {
+    memory_bank: Arc<Mutex<HashMap<WorldState, f32>>>) -> (Option<Commit>, f32) {
     let team = world.to_move;
     let potential_score = orientation(team) * score(world);
     let mut premonitions = world.reckless_lookahead();
@@ -94,31 +95,27 @@ pub fn α_β_negamax_search(
     let mut optimum = NEG_INFINITY;
     let mut optimand = None;
     for premonition in premonitions.into_iter() {
-        let mut value: f32;
+        let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
         let cached: bool;
         {
-            // let cached_value_maybe = déjà_vu_table.get(&premonition.tree);
-            let cached_value_maybe = None;
+            let open_vault = memory_bank.lock().unwrap();
+            let cached_value_maybe = open_vault.get(&premonition.tree);
             match cached_value_maybe {
                 Some(&cached_value) => {
                     cached = true;
                     value = cached_value;
                 }
-                None => {
-                    cached = false;
-                    // XXX fake assignment to work around the compiler's
-                    // "possibly uninitialized value" rules
-                    value = NEG_INFINITY;
-                }
+                None => { cached = false; }
             };
         }
 
         if !cached {
             let (_, acquired_value) = α_β_negamax_search(
                 premonition.tree, depth - 1,
-                -β, -α, /* déjà_vu_table */);
+                -β, -α, memory_bank.clone()
+            );
             value = -acquired_value;
-            // déjà_vu_table.insert(premonition.tree, value);
+            memory_bank.lock().unwrap().insert(premonition.tree, value);
         }
 
         if value > optimum {
@@ -141,7 +138,8 @@ pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
                                      nihilistically: bool,
                                      deadline_maybe: Option<time::Timespec>)
                                      -> Option<Vec<(Commit, f32)>> {
-    // let mut déjà_vu_table: HashMap<WorldState, f32> = HashMap::new();
+    let déjà_vu_table: HashMap<WorldState, f32> = HashMap::new();
+    let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
     let mut premonitions;
     if nihilistically {
         premonitions = world.reckless_lookahead();
@@ -156,13 +154,12 @@ pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
                 return None;
             }
         }
+        let travel_bank = memory_bank.clone();
         let thread_handle = thread::spawn(move || {
             α_β_negamax_search(
                 premonition.tree, depth - 1,
                 NEG_INFINITY, INFINITY,
-                // &mut déjà_vu_table
-                // TODO RESEARCH: how do we maintain a shared déjà vu
-                // table while still doing work in a thread? Channels??
+                travel_bank
             )
         });
         let (_grandchild, mut value) = thread_handle.join().ok().unwrap();
