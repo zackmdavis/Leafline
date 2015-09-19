@@ -134,15 +134,6 @@ pub fn α_β_negamax_search(world: WorldState,
         if α >= β {
             break;
         }
-        if (20000.0 - α.abs()).abs() < 1000.0 {
-            // if the best score we're already assured of is in the
-            // vicinity of 20000, we've already found an ultimate
-            // endangerment scnario and don't need to search here
-            // anymore
-            //
-            // XXX: can't the condition just be `α > 19000`?
-            break;
-        };
     }
 
     (optimand, optimum)
@@ -255,7 +246,8 @@ mod tests {
     }
 
     #[test]
-    fn concerning_short_circuiting_upon_finding_mate() {
+    #[ignore]  // more research is needed
+    fn concerning_short_circuiting_upon_finding_critical_endangerment() {
         let ws = WorldState::reconstruct("7K/r7/1r6/8/8/8/8/7k b -".to_owned());
         let start = time::get_time();
         kickoff(&ws, 30, true);
