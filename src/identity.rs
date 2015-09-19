@@ -1,6 +1,7 @@
 use std::fmt;
 
 use ansi_term::Colour as Color;  // this is America
+use ansi_term::Style;
 
 
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
@@ -20,6 +21,13 @@ impl Team {
         match *self {
             Team::Orange => Team::Blue,
             Team::Blue => Team::Orange,
+        }
+    }
+
+    pub fn figurine_paintjob(&self) ->  Style {
+        match *self {
+            Team::Orange => Color::Red.bold(),
+            Team::Blue => Color::Cyan.normal(),
         }
     }
 }
@@ -58,7 +66,7 @@ impl Agent {
     }
 
     pub fn to_preservation_rune(&self) -> char {
-        match_agent!(*self, 
+        match_agent!(*self,
             // 'P' is for "peon"
             Orange, Servant => 'P',
             // 'N' is for "neigh"
@@ -121,32 +129,30 @@ impl Agent {
                          `from_preservation_rune`"),
         }
     }
+
+    pub fn to_figurine_display_rune(&self) -> char {
+        match_agent!(*self,
+            Orange, Servant => '♙',
+            Orange, Pony => '♘',
+            Orange, Scholar => '♗',
+            Orange, Cop => '♖',
+            Orange, Princess => '♕',
+            Orange, Figurehead => '♔',
+            Blue, Servant => '♟',
+            Blue, Pony => '♞',
+            Blue, Scholar => '♝',
+            Blue, Cop => '♜',
+            Blue, Princess => '♛',
+            Blue, Figurehead => '♚'
+         )
+    }
 }
+
 
 impl fmt::Display for Agent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let caricature = match *self {
-            Agent { team: Team::Orange, .. } => {
-                match self.job_description {
-                    JobDescription::Servant => Color::Yellow.paint("♙"),
-                    JobDescription::Pony => Color::Yellow.paint("♘"),
-                    JobDescription::Scholar => Color::Yellow.paint("♗"),
-                    JobDescription::Cop => Color::Yellow.paint("♖"),
-                    JobDescription::Princess => Color::Yellow.paint("♕"),
-                    JobDescription::Figurehead => Color::Yellow.paint("♔"),
-                }
-            }
-            Agent { team: Team::Blue, .. } => {
-                match self.job_description {
-                    JobDescription::Servant => Color::Cyan.paint("♟"),
-                    JobDescription::Pony => Color::Cyan.paint("♞"),
-                    JobDescription::Scholar => Color::Cyan.paint("♝"),
-                    JobDescription::Cop => Color::Cyan.paint("♜"),
-                    JobDescription::Princess => Color::Cyan.paint("♛"),
-                    JobDescription::Figurehead => Color::Cyan.paint("♚"),
-                }
-            }
-        };
-        write!(f, "{}", caricature)
+        write!(f, "{}",
+               self.team.figurine_paintjob().paint(
+                   &self.to_figurine_display_rune().to_string()))
     }
 }
