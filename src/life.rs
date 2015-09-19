@@ -5,7 +5,6 @@ use space::{Locale, Pinfield};
 use identity::{Team, JobDescription, Agent};
 use motion::{PONY_MOVEMENT_TABLE, FIGUREHEAD_MOVEMENT_TABLE};
 use ansi_term::Colour as Color;
-use ansi_term::Style;
 
 
 /// represents the movement of a figurine
@@ -893,27 +892,36 @@ impl WorldState {
 
 }
 
+
 impl fmt::Display for WorldState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let scenes = vec![Color::Yellow.normal(), Color::Cyan.dimmed()];
+        let scenes = vec![Color::Fixed(058), Color::Fixed(017)];
         let mut sceneries = scenes.iter().cycle();
-        let mut scenery: &Style;
+        let mut scenery;
         let mut output = String::new();
-        output.push_str("  a b c d e f g h\n");
+        output.push_str("    a b c d e f g h\n");
         for rank in (0..8).rev() {
-            output.push_str(&*format!("{} ", rank+1));
+            output.push_str(&*format!(" {} ", rank+1));
             for file in 0..8 {
                 scenery = sceneries.next().expect("cycles are eternal");
                 let locale = Locale { rank: rank, file: file };
                 if self.unoccupied().query(locale) {
-                    output.push_str(&*format!("{}", scenery.paint("█ ")));
+                    output.push_str(
+                        &Color::White.on(*scenery).paint("  ").to_string());
                 } else {
                     for &team in &[Team::Orange, Team::Blue] {
                         for &figurine_class in &Agent::dramatis_personæ(team) {
                             if self.agent_to_pinfield_ref(figurine_class)
                                    .query(locale) {
-                                output.push_str(
-                                    &*format!("{} ", figurine_class));
+                                       output.push_str(
+                                           &figurine_class.team
+                                               .figurine_paintjob().on(*scenery)
+                                               .paint(
+                                                   &format!(
+                                                       " {}",
+                                                       figurine_class
+                                                           .to_solid_display_rune())
+                                                       ).to_string());
                             }
                         }
                     }

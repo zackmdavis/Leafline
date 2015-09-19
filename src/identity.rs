@@ -146,6 +146,15 @@ impl Agent {
             Blue, Figurehead => '♚'
          )
     }
+
+    pub fn to_solid_display_rune(&self) -> char {
+        // regrettably, the solid runes look better against locale
+        // scenery, even though we would reserve them for Blue Team in
+        // other contexts
+        Agent { team: Team::Blue,
+                job_description: self.job_description }
+        .to_figurine_display_rune()
+    }
 }
 
 
