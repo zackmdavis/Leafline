@@ -1,12 +1,12 @@
 [package]
 name = "leafline"
-version = "0.0.11"
+version = "0.0.12"
 authors = ["Zack M. Davis <code@zackmdavis.net>"]
 
 [dependencies]
-ansi_term = "0.6.3"
-argparse = "0.2.0"
+ansi_term = "0.6"
+argparse = "0.2"
 clippy = "*"
-itertools = "0.3.25"
-rustc-serialize = "0.3.16"
-time = "0.1.32"
+itertools = "0.4"
+rustc-serialize = "0.3"
+time = "0.1"
