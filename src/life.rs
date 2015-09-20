@@ -918,7 +918,7 @@ impl fmt::Display for WorldState {
                                                .figurine_paintjob().on(*scenery)
                                                .paint(
                                                    &format!(
-                                                       " {}",
+                                                       "{} ",
                                                        figurine_class
                                                            .to_solid_display_rune())
                                                        ).to_string());
