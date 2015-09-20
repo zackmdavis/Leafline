@@ -8,7 +8,7 @@ use ansi_term::Colour as Color;
 
 
 /// represents the movement of a figurine
-#[derive(Eq,PartialEq,Debug,Clone,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub struct Patch {
     pub star: Agent,
     pub whence: Locale,
@@ -36,7 +36,7 @@ impl Patch {
 /// the figurine moved, the state of the world after the turn (`tree`),
 /// and whether an opposing figurine was stunned and put in the hospital,
 /// and if so, which one
-#[derive(Eq,PartialEq,Debug,Clone,Hash)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 pub struct Commit {
     pub patch: Patch,
     pub tree: WorldState,

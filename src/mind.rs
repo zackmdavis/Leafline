@@ -1,6 +1,9 @@
 use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::sync::mpsc;
+use std::thread;
 
 use time;
 
@@ -80,12 +83,9 @@ fn order_moves(commits: &mut Vec<Commit>) {
     });
 }
 
-pub fn α_β_negamax_search(world: WorldState,
-                          depth: u8,
-                          mut α: f32,
-                          β: f32,
-                          déjà_vu_table: &mut HashMap<WorldState, f32>)
-                          -> (Option<Commit>, f32) {
+pub fn α_β_negamax_search(
+    world: WorldState, depth: u8, mut α: f32, β: f32,
+    memory_bank: Arc<Mutex<HashMap<WorldState, f32>>>) -> (Option<Commit>, f32) {
     let team = world.to_move;
     let potential_score = orientation(team) * score(world);
     let mut premonitions = world.reckless_lookahead();
@@ -96,32 +96,27 @@ pub fn α_β_negamax_search(world: WorldState,
     let mut optimum = NEG_INFINITY;
     let mut optimand = None;
     for premonition in premonitions.into_iter() {
-        let mut value: f32;
+        let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
         let cached: bool;
         {
-            let cached_value_maybe = déjà_vu_table.get(&premonition.tree);
+            let open_vault = memory_bank.lock().unwrap();
+            let cached_value_maybe = open_vault.get(&premonition.tree);
             match cached_value_maybe {
                 Some(&cached_value) => {
                     cached = true;
                     value = cached_value;
                 }
-                None => {
-                    cached = false;
-                    // XXX fake assignment to work around the compiler's
-                    // "possibly uninitialized value" rules
-                    value = NEG_INFINITY;
-                }
+                None => { cached = false; }
             };
         }
 
         if !cached {
-            let (_, acquired_value) = α_β_negamax_search(premonition.tree,
-                                                         depth - 1,
-                                                         -β,
-                                                         -α,
-                                                         déjà_vu_table);
+            let (_, acquired_value) = α_β_negamax_search(
+                premonition.tree, depth - 1,
+                -β, -α, memory_bank.clone()
+            );
             value = -acquired_value;
-            déjà_vu_table.insert(premonition.tree, value);
+            memory_bank.lock().unwrap().insert(premonition.tree, value);
         }
 
         if value > optimum {
@@ -139,12 +134,13 @@ pub fn α_β_negamax_search(world: WorldState,
     (optimand, optimum)
 }
 
-
+#[allow(type_complexity)]
 pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
                                      nihilistically: bool,
                                      deadline_maybe: Option<time::Timespec>)
                                      -> Option<Vec<(Commit, f32)>> {
-    let mut déjà_vu_table: HashMap<WorldState, f32> = HashMap::new();
+    let déjà_vu_table: HashMap<WorldState, f32> = HashMap::new();
+    let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
     let mut premonitions;
     if nihilistically {
         premonitions = world.reckless_lookahead();
@@ -153,19 +149,39 @@ pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
     }
     order_moves(&mut premonitions);
     let mut forecasts = Vec::new();
-    for premonition in premonitions.into_iter() {
+    let mut time_radios: Vec<(Commit, mpsc::Receiver<(Option<Commit>, f32)>)> =
+        Vec::new();
+    for &premonition in &premonitions {
+        let travel_bank = memory_bank.clone();
+        let (tx, rx) = mpsc::channel();
+        let explorer_radio = tx.clone();
+        time_radios.push((premonition, rx));
+        thread::spawn(move || {
+            let search_hit: (Option<Commit>, f32) = α_β_negamax_search(
+                premonition.tree, depth - 1,
+                NEG_INFINITY, INFINITY,
+                travel_bank
+            );
+            explorer_radio.send(search_hit).ok();
+        });
+    }
+    while !time_radios.is_empty() {  // polling for results
         if let Some(deadline) = deadline_maybe {
             if time::get_time() > deadline {
                 return None;
             }
         }
-        let (_grandchild, mut value) = α_β_negamax_search(premonition.tree,
-                                                          depth - 1,
-                                                          NEG_INFINITY,
-                                                          INFINITY,
-                                                          &mut déjà_vu_table);
-        value = -value;
-        forecasts.push((premonition, value));
+        // iterate over indices so that we can use swap_remove during the loop
+        for i in (0..time_radios.len()).rev() {
+            let premonition = time_radios[i].0;
+            if let Some(search_hit) = time_radios[i].1.try_recv().ok() {
+                let (_grandchild, mut value) = search_hit;
+                value = -value;
+                forecasts.push((premonition, value));
+                time_radios.swap_remove(i);
+            }
+        }
+        thread::sleep_ms(2);
     }
     forecasts.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     Some(forecasts)
@@ -190,7 +206,7 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
         forecasts = prophecy;
         depth += 1;
     }
-    (forecasts, depth)
+    (forecasts, depth-1)
 }
 
 
@@ -238,7 +254,6 @@ mod tests {
         b.iter(|| kickoff(&ws, 2, false));
     }
 
-    #[ignore]
     #[bench]
     fn benchmark_kickoff_depth_3(b: &mut Bencher) {
         let ws = WorldState::new();
