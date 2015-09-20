@@ -86,7 +86,8 @@ def compile_client():
 
 
 @task
-@not_if_files_exist(os.path.join('src', 'motion.rs'))
+@not_if_files_exist(*[os.path.join('src', f)
+                      for f in ("motion.rs", "landmark.rs")])
 def build_furniture():
     tablemaker.main()
 

@@ -9,7 +9,7 @@ use time;
 
 use identity::{Team, JobDescription, Agent};
 use life::{Commit, WorldState};
-use motion::CENTER_OF_THE_WORLD;
+use landmark::CENTER_OF_THE_WORLD;
 use space::Pinfield;
 
 

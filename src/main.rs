@@ -20,6 +20,7 @@ mod macros;
 mod space;
 mod identity;
 mod motion;
+mod landmark;
 mod life;
 mod mind;
 

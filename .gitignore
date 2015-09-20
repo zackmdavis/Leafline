@@ -35,8 +35,9 @@ pip-selfcheck.json
 # npm droppings (yes, I know this isn't even a Node project; humor me)
 node_modules/
 
-# we build this
+# we build these
 src/motion.rs
+src/landmark.rs
 
 # perf profiling data
 perf.data

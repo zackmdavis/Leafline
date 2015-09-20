@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import itertools
-from functools import reduce
+from functools import partial, reduce
 import operator
 import os
 
@@ -21,6 +21,12 @@ def center_of_the_world():
     return reduce(operator.ior,
                   [rank_and_file_to_u64(position)
                    for position in itertools.product(range(2, 6), repeat=2)])
+
+def forward_contour(i):
+    return reduce(operator.ior,
+                  [rank_and_file_to_u64(position)
+                   for position in [(i, j) for j in range(8)]])
+
 
 PONY_OPTIONS = ((+1, +2), (-1, +2), (+1, -2), (-1, -2),
                 (+2, +1), (-2, +1), (+2, -1), (-2, -1))
@@ -44,21 +50,46 @@ def the_book_of_life(job_description, result):
         '\n'.join("    {},".format(entry) for entry in result)
     )
 
+def where_the_heart_is(whose_heart, strikepoint):
+    return "pub static {}: u64 = {};\n".format(
+        whose_heart.upper().replace(' ', '_'), strikepoint)
+
 
 def main():
-    with open(os.path.join('src', 'motion.rs'),
-              'w') as motion_rs:
+    with open(os.path.join('src', "motion.rs"), 'w') as motion_rs:
         motion_rs.write(
             '\n\n'.join(
-                ["pub static CENTER_OF_THE_WORLD: u64 = {};".format(
-                    center_of_the_world()),
-                 the_book_of_life(
-                     "pony", universal_distribution(PONY_OPTIONS)),
-                 the_book_of_life(
-                     "figurehead", universal_distribution(FIGUREHEAD_OPTIONS))]
+                map(
+                    # XXX inadequately elegant
+                    lambda jr: the_book_of_life(*jr),
+                    zip(
+                        ("pony", "figurehead"),
+                            map(
+                                universal_distribution,
+                                (PONY_OPTIONS, FIGUREHEAD_OPTIONS)
+                            )
+                    )
+                )
             )
         )
     print("Wrote motion.rs!")
+
+    with open(os.path.join('src', "landmark.rs"), 'w') as landmark_rs:
+        landmark_rs.write(
+            '\n'.join(
+                ["#![allow(dead_code)]",  # TODO todo
+                 "pub static CENTER_OF_THE_WORLD: u64 = {};\n".format(
+                    center_of_the_world()),
+                ("// TODO: second-to-last rank is a cop's favorite beat; "
+                 "incentivize"),
+                "// ascension if search alone is too nearsighted"] +
+                [where_the_heart_is(*blargs)
+                 for blargs in (
+                         map(lambda a: (a[0], forward_contour(a[1])),
+                             (("seventh heaven", 6), ("colonelcy", 5))))]
+            )
+        )
+    print("Wrote landmark.rs!")
 
 if __name__ == "__main__":
     main()
