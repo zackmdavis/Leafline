@@ -1,5 +1,8 @@
 const Team = Object.freeze({Orange: "Orange", Blue: "Blue"});
 
+// XXX hideous; can we put this somewhere else, please?
+const initialReplies = [{star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 0}, whither: {rank: 2, file: 0}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 0}, whither: {rank: 3, file: 0}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 1}, whither: {rank: 2, file: 1}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 1}, whither: {rank: 3, file: 1}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 2}, whither: {rank: 2, file: 2}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 2}, whither: {rank: 3, file: 2}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 3}, whither: {rank: 2, file: 3}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 3}, whither: {rank: 3, file: 3}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 4}, whither: {rank: 2, file: 4}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 4}, whither: {rank: 3, file: 4}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 5}, whither: {rank: 2, file: 5}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 5}, whither: {rank: 3, file: 5}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 6}, whither: {rank: 2, file: 6}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 6}, whither: {rank: 3, file: 6}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 7}, whither: {rank: 2, file: 7}},  {star: {team: Team.Orange, job_description: "Servant"}, whence: {rank: 1, file: 7}, whither: {rank: 3, file: 7}},  {star: {team: Team.Orange, job_description: "Pony"}, whence: {rank: 0, file: 1}, whither: {rank: 2, file: 0}},  {star: {team: Team.Orange, job_description: "Pony"}, whence: {rank: 0, file: 1}, whither: {rank: 2, file: 2}},  {star: {team: Team.Orange, job_description: "Pony"}, whence: {rank: 0, file: 6}, whither: {rank: 2, file: 5}}, {star: {team: Team.Orange, job_description: "Pony"}, whence: {rank: 0, file: 6}, whither: {rank: 2, file: 7}}];
+
 const configuration = {
     position: 'start',
     draggable: true,
@@ -12,6 +15,7 @@ class WorldState {
         this.initiative = Team.Orange;
         this.preservedServiceEligibilities = "KQkq";
         this.multifield = ChessBoard('world', configuration);
+        this.replies = initialReplies;
     }
 
     preserveInitiative() {
@@ -30,6 +34,21 @@ class WorldState {
 
     cedeInitiative() {
         this.initiative = (this.initiative === Team.Orange) ? Team.Blue : Team.Orange;
+    }
+
+    loadReplies(replies) {
+        this.replies = replies;
+    }
+
+    validateMovement(movement) {
+        let validations = (for (reply of this.replies)
+            (_.isEqual(movement, reply)));
+        for (var validity of validations) {
+            if (validity) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
@@ -82,6 +101,12 @@ function localeToAlgebraic(locale) {
     return file + rank;
 }
 
+function algebraicToLocale(algebraic) {
+    let [fileIndicator, rankIndicator] = algebraic;
+    return {rank: rankIndicator.charCodeAt() - 49,
+            file: fileIndicator.charCodeAt() - 97};
+}
+
 function getLookaheadBound() {
     let nature;
     if ($('#depth-radio-button').is(':checked')) {
@@ -105,21 +130,22 @@ function sendPostcard(news) {
             world: world.preserve(),
             bound: getLookaheadBound()
         },
-        success: function (data, textStatus, jqxhr) {
+        success: function (missive, textStatus, jqxhr) {
             let [newField, _initiative,
-                 newEligibilities] = data.world.split(/ /);
+                 newEligibilities] = missive.world.split(/ /);
             world.cedeInitiative();
             world.multifield.position(newField);
             world.preservedServiceEligibilities = newEligibilities;
-            let commentary = ` (after searching ${data.depth} plies in ` +
-                             `${data.thinking_time} ms)`;
+            world.replies = missive.replies;
+            let commentary = ` (after searching ${missive.depth} plies in ` +
+                             `${missive.thinking_time} ms)`;
             $spinner.hide();
             printHeadline(
                 "Blue",
-                data.patch.star,
-                localeToAlgebraic(data.patch.whence),
-                localeToAlgebraic(data.patch.whither),
-                data.hospitalization,
+                missive.patch.star,
+                localeToAlgebraic(missive.patch.whence),
+                localeToAlgebraic(missive.patch.whither),
+                missive.hospitalization,
                 commentary
             );
             transpireYear();
@@ -131,10 +157,18 @@ function sendPostcard(news) {
     });
 }
 
+
 function dropHandler(whence, whither, agentRune,
                      news, previously, _orientation) {
     if (whence != whither && whither != 'offboard') {
-        let [team, opposition] = teamAndOppositionFromPrefix(agentRune[0]);
+        let [team, _opposition] = teamAndOppositionFromPrefix(agentRune[0]);
+        let agent = guiAgentRuneToLeaflineAgent(agentRune);
+        let movement = {star: agent,
+                        whence: algebraicToLocale(whence),
+                        whither: algebraicToLocale(whither)};
+        if (!world.validateMovement(movement)) {
+            return "snapback";
+        }
         let occupyingWhither = previously[whither];
         let patient;
         if (occupyingWhither) {

@@ -42,9 +42,15 @@ def not_if_files_exist(*filenames):
     return derived_decorator
 
 
+
 CHESSBOARDJS_ZIPBALL_DOWNLOAD_PATH = os.path.join('web_client', 'resources',
                                                   'chessboardjs-0.3.0.zip')
 
+UNDERSCORE_PATH = os.path.join('web_client', 'resources', 'public', 'js',
+                               "underscore-min.js")
+
+REGENERATOR_PATH = os.path.join('web_client', 'resources', 'public', 'js',
+                                "regenerator.js")
 
 @not_if_files_exist(CHESSBOARDJS_ZIPBALL_DOWNLOAD_PATH)
 def download_chessboard_js():
@@ -67,13 +73,28 @@ def install_chessboard_js():
     unpack_chessboard_js()
 
 
+@not_if_files_exist(UNDERSCORE_PATH)
+def download_underscore():
+    urlretrieve("http://underscorejs.org/underscore-min.js", UNDERSCORE_PATH)
+
+
+@not_if_files_exist(REGENERATOR_PATH)
+def download_regenerator():
+    # ECMAScript 6 generators
+    urlretrieve("https://raw.githubusercontent.com/facebook/regenerator/"
+                "master/runtime.js", REGENERATOR_PATH)
+
+
 @task
 def download_statics():
     install_chessboard_js()
+    download_underscore()
+    download_regenerator()
 
 
 BABEL_COMMAND = [
     "babel", "web_client/resources/public/js/client.js",
+    "--optional", "es7.comprehensions",
     "--watch",
     "--out-file", "web_client/resources/public/js/client-built.js"
 ]
@@ -94,7 +115,7 @@ def build_furniture():
 
 @task
 def sed(pattern, replacement):
-    for subtree in ("src", "web_client"):
+    for subtree in ('src', "web_client"):
         for fortress, _subsubtrees, deëdgers in os.walk(subtree):
             for deëdger in deëdgers:
                 with open(os.path.join(fortress, deëdger), 'r+') as d:

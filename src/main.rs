@@ -82,7 +82,8 @@ struct Postcard {
     patch: Patch,
     hospitalization: Option<Agent>,
     thinking_time: u64,
-    depth: u8
+    depth: u8,
+    replies: Vec<Patch>,
 }
 
 
@@ -93,7 +94,8 @@ fn correspondence(reminder: String, bound: LookaheadBound) -> String {
     if !forecasts.is_empty() {
         determination_and_karma = forecasts.swap_remove(0);
     } else {
-        // XXX TODO FIXME: during actual gameplay, we don't want to panic
+        // XXX TODO FIXME: during actual gameplay, we don't want to
+        // panic; signal hung match or ultimate endangerment
         panic!("Cannot oppose with no moves");
     }
     let (determination, _karma) = determination_and_karma;
@@ -102,7 +104,9 @@ fn correspondence(reminder: String, bound: LookaheadBound) -> String {
         patch: determination.patch,
         hospitalization: determination.hospitalization,
         thinking_time: sidereal.num_milliseconds() as u64,
-        depth: depth
+        depth: depth,
+        replies: determination.tree.lookahead()
+            .iter().map(|c| c.patch).collect::<Vec<_>>(),
     };
     json::encode(&postcard).unwrap()
 }

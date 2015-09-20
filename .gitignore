@@ -20,6 +20,12 @@ web_client/resources/public/css/chessboard-0.3.0.min.css
 web_client/resources/public/js/chessboard-0.3.0.js
 web_client/resources/public/js/chessboard-0.3.0.min.js
 
+# Underscore
+web_client/resources/public/js/underscore-min.js
+
+# polyfill for ECMAScript 6 generators
+web_client/resources/public/js/regenerator.js
+
 # boring, mainstream JavaScript compiled from cool new ECMAScript 6
 web_client/resources/public/js/client-built.js
 
