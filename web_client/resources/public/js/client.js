@@ -58,6 +58,14 @@ const $history = $('#history');
 const $message = $('#message');
 const $spinner = $('#spinner');
 
+const $ascensionModal = $('#ascension-modal')
+const $ponyAscensionButton = $('#pony-ascension-button');
+const $scholarAscensionButton = $('#scholar-ascension-button');
+const $copAscensionButton = $('#cop-ascension-button');
+const $princessAscensionButton = $('#princess-ascension-button');
+let pendingAscension = null;
+
+
 function leaflineAgentToGuiAgentRune(agent) {
     let teamToPrefix = {'Orange': "w", 'Blue': "b"};
     let jobDescriptionToTail = {
@@ -171,7 +179,8 @@ function dropHandler(whence, whither, agentRune,
         }
         if (agent.job_description == "Servant" && movement.whither.rank == 7) {
             // ascension
-            $('#ascension-modal').foundation('reveal', "open");
+            $ascensionModal.foundation('reveal', "open");
+            pendingAscension = movement;
             return "snapback";
         }
         let occupyingWhither = previously[whither];
@@ -241,3 +250,37 @@ function printHeadline(team, agent, whence, whither,
 
     $history.append($headline);
 }
+
+$(document).ready(function() {
+    $('#ascension-modal-close-control').on('click', function (_event) {
+        pendingAscension = null;
+    });
+    $('.ascension-button').on('click', function (_event) {
+        // XXX factorize
+        if (world.validateMovement(pendingAscension)) {
+            $ascensionModal.foundation('reveal', "close");
+            let ascendedFormRune = `w${$(this).data('job-description-rune')}`;
+            window.setTimeout(function () {
+                let news = world.multifield.position();
+                let algebraicWhence = localeToAlgebraic(pendingAscension.whence);
+                let algebraicWhither = localeToAlgebraic(
+                    pendingAscension.whither);
+                delete news[algebraicWhence];
+                news[algebraicWhither] = ascendedFormRune;
+                world.multifield.position(news);
+                world.cedeInitiative();
+                printHeadline(
+                    "Orange", guiAgentRuneToLeaflineAgent(ascendedFormRune),
+                    algebraicWhence, algebraicWhither,
+                    null, // XXX need to take stunning ascension into account
+                    " (servant ascension)"
+                );
+                pendingAscension = null;
+                sendPostcard(news);
+                $spinner.show();
+            }, 500);
+        } else {
+            alert("No Pending Ascension Error");  // yeah, that just happened
+        }
+    });
+});

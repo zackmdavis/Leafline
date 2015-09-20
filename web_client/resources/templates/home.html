@@ -52,26 +52,31 @@
        data-reveal aria-labelledby="modalTitle" aria-hidden="true" role="dialog">
     <p><strong>Select an ascension form for this servant.</strong></p>
     <div>
-      <div id="pony-ascension-button" class="button ascension-button">
+      <div id="pony-ascension-button" class="button ascension-button"
+           data-job-description-rune="N">
         <img class="ascension-icon" src="img/figurines/wN.png"/>
         transform into Pony
       </div>
-      <div id="scholar-ascension-button" class="button ascension-button">
+      <div id="scholar-ascension-button" class="button ascension-button"
+           data-job-description-rune="B">
         <img class="ascension-icon" src="img/figurines/wB.png"/>
         transition into Scholar
       </div>
     </div>
     <div>
-      <div id="cop-ascension-button" class="button ascension-button">
+      <div id="cop-ascension-button" class="button ascension-button"
+           data-job-description-rune="R">
         <img class="ascension-icon" src="img/figurines/wR.png"/>
         be brevetted to Cop
       </div>
-      <div id="princess-ascension-button" class="button ascension-button">
+      <div id="princess-ascension-button" class="button ascension-button"
+           data-job-description-rune="Q">
         <img class="ascension-icon" src="img/figurines/wQ.png"/>
         transition into Princess
       </div>
     </div>
-    <a class="close-reveal-modal" aria-label="Close">&#215;</a>
+    <a id="ascension-modal-close-control"
+       class="close-reveal-modal" aria-label="Close">&#215;</a>
   </div>
 
 {% endblock %}
