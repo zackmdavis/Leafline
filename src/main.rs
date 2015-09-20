@@ -105,6 +105,9 @@ fn correspondence(reminder: String, bound: LookaheadBound) -> String {
         hospitalization: determination.hospitalization,
         thinking_time: sidereal.num_milliseconds() as u64,
         depth: depth,
+        // XXX TODO FIXME: this doesn't distinguish amongst ascensions
+        // (and we can imagine somewhat contrived situations where
+        // only some of them are admissible movements)
         replies: determination.tree.lookahead()
             .iter().map(|c| c.patch).collect::<Vec<_>>(),
     };

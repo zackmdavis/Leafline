@@ -27,9 +27,17 @@
     <!-- scripts and styles -->
     {% style "/assets/foundation/css/foundation.min.css" %}
     {% style "/css/site.css" %}
+
+
     {% script "/assets/jquery/jquery.min.js" %}
     {% script "/js/underscore-min.js" %}
     {% script "/js/regenerator.js" %}
+
+    {% script "/assets/foundation/js/foundation/foundation.js" %}
+    {% script "/assets/foundation/js/foundation/foundation.reveal.js" %}
+    <script>
+     $(document).foundation();
+    </script>
 
     {% block page-styles %}
     {% endblock %}

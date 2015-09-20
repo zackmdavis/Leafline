@@ -9,6 +9,7 @@
 }
 
 .agent-icon {
+    margin: 0px;
     width: 20px;
     height: auto;
 }
@@ -22,11 +23,17 @@
     line-height: 0px;
 }
 
-.agent-icon {
-    margin: 0px;
-}
-
 #spinner {
     width: 20px;
     height: auto;
+}
+
+.ascension-button img {
+    margin-left: 0px;
+    width: 50px;
+    height: auto;
+}
+
+.ascension-button {
+    padding: 15px;
 }

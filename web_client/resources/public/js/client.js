@@ -169,10 +169,14 @@ function dropHandler(whence, whither, agentRune,
         if (!world.validateMovement(movement)) {
             return "snapback";
         }
+        if (agent.job_description == "Servant" && movement.whither.rank == 7) {
+            // ascension
+            $('#ascension-modal').foundation('reveal', "open");
+            return "snapback";
+        }
         let occupyingWhither = previously[whither];
         let patient;
         if (occupyingWhither) {
-            let [patientTeam, _patientJobDescription] = occupyingWhither;
             patient = guiAgentRuneToLeaflineAgent(occupyingWhither)
         } else {
             patient = null;
