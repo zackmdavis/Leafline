@@ -134,7 +134,7 @@ pub fn α_β_negamax_search(
     (optimand, optimum)
 }
 
-
+#[allow(type_complexity)]
 pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
                                      nihilistically: bool,
                                      deadline_maybe: Option<time::Timespec>)
@@ -149,35 +149,39 @@ pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
     }
     order_moves(&mut premonitions);
     let mut forecasts = Vec::new();
-    let (tx, rx) = mpsc::channel();
+    let mut time_radios: Vec<(Commit, mpsc::Receiver<(Option<Commit>, f32)>)> =
+        Vec::new();
     for &premonition in &premonitions {
         let travel_bank = memory_bank.clone();
+        let (tx, rx) = mpsc::channel();
         let explorer_radio = tx.clone();
+        time_radios.push((premonition, rx));
         thread::spawn(move || {
-            let search_hit = α_β_negamax_search(
+            let search_hit: (Option<Commit>, f32) = α_β_negamax_search(
                 premonition.tree, depth - 1,
                 NEG_INFINITY, INFINITY,
                 travel_bank
             );
             explorer_radio.send(search_hit).ok();
         });
-        loop {  // polling for results
-            if let Some(deadline) = deadline_maybe {
-                if time::get_time() > deadline {
-                    return None;
-                }
-            }
-            let search_hit_maybe = rx.try_recv().ok();
-            match search_hit_maybe {
-                Some(search_hit) => {
-                    let (_grandchild, mut value) = search_hit;
-                    value = -value;
-                    forecasts.push((premonition, value));
-                    break;
-                },
-                None => { thread::sleep_ms(2); }
+    }
+    while !time_radios.is_empty() {  // polling for results
+        if let Some(deadline) = deadline_maybe {
+            if time::get_time() > deadline {
+                return None;
             }
         }
+        // iterate over indices so that we can use swap_remove during the loop
+        for i in (0..time_radios.len()).rev() {
+            let premonition = time_radios[i].0;
+            if let Some(search_hit) = time_radios[i].1.try_recv().ok() {
+                let (_grandchild, mut value) = search_hit;
+                value = -value;
+                forecasts.push((premonition, value));
+                time_radios.swap_remove(i);
+            }
+        }
+        thread::sleep_ms(2);
     }
     forecasts.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     Some(forecasts)
@@ -250,7 +254,6 @@ mod tests {
         b.iter(|| kickoff(&ws, 2, false));
     }
 
-    #[ignore]
     #[bench]
     fn benchmark_kickoff_depth_3(b: &mut Bencher) {
         let ws = WorldState::new();
