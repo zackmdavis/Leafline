@@ -1,0 +1,63 @@
+---
+- hosts: all
+  tasks:
+    - name: install nginx
+      sudo: yes
+      apt: name=nginx-core state=present
+      tags:
+        - nginx
+
+    # correctness not yet observed (slow network)
+    #
+    # - name: install Java
+    #   sudo: yes
+    #   apt: name=default-jre state=present
+    #   tags:
+    #     - jvm
+
+    - name: make /srv/leafline directory
+      sudo: yes
+      file: path=/srv/leafline state=directory owner=www-data group=www-data
+      tags:
+        - application
+
+    # let's suppose that the binary and jar have been copied into the
+    # provisioning/ directory of our local repository
+
+    - name: copy Leafline binary
+      sudo: yes
+      copy: >
+        src=leafline
+        dest=/srv/leafline/leafline
+        mode=755
+        force=yes
+        owner=www-data
+        group=www-data
+      tags:
+        - application
+
+    - name: copy Leafline Web jar
+      sudo: yes
+      copy: >
+        src=leafline-web-client.jar
+        dest=/srv/leafline/leafline-web-client-jar
+        mode=755
+        force=yes
+        owner=www-data
+        group=www-data
+      tags:
+        - application
+
+
+    # correctness not yet observed
+    #
+    # - name: run the jar
+    #   command: java -jar leafline-web-client.jar
+    #   args:
+    #     chdir: /srv/leafline
+    #   tags:
+    #     - application
+
+    # TODO
+    # - name: configure nginx
+    # - name: run nginx

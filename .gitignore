@@ -32,6 +32,7 @@ web_client/resources/public/js/client-built.js
 # virtualenv droppings (yes, I know this isn't even a Python project; humor me)
 .Python
 include/
+local/
 bin/
 lib/
 lib64
@@ -48,3 +49,10 @@ src/landmark.rs
 # perf profiling data
 perf.data
 perf.data.old
+
+# Vagrant
+.vagrant/
+
+# copies of built binary/jar awaiting provisioning
+provisioning/leafline
+provisioning/leafline-web-client.jar
