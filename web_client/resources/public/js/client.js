@@ -177,11 +177,27 @@ function dropHandler(whence, whither, agentRune,
         if (!world.validateMovement(movement)) {
             return "snapback";
         }
-        if (agent.job_description == "Servant" && movement.whither.rank == 7) {
+        if (agent.job_description === "Servant" && movement.whither.rank === 7) {
             // ascension
             $ascensionModal.foundation('reveal', "open");
             pendingAscension = movement;
             return "snapback";
+        }
+        if (agent.job_description === "Figurehead" &&
+            Math.abs(movement.whence.file - movement.whither.file) === 2) {
+            // secret service
+            //
+            // XXX TODO (here as elsewhere): eventually we might want to
+            // drop the assumption that the human controls the Orange
+            // Team
+            let longitude = movement.whither.file - movement.whence.file;
+            if (longitude === 2) {  // east service
+                delete news['h1'];
+                news.f1 = "wR";
+            } else if (longitude === -2) {  // west service
+                delete news['a1'];
+                news.d1 = "wR";
+            }
         }
         let occupyingWhither = previously[whither];
         let patient;
