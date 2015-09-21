@@ -33,7 +33,7 @@ use argparse::{ArgumentParser, Store, StoreTrue};
 use rustc_serialize::json;
 use time::*;
 
-use identity::Agent;
+use identity::{Agent, Team};
 use life::{WorldState, Commit, Patch};
 use mind::{kickoff, iterative_deepening_kickoff};
 
@@ -83,35 +83,53 @@ struct Postcard {
     hospitalization: Option<Agent>,
     thinking_time: u64,
     depth: u8,
-    replies: Vec<Patch>,
+    counterreplies: Vec<Patch>,
 }
 
+#[derive(RustcEncodable, RustcDecodable)]
+struct LastMissive {
+    the_triumphant: Option<Team>
+}
 
 fn correspondence(reminder: String, bound: LookaheadBound) -> String {
     let in_medias_res = WorldState::reconstruct(reminder);
     let (mut forecasts, depth, sidereal) = forecast(in_medias_res, bound);
-    let determination_and_karma;
+
     if !forecasts.is_empty() {
-        determination_and_karma = forecasts.swap_remove(0);
-    } else {
-        // XXX TODO FIXME: during actual gameplay, we don't want to
-        // panic; signal hung match or ultimate endangerment
-        panic!("Cannot oppose with no moves");
-    }
-    let (determination, _karma) = determination_and_karma;
-    let postcard = Postcard {
-        world: determination.tree.preserve(),
-        patch: determination.patch,
-        hospitalization: determination.hospitalization,
-        thinking_time: sidereal.num_milliseconds() as u64,
-        depth: depth,
+        let (determination, _karma) = forecasts.swap_remove(0);
         // XXX TODO FIXME: this doesn't distinguish amongst ascensions
-        // (and we can imagine somewhat contrived situations where
-        // only some of them are admissible movements)
-        replies: determination.tree.lookahead()
-            .iter().map(|c| c.patch).collect::<Vec<_>>(),
-    };
-    json::encode(&postcard).unwrap()
+        // (and we can imagine somewhat contrived situations where only
+        // some of them are admissible movements)
+        let counterreplies = determination.tree.lookahead()
+            .iter().map(|c| c.patch).collect::<Vec<_>>();
+        if counterreplies.is_empty() {
+            // XXX there's a bug where it's declaring deadlock
+            // ("stalemate") instead of ultimate endangerment
+            // ("checkmate"). Why?!
+            if determination.tree.in_critical_endangerment(Team::Orange) {
+                return json::encode(
+                    &LastMissive { the_triumphant: Some(Team::Blue) }).unwrap()
+            } else {
+                return json::encode(
+                    &LastMissive { the_triumphant: None }).unwrap()
+            }
+        }
+        let postcard = Postcard {
+            world: determination.tree.preserve(),
+            patch: determination.patch,
+            hospitalization: determination.hospitalization,
+            thinking_time: sidereal.num_milliseconds() as u64,
+            depth: depth,
+            counterreplies: counterreplies,
+        };
+        json::encode(&postcard).unwrap()
+    } else {
+        if in_medias_res.in_critical_endangerment(Team::Blue) {
+            json::encode(&LastMissive { the_triumphant: Some(Team::Orange) }).unwrap()
+        } else {
+            json::encode(&LastMissive { the_triumphant: None }).unwrap()
+        }
+    }
 }
 
 

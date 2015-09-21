@@ -65,6 +65,9 @@ const $copAscensionButton = $('#cop-ascension-button');
 const $princessAscensionButton = $('#princess-ascension-button');
 let pendingAscension = null;
 
+const $blueTriumphModal = $('#blue-triumph-modal');
+const $orangeTriumphModal = $('#orange-triumph-modal');
+const $deadlockModal = $('#deadlock-modal');
 
 function leaflineAgentToGuiAgentRune(agent) {
     let teamToPrefix = {'Orange': "w", 'Blue': "b"};
@@ -139,12 +142,23 @@ function sendPostcard(news) {
             bound: getLookaheadBound()
         },
         success: function (missive, textStatus, jqxhr) {
+            if ("the_triumphant" in missive) {
+                if (missive.the_triumpant === Team.Orange) {
+                    $orangeTriumphModal.foundation('reveal', "open");
+                } else if (missive.the_triumpant === Team.Blue) {
+                    $blueTriumphModal.foundation('reveal', "open");
+                } else {
+                    $deadlockModal.foundation('reveal', "open");
+                }
+                $spinner.hide();
+                return;
+            }
             let [newField, _initiative,
                  newEligibilities] = missive.world.split(/ /);
             world.cedeInitiative();
             world.multifield.position(newField);
             world.preservedServiceEligibilities = newEligibilities;
-            world.replies = missive.replies;
+            world.replies = missive.counterreplies;
             let commentary = ` (after searching ${missive.depth} plies in ` +
                              `${missive.thinking_time} ms)`;
             $spinner.hide();
