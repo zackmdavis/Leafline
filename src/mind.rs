@@ -75,12 +75,24 @@ fn mmv_lva_heuristic(commit: &Commit) -> f32 {
     }
 }
 
-fn order_moves(commits: &mut Vec<Commit>) {
+fn order_moves(commits: &mut Vec<Commit>,
+               déjà_vu_table: &HashMap<WorldState, f32>) {
     commits.sort_by(|a, b| {
-        mmv_lva_heuristic(&b)
-            .partial_cmp(&mmv_lva_heuristic(&a))
+        déjà_vu_table.get(&b.tree).unwrap_or(&NEG_INFINITY)
+            .partial_cmp(&déjà_vu_table.get(&a.tree).unwrap_or(&NEG_INFINITY))
             .unwrap_or(Ordering::Equal)
     });
+    commits.sort_by(|a, b| {  // prioritize favorable-looking exchanges ...
+        mmv_lva_heuristic(&b)
+            .partial_cmp(&mmv_lva_heuristic(&a))
+            .unwrap_or(Ordering::Equal)  // (NaN is a non-issue)
+    });
+    // // but hit the cache first (`.sort_by` is stable)
+    // commits.sort_by(|a, b| {
+    //     déjà_vu_table.get(&b.tree).unwrap_or(&NEG_INFINITY)
+    //         .partial_cmp(&déjà_vu_table.get(&a.tree).unwrap_or(&NEG_INFINITY))
+    //         .unwrap_or(Ordering::Equal)
+    // });
 }
 
 pub fn α_β_negamax_search(
@@ -89,7 +101,10 @@ pub fn α_β_negamax_search(
     let team = world.to_move;
     let potential_score = orientation(team) * score(world);
     let mut premonitions = world.reckless_lookahead();
-    order_moves(&mut premonitions);
+    {
+        let open_vault = memory_bank.lock().unwrap();
+        order_moves(&mut premonitions, &open_vault);
+    }
     if depth == 0 || premonitions.is_empty() {
         return (None, potential_score)
     };
@@ -147,7 +162,10 @@ pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
     } else {
         premonitions = world.lookahead();
     }
-    order_moves(&mut premonitions);
+    {
+        let open_vault = memory_bank.lock().unwrap();
+        order_moves(&mut premonitions, &open_vault);
+    }
     let mut forecasts = Vec::new();
     let mut time_radios: Vec<(Commit, mpsc::Receiver<(Option<Commit>, f32)>)> =
         Vec::new();
