@@ -212,6 +212,10 @@ function dropHandler(whence, whither, agentRune,
                 delete news['a1'];
                 news.d1 = "wR";
             }
+            world.preservedServiceEligibilities = world
+                .preservedServiceEligibilities.replace(/Q/g, '');
+            world.preservedServiceEligibilities = world
+                .preservedServiceEligibilities.replace(/K/g, '');
         }
         let occupyingWhither = previously[whither];
         let patient;
