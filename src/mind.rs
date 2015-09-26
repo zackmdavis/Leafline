@@ -9,7 +9,8 @@ use time;
 
 use identity::{Team, JobDescription, Agent};
 use life::{Commit, WorldState};
-use landmark::CENTER_OF_THE_WORLD;
+use landmark::{CENTER_OF_THE_WORLD, LOW_COLONELCY,
+               LOW_SEVENTH_HEAVEN, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN};
 use space::Pinfield;
 
 
@@ -53,15 +54,38 @@ pub fn score(world: WorldState) -> f32 {
         }
     }
 
-    // ponies and servants want to be in the center of the world's
-    // action, maybe??
+    // ponies and servants want to be in the center of the world's action
     let center = Pinfield(CENTER_OF_THE_WORLD);
     // cast to signed to avoid overflow
     let orange_centerism: i8 = world.orange_servants.union(
         world.orange_ponies).intersection(center).pincount() as i8;
     let blue_centerism: i8 = world.blue_servants.union(
         world.blue_ponies).intersection(center).pincount() as i8;
-    valuation += (orange_centerism - blue_centerism) as f32 * 0.1;
+    valuation += 0.1 * (orange_centerism - blue_centerism) as f32;
+
+    // a cop's favorite beat is the seventh rank
+    let high_seventh = Pinfield(HIGH_SEVENTH_HEAVEN);
+    let orange_beat = world.orange_cops.intersection(high_seventh).pincount();
+    valuation += 0.5 * orange_beat as f32;
+    let low_seventh = Pinfield(LOW_SEVENTH_HEAVEN);
+    let blue_beat = world.blue_cops.intersection(low_seventh).pincount();
+    valuation -= 0.5 * blue_beat as f32;
+
+    // servants should aspire to something more in life someday
+    let orange_subascendants = world.orange_servants.intersection(high_seventh)
+        .pincount();
+    valuation += 0.5 * orange_subascendants as f32;
+    let high_colonelcy = Pinfield(HIGH_COLONELCY);
+    let orange_subsubascendants = world.orange_servants.intersection(
+        high_colonelcy).pincount();
+    valuation += 0.2 * orange_subsubascendants as f32;
+    let blue_subascendants = world.blue_servants.intersection(low_seventh)
+        .pincount();
+    valuation -= 0.5 * blue_subascendants as f32;
+    let low_colonelcy = Pinfield(LOW_COLONELCY);
+    let blue_subsubascendants = world.blue_servants.intersection(
+        low_colonelcy).pincount();
+    valuation -= 0.2 * blue_subsubascendants as f32;
 
     valuation
 }

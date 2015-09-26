@@ -50,9 +50,12 @@ def the_book_of_life(job_description, result):
         '\n'.join("    {},".format(entry) for entry in result)
     )
 
-def where_the_heart_is(whose_heart, strikepoint):
-    return "pub static {}: u64 = {};\n".format(
-        whose_heart.upper().replace(' ', '_'), strikepoint)
+def where_the_heart_is(alignment, whose_heart, strikepoint):
+    return "pub static {}_{}: u64 = {};\n".format(
+        alignment.upper(),
+        whose_heart.upper().replace(' ', '_'),
+        strikepoint
+    )
 
 
 def main():
@@ -77,16 +80,16 @@ def main():
     with open(os.path.join('src', "landmark.rs"), 'w') as landmark_rs:
         landmark_rs.write(
             '\n'.join(
-                ["#![allow(dead_code)]",  # TODO todo
-                 "pub static CENTER_OF_THE_WORLD: u64 = {};\n".format(
-                    center_of_the_world()),
-                ("// TODO: second-to-last rank is a cop's favorite beat; "
-                 "incentivize"),
-                "// ascension if search alone is too nearsighted"] +
+                ["pub static CENTER_OF_THE_WORLD: u64 = {};\n".format(
+                    center_of_the_world())] +
                 [where_the_heart_is(*blargs)
                  for blargs in (
-                         map(lambda a: (a[0], forward_contour(a[1])),
-                             (("seventh heaven", 6), ("colonelcy", 5))))]
+                         # XXX inadequately elegant
+                         map(lambda a: (a[0], a[1], forward_contour(a[2])),
+                             (("low", "seventh heaven", 1),
+                              ("low", "colonelcy", 2),
+                              ("high", "seventh heaven", 6),
+                              ("high", "colonelcy", 5))))]
             )
         )
     print("Wrote landmark.rs!")
