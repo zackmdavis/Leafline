@@ -143,9 +143,9 @@ function sendPostcard(news) {
         },
         success: function (missive, textStatus, jqxhr) {
             if ("the_triumphant" in missive) {
-                if (missive.the_triumpant === Team.Orange) {
+                if (missive.the_triumphant === Team.Orange) {
                     $orangeTriumphModal.foundation('reveal', "open");
-                } else if (missive.the_triumpant === Team.Blue) {
+                } else if (missive.the_triumphant === Team.Blue) {
                     $blueTriumphModal.foundation('reveal', "open");
                 } else {
                     $deadlockModal.foundation('reveal', "open");

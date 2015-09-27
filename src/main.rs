@@ -103,9 +103,6 @@ fn correspondence(reminder: String, bound: LookaheadBound) -> String {
         let counterreplies = determination.tree.lookahead()
             .iter().map(|c| c.patch).collect::<Vec<_>>();
         if counterreplies.is_empty() {
-            // XXX there's a bug where it's declaring deadlock
-            // ("stalemate") instead of ultimate endangerment
-            // ("checkmate"). Why?!
             if determination.tree.in_critical_endangerment(Team::Orange) {
                 return json::encode(
                     &LastMissive { the_triumphant: Some(Team::Blue) }).unwrap()
@@ -275,4 +272,20 @@ fn main() {
             }
         }
     }
+}
+
+#[test]
+mod tests {
+    use super::{correspondence, LastMissive, LookaheadBound};
+
+    #[test]
+    fn concerning_correspondence_victory_conditions() {
+        let blue_concession = correspondence(
+            "R6k/6pp/8/8/8/8/8/8 b -".to_owned(),
+            LookaheadBound::Depth(2)
+        );
+        assert_eq!("{\"the_triumphant\":\"Orange\"}".to_owned(),
+                   blue_concession);
+    }
+
 }
