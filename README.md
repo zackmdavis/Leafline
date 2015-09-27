@@ -34,5 +34,6 @@ There are some other rules which apply in special circumstnaces:
 
 A web application GUI to Leafline, the Leafline Web Client, is written in Clojure 1.7 and ECMAScript 6.
 
-Any resemblance to other popular games is _not to be discussed!_
+[All the source code is available on GitHub](https://github.com/zackmdavis/Leafline) and freely usable under the terms of the [MIT License](https://opensource.org/licenses/MIT).
 
+Any resemblance to other popular games is _not to be discussed!_

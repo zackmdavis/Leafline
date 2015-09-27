@@ -114,6 +114,14 @@ def build_furniture():
 
 
 @task
+def build_release():
+    run("cargo build --release")
+    run("cd web_client && lein uberjar")
+    run("cp target/release/leafline provisioning/leafline")
+    run("cp web_client/target/leafline-web-client.jar "
+        "provisioning/leafline-web-client.jar")
+
+@task
 def sed(pattern, replacement):
     for subtree in ('src', "web_client"):
         for fortress, _subsubtrees, deëdgers in os.walk(subtree):

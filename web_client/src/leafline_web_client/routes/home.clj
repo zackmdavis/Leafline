@@ -25,7 +25,7 @@
           :headers {"Content-Type" "application/json"}}
          response-map))
 
-(def max-depth 7)
+(def max-depth 6)
 (def max-seconds 120)
 (def reasonable-request? (reasonable-request-validator
                           :max-seconds max-seconds :max-depth max-depth))
