@@ -1,19 +1,26 @@
 ---
 - hosts: all
   tasks:
-    - name: install nginx
+    - name: firewall allow 2882
       sudo: yes
-      apt: name=nginx-core state=present
+      ufw: >
+        rule=allow
+        proto=tcp
+        port=2882
       tags:
-        - nginx
+        - firewall
 
-    # correctness not yet observed (slow network)
-    #
-    # - name: install Java
-    #   sudo: yes
-    #   apt: name=default-jre state=present
-    #   tags:
-    #     - jvm
+    - name: give www-data a shell
+      sudo: yes
+      user: >
+        name=www-data
+        shell=/bin/bash
+
+    - name: install Java
+      sudo: yes
+      apt: name=default-jre-headless state=present
+      tags:
+        - jvm
 
     - name: make /srv/leafline directory
       sudo: yes
@@ -40,7 +47,7 @@
       sudo: yes
       copy: >
         src=leafline-web-client.jar
-        dest=/srv/leafline/leafline-web-client-jar
+        dest=/srv/leafline/leafline-web-client.jar
         mode=755
         force=yes
         owner=www-data
@@ -48,16 +55,23 @@
       tags:
         - application
 
+    - name: create server-running script  # XXX: Upstart would be better
+      sudo: yes
+      lineinfile: >
+        create=yes
+        dest=/srv/leafline/leafline-server.sh
+        mode=755
+        line="PORT=2882 java -jar /srv/leafline/leafline-web-client.jar &"
+        owner=www-data
+        group=www-data
+      tags:
+        - application
 
-    # correctness not yet observed
-    #
-    # - name: run the jar
-    #   command: java -jar leafline-web-client.jar
-    #   args:
-    #     chdir: /srv/leafline
-    #   tags:
-    #     - application
-
-    # TODO
-    # - name: configure nginx
-    # - name: run nginx
+    # XXX TODO FIXME WHY DOESN'T THIS SEEM TO WORK
+    - name: run server
+      command: "bash /srv/leafline/leafline-server.sh"
+      become_user: www-data
+      args:
+        chdir: /srv/leafline
+      tags:
+        - application
