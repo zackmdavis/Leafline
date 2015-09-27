@@ -55,23 +55,21 @@
       tags:
         - application
 
-    - name: create server-running script  # XXX: Upstart would be better
+    - name: install Upstart job
       sudo: yes
-      lineinfile: >
-        create=yes
-        dest=/srv/leafline/leafline-server.sh
-        mode=755
-        line="PORT=2882 java -jar /srv/leafline/leafline-web-client.jar &"
-        owner=www-data
-        group=www-data
+      template: >
+        src=leafline.conf.j2
+        dest=/etc/init/leafline.conf
       tags:
+        - upstart
         - application
 
-    # XXX TODO FIXME WHY DOESN'T THIS SEEM TO WORK
-    - name: run server
-      command: "bash /srv/leafline/leafline-server.sh"
-      become_user: www-data
-      args:
-        chdir: /srv/leafline
+    - name: run Leafline service
+      sudo: yes
+      service: >
+        name=leafline
+        state=restarted
+        enabled=yes
       tags:
+        - upstart
         - application

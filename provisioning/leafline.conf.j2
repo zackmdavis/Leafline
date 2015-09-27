@@ -1,0 +1,15 @@
+description "Leafline Web Client server"
+
+start on runlevel [2345]
+stop on (runlevel [!2345] or shutdown)
+
+respawn
+
+console log
+setuid www-data
+setgid www-data
+
+env PORT=2882
+
+chdir /srv/leafline
+exec java -jar /srv/leafline/leafline-web-client.jar
