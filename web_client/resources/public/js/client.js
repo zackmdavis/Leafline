@@ -190,6 +190,7 @@ function dropHandler(whence, whither, agentRune,
         let movement = {star: agent,
                         whence: algebraicToLocale(whence),
                         whither: algebraicToLocale(whither)};
+        let commentary = null;
         if (!world.validateMovement(movement)) {
             return "snapback";
         }
@@ -210,9 +211,11 @@ function dropHandler(whence, whither, agentRune,
             if (longitude === 2) {  // east service
                 delete news['h1'];
                 news.f1 = "wR";
+                commentary = " (east secret service)";
             } else if (longitude === -2) {  // west service
                 delete news['a1'];
                 news.d1 = "wR";
+                commentary = " (west secret service)";
             }
             world.preservedServiceEligibilities = world
                 .preservedServiceEligibilities.replace(/Q/g, '');
@@ -232,7 +235,7 @@ function dropHandler(whence, whither, agentRune,
         $spinner.show();
         printHeadline(
             "Orange", guiAgentRuneToLeaflineAgent(agentRune),
-            whence, whither, patient, null
+            whence, whither, patient, commentary
         );
     }
 }
