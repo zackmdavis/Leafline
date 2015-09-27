@@ -1,12 +1,28 @@
 ---
 - hosts: all
   tasks:
+    - name: firewall allow SSH
+      sudo: yes
+      ufw: >
+        rule=allow
+        name=OpenSSH
+      tags:
+        - firewall
+
     - name: firewall allow 2882
       sudo: yes
       ufw: >
         rule=allow
         proto=tcp
         port=2882
+      tags:
+        - firewall
+
+    - name: firewall up
+      sudo: yes
+      ufw: >
+        state=enabled
+        policy=deny
       tags:
         - firewall
 
