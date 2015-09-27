@@ -25,7 +25,7 @@ There are some other rules which apply in special circumstnaces:
 
 * _Servant ascension_: if a servant reaches the other team's side, he can _transform_ into a pony, be _brevetted_ into a cop, or _transition_ into a scholar or princess.
 * _Secret service_: if the figurehead and a cop haven't previously moved, then the figurehead can move two locales towards the cop and the cop can sit next to him on the other side.
-* _Passing by_ *(part of game spec, but not yet implemented)*: if a servant takes the option to move two locales its first time, another servant in the right position can pretend he only moved one locale and stun him.
+* _Passing by_ (part of game spec, but not yet implemented): if a servant takes the option to move two locales its first time, another servant in the right position can pretend he only moved one locale and stun him.
 
 
 #### concerning the program

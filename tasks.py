@@ -116,6 +116,7 @@ def build_furniture():
 @task
 def build_release():
     run("cargo build --release")
+    run(' '.join(segment for segment in BABEL_COMMAND if segment != "--watch"))
     run("cd web_client && lein uberjar")
     run("cp target/release/leafline provisioning/leafline")
     run("cp web_client/target/leafline-web-client.jar "

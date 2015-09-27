@@ -42,10 +42,10 @@
       (do
         (timbre/info "invoking Leafline with" mail-call)
         (let [dictation (apply sh mail-call)]
-        (if (zero? (dictation :exit))
-          (json-response {:body (dictation :out)})
-          (json-response {:status 500
-                          :body {:error (dictation :err)}}))))
+          (if (zero? (dictation :exit))
+            (json-response {:body (dictation :out)})
+            (json-response {:status 500
+                            :body {:error (dictation :err)}}))))
       (json-response
        {:status 400
         :body {:error
