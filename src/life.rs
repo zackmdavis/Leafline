@@ -83,7 +83,7 @@ impl fmt::Display for Commit {
 
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
 pub struct WorldState {
-    pub to_move: Team,
+    pub initiative: Team,
 
     pub orange_servants: Pinfield,
     pub orange_ponies: Pinfield,
@@ -116,7 +116,7 @@ impl WorldState {
             blue_servant_locales.push(Locale { rank: 6, file: f });
         }
         WorldState {
-            to_move: Team::Orange,
+            initiative: Team::Orange,
 
             orange_servants: Pinfield::init(&orange_servant_locales),
             orange_ponies: Pinfield::init(&vec![Locale { rank: 0, file: 1 },
@@ -149,7 +149,7 @@ impl WorldState {
     // `new` and the current `new` should be `init`??
     pub fn new_except_empty() -> Self {
         WorldState {
-            to_move: Team::Orange,
+            initiative: Team::Orange,
 
             orange_servants: Pinfield::new(),
             orange_ponies: Pinfield::new(),
@@ -208,7 +208,7 @@ impl WorldState {
             Blue, Cop => &mut self.blue_cops,
             Blue, Princess => &mut self.blue_princesses,
             Blue, Figurehead => &mut self.blue_figurehead
-            )
+        )
     }
 
     pub fn is_being_leered_at_by(&self, locale: Locale, team: Team) -> bool {
@@ -217,7 +217,7 @@ impl WorldState {
         let pinfield = self.agent_to_pinfield_ref(agent);
         let mut tree = self.except_replaced_subboard(
             agent, pinfield.alight(locale));
-        tree.to_move = team;
+        tree.initiative = team;
         let prems = tree.lookahead_without_secret_service(true);
         prems.iter().any(|c| (*c).patch.whither == locale)
     }
@@ -259,13 +259,13 @@ impl WorldState {
                 book.push('/')
             }
         }
-        let to_move_indication_rune = match self.to_move {
+        let initiative_indication_rune = match self.initiative {
             // TODO: think of some remotely plausible rationalization for 'w'
             Team::Orange => 'w',
             Team::Blue => 'b',
         };
         book.push(' ');
-        book.push(to_move_indication_rune);
+        book.push(initiative_indication_rune);
         book.push(' ');
         let mut any_service = false;
         for &(service_eligibility, eligibility_rune) in &[
@@ -340,7 +340,7 @@ impl WorldState {
                                                    .chars()
                                                    .next()
                                                    .unwrap();
-        world.to_move = match rune_of_those_with_initiative {
+        world.initiative = match rune_of_those_with_initiative {
             'w' => Team::Orange,
             'b' => Team::Blue,
             _ => moral_panic!("Non-initiative-preserving-rune passed to \
@@ -488,7 +488,7 @@ impl WorldState {
         }
 
         // was anyone stunned?
-        let opposition = tree.to_move.opposition();
+        let opposition = tree.initiative.opposition();
         let hospitalization = self.occupying_affiliated_agent(
             patch.whither, opposition);
         if let Some(stunned) = hospitalization {
@@ -498,14 +498,14 @@ impl WorldState {
             tree = tree.except_replaced_subboard(
                 stunned, further_derived_subboard);
         }
-        tree.to_move = opposition;
+        tree.initiative = opposition;
         Commit { patch: patch, tree: tree,
                  hospitalization: hospitalization, ascension: None }
     }
 
     pub fn in_critical_endangerment(&self, team: Team) -> bool {
         let mut contingency = *self;
-        contingency.to_move = team.opposition();
+        contingency.initiative = team.opposition();
         let premonitions = contingency.reckless_lookahead();
         for premonition in &premonitions {
             if let Some(patient) = premonition.hospitalization {
@@ -519,7 +519,7 @@ impl WorldState {
 
     pub fn careful_apply(&self, patch: Patch) -> Option<Commit> {
         let force_commit = self.apply(patch);
-        if force_commit.tree.in_critical_endangerment(self.to_move) {
+        if force_commit.tree.in_critical_endangerment(self.initiative) {
             None
         } else {
             Some(force_commit)
@@ -565,7 +565,14 @@ impl WorldState {
         }
     }
 
-    /// generate possible commits for servants of the given team
+    /// "... what he knows throws the blows when he goes to the
+    /// fight. And he'll win the whole thing 'fore he enters the ring;
+    /// there's no body to batter when your mind is your might. And
+    /// when you go solo, you hold your own hand, and remember that
+    /// [minimax search] depth is the greatest of heights. If you know
+    /// where you stand, then you know where to land, and if you fall,
+    /// it won't matter, because you'll know that you're right."
+    ///                                   —Fiona Apple
     pub fn servant_lookahead(&self, team: Team,
                              nihilistically: bool) -> Vec<Commit> {
         let initial_rank;
@@ -738,6 +745,9 @@ impl WorldState {
         premonitions
     }
 
+    /// "Morning in Ponyville shimmers; morning in Ponyville shines!
+    /// And I know for absolute certain, that everything is certainly
+    /// fine."
     pub fn pony_lookahead(&self, team: Team,
                           nihilistically: bool) -> Vec<Commit> {
         self.ponylike_lookahead(
@@ -745,6 +755,9 @@ impl WorldState {
             nihilistically)
     }
 
+    /// "Doesn't seem right, to take information given at close range,
+    /// for the gag, and the bind, and the ammunition round."
+    ///                            —Fiona Apple, "Not About Love"
     pub fn scholar_lookahead(&self, team: Team,
                              nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
@@ -752,6 +765,10 @@ impl WorldState {
             nihilistically)
     }
 
+    /// "'What is this posture I have to stare at,' that's what he
+    /// said when I was sitting up straight. Changed the name of the
+    /// game 'cause he lost and he knew he was wrong but he knew it
+    /// too late."                 —Fiona Apple, "Not About Love"
     pub fn cop_lookahead(&self, team: Team,
                          nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
@@ -759,6 +776,7 @@ impl WorldState {
             nihilistically)
     }
 
+    /// "A princess here before us; behold, behold ..."
     pub fn princess_lookahead(&self, team: Team,
                               nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
@@ -766,6 +784,8 @@ impl WorldState {
             nihilistically)
     }
 
+    /// "It doesn't make sense I should fall for the kingcraft of a
+    /// meritless crown."           —Fiona Apple, "Not About Love"
     pub fn figurehead_lookahead(&self, team: Team,
                                 nihilistically: bool) -> Vec<Commit> {
         self.ponylike_lookahead(
@@ -862,7 +882,7 @@ impl WorldState {
         // if something overwhelmingly important came up, like ultimate
         // endangerment)?
         let mut premonitions = Vec::new();
-        let moving_team = self.to_move;
+        let moving_team = self.initiative;
         premonitions.extend(self.servant_lookahead(moving_team, nihilistically));
         premonitions.extend(self.pony_lookahead(moving_team, nihilistically));
         premonitions.extend(self.scholar_lookahead(moving_team, nihilistically));
@@ -878,7 +898,7 @@ impl WorldState {
         let mut premonitions = self.lookahead_without_secret_service(
             nihilistically);
         premonitions.extend(self.service_lookahead(
-            self.to_move, nihilistically));
+            self.initiative, nihilistically));
         premonitions
     }
 
@@ -1203,9 +1223,9 @@ mod tests {
         let state1 = WorldState::new();
         let state2 = state1.lookahead()[0].tree;
         let state3 = state2.lookahead()[0].tree;
-        assert_eq!(state1.to_move, Team::Orange);
-        assert_eq!(state2.to_move, Team::Blue);
-        assert_eq!(state3.to_move, Team::Orange);
+        assert_eq!(state1.initiative, Team::Orange);
+        assert_eq!(state2.initiative, Team::Blue);
+        assert_eq!(state3.initiative, Team::Orange);
     }
 
     #[test]

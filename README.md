@@ -1,15 +1,15 @@
-# Leafline
+## Leafline
 
 ### an oppositional strategy game engine
 
 #### game description
 
-Leafline is a oppositional stategy game for two teams! It takes place by taking turns moving figurines on an 8-by-8 square lattice. Each lattice point is called a *locale*. The two teams are called Blue and Orange (Orange goes first). Figurines can *stun* those of the opposing team by moving into their locale (in accordance with the figurine movement rules described below); stunned figurines are removed from the lattice and placed in the hospital for the remaining duration of the game. The goal is to stun the opponent's figurehead!
+Leafline is a oppositional stategy game for two teams! It takes place by taking turns moving figurines on an 8-by-8 square lattice. Each lattice point is called a *locale*. The two teams are called Blue and Orange (Orange moves first). Figurines can *stun* those of the opposing team by moving into their locale (in accordance with the figurine movement rules described momentarily); stunned figurines are removed from the lattice and placed in the hospital for the remaining duration of the game. The goal is to maneuver the opposing team into a situation where their figurehead would surely be stunned were play to continue!
 
 Each team starts with the following set of figurines:
 
 * eight _servants_
-  * A servant can move one locale "forward" toward's the opposing team's side, or optionally two locales if he has not previously moved, if these locales are unoccupied. If there is a figurine belonging to the opposing side diagonally-forward, the sevant may stun it, but servants can't stun moving forward.
+  * A servant can move one locale toward's the opposing team's side, or optionally two locales if he has not previously moved, if these locales are unoccupied. If there is a figurine belonging to the opposing side diagonally and towards the opposing team's side, the sevant may stun it, but servants can't stun moving forward.
 * two _ponies_
   * A pony can hop to a destination that is one locale in one direction and two locales away in the orthogonal direction. She doesn't care if any of the "intervening" locales are occupied.
 * two _scholars_
@@ -23,9 +23,9 @@ Each team starts with the following set of figurines:
 
 There are some other rules which apply in special circumstnaces:
 
-* _Servant ascension_: if a servant reaches the other team's side, he can be _brevetted_ into a cop, or _transition_ into a princess, pony, or scholar.
-* _Secret service_: if the figurehead and a cop haven't previously moved, then they can switch places and sit next to each other.
-* _Passing by_: if a servant takes the option to move two locales its first time, another servant in the right position can pretend he only moved one locale and stun him.
+* _Servant ascension_: if a servant reaches the other team's side, he can _transform_ into a pony, be _brevetted_ into a cop, or _transition_ into a scholar or princess.
+* _Secret service_: if the figurehead and a cop haven't previously moved, then the figurehead can move two locales towards the cop and the cop can sit next to him on the other side.
+* _Passing by_ *(part of game spec, but not yet implemented)*: if a servant takes the option to move two locales its first time, another servant in the right position can pretend he only moved one locale and stun him.
 
 
 #### concerning the program
@@ -34,5 +34,5 @@ There are some other rules which apply in special circumstnaces:
 
 A web application GUI to Leafline, the Leafline Web Client, is written in Clojure 1.7 and ECMAScript 6.
 
-Any resemblance to other popular games is really obvious and _not to be discussed!_
+Any resemblance to other popular games is _not to be discussed!_
 

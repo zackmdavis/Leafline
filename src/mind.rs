@@ -110,7 +110,7 @@ fn order_moves(commits: &mut Vec<Commit>) {
 pub fn α_β_negamax_search(
     world: WorldState, depth: u8, mut α: f32, β: f32,
     memory_bank: Arc<Mutex<HashMap<WorldState, f32>>>) -> (Option<Commit>, f32) {
-    let team = world.to_move;
+    let team = world.initiative;
     let potential_score = orientation(team) * score(world);
     let mut premonitions = world.reckless_lookahead();
     order_moves(&mut premonitions);
@@ -354,7 +354,7 @@ mod tests {
         // two levels of abstraction above twiddling bits on an unsigned
         // int ... oh, well
         let mut negaworld = WorldState::new_except_empty();
-        negaworld.to_move = Team::Blue;
+        negaworld.initiative = Team::Blue;
 
         // scholar endangers pony
         negaworld.orange_ponies = negaworld.orange_ponies.alight(
@@ -371,7 +371,7 @@ mod tests {
         // Orange has another servant sitting nowhere interesting
         negaworld.orange_servants = negaworld.orange_servants.alight(
             Locale { rank: 3, file: 6 });
-        negaworld.to_move = Team::Blue;
+        negaworld.initiative = Team::Blue;
 
         negaworld.no_castling_at_all();
 

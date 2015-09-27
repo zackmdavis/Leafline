@@ -1,26 +1,29 @@
 # What you need to do to hack on Leafline
 
-### Getting your life in order
+### Dependencies
 
-Your life is not in order. You're probably not running python3, you probably don't have Rust installed. christ you might not even have Clojure installed. Get it together, folks.
+Essential:
+* [Rust Nightly 1.5.0+](https://github.com/brson/multirust) for the main game engine
+* [Leiningen](http://leiningen.org/) for the web client server
+* NodeJS and [Babel](https://babeljs.io/) to compile the web client JavaScripts
 
-* You must install the Rust nightly build. I don't care which night. Just a recent one.
-* You must install clojure and lein, which I forget what lein is even short for, and I don't remember how to install it, because, unlike you, __my life is together__, and I did that months ago. or years. I don't remember.
-* install python3
-* `virtualenv --python=python3.4 .`
-* `source bin/activate` obviously you knew that one
-* `pip install -r requirements.txt`
-* holy shit you need `npm` for this, that's insane, i thought this was the future.
-  * go here https://nodejs.org/en/ and do what it says
-  * then run `npm install babel`
-  * we are SERIOUS PEOPLE here, don't do that `-g` crap, the same way you didn't `sudo` up your pip earlier.
-* run `make all`
-  * this might take a little while because it has to do a full release build. use `make` or `make dev` for every day things
+Recommended:
+* Python and [Invoke](http://www.pyinvoke.org/) for the build command helpers.
+  * Alternatively, there's also a Makefile apparently?
 
+### Build commands
 
-# you now might have a working environment to hack on!
+* `inv build_furniture` will generate src/motion.rs and src/landmark.rs, which contain essesntial position tables.
+* `inv compile_client` will compile the web client JavaScripts.
 
-* try running the tests: `cargo test`
-* try running the web server: `cd web_client; lein run`. it'll open up in localhost:2882
+***XXX TODO FIXME*** finish coding Invoke tasks for all build steps and document them here
+
+### You now might have a working environment to hack on!
+
+* Try running the tests: `cargo test`
+* Try compiling the game engine: `cargo build --release`
+  * The `--release` flag turns on optimizations, which are useful even in development of this fairly CPU-intensive application.
+* Try playing the console game: `cargo run --release`
+* Try running the web server: `cd web_client; lein run`. The web client will be available on localhost:2882.
   * It's easy to remember because 2882 is Magnus Carlsen's peak ELO rating.
 * Alternatively, `lein repl` starts the REPL, from which `(restart-server!)` starts or restarts the server.

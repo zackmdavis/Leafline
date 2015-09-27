@@ -28,7 +28,7 @@
 (def max-depth 7)
 (def max-seconds 120)
 (def reasonable-request? (reasonable-request-validator
-                          :max-seconds 120 :max-depth 8))
+                          :max-seconds max-seconds :max-depth max-depth))
 
 (defn correspondence-endpoint [request]
   (let [world (str (get-in request [:params :world]))

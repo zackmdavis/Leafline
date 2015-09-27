@@ -274,9 +274,9 @@ fn main() {
     }
 }
 
-#[test]
+#[cfg(test)]
 mod tests {
-    use super::{correspondence, LastMissive, LookaheadBound};
+    use super::{correspondence, LookaheadBound};
 
     #[test]
     fn concerning_correspondence_victory_conditions() {
