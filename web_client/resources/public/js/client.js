@@ -133,6 +133,7 @@ function getLookaheadBound() {
 
 
 function sendPostcard(news) {
+    $message.removeClass("alert");
     $message.text('');
     $.ajax({
         url: "/write/",
@@ -174,7 +175,8 @@ function sendPostcard(news) {
         },
         error: function (jqxhr, textStatus, errorThrown) {
             $spinner.hide();
-            $message.text(errorThrown);
+            $message.addClass("alert").addClass("alert-box");
+            $message.text(`${errorThrown}: ${jqxhr.responseJSON.error}`);
         }
     });
 }
@@ -283,6 +285,7 @@ function printHeadline(team, agent, whence, whither,
     }
 
     $history.append($headline);
+    $history.scrollTop($history[0].scrollHeight);
 }
 
 $(document).ready(function() {
