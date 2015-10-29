@@ -84,7 +84,7 @@ impl Pinfield {
         Pinfield(0)
     }
 
-    pub fn init(starters: &Vec<Locale>) -> Pinfield {
+    pub fn init(starters: &[Locale]) -> Pinfield {
         let mut board = Pinfield::new();
         for &starter in starters.iter() {
             board = board.alight(starter);

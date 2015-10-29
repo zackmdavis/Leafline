@@ -849,18 +849,12 @@ impl WorldState {
         let mut being_leered_at = None;
         for (locales, patch) in locales_to_query {
             if locales.iter().all(|l| unoc.query(*l)) {
-                match being_leered_at {
-                    None => {
-                        being_leered_at = Some(
-                            self.is_being_leered_at_by(
-                                Locale {
-                                    rank: home_rank,
-                                    file: 4,
-                                },
-                                team.opposition())
+                if let None = being_leered_at {
+                    being_leered_at = Some(
+                        self.is_being_leered_at_by(
+                            Locale { rank: home_rank, file: 4 },
+                            team.opposition())
                         )
-                    },
-                    _ => {}
                 }
                 if being_leered_at.unwrap() {
                     return premonitions;
