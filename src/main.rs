@@ -2,8 +2,11 @@
 #![feature(non_ascii_idents)]
 #![feature(plugin)]
 #![plugin(clippy)]
-#![allow(unused_features)]
 
+#![allow(unused_features)]
+#![warn(missing_debug_implementations, missing_copy_implementations,
+        trivial_casts, trivial_numeric_casts,
+        unused_import_braces, unused_qualifications)]
 
 #[macro_use]
 extern crate itertools;
@@ -31,7 +34,7 @@ use std::process;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 use rustc_serialize::json;
-use time::*;
+use time::{Duration, get_time};
 
 use identity::{Agent, Team};
 use life::{WorldState, Commit, Patch};
@@ -55,7 +58,7 @@ impl LookaheadBound {
 
 fn forecast(world: WorldState, bound: LookaheadBound)
             -> (Vec<(Commit, f32)>, u8, Duration) {
-    let start_thinking = time::get_time();
+    let start_thinking = get_time();
     let forecasts;
     let depth;
     match bound {
@@ -70,7 +73,7 @@ fn forecast(world: WorldState, bound: LookaheadBound)
             depth = ds;
         }
     }
-    let stop_thinking = time::get_time();
+    let stop_thinking = get_time();
     let thinking_time = stop_thinking - start_thinking;
     (forecasts, depth, thinking_time)
 }
@@ -182,6 +185,8 @@ fn main() {
         println!("{}", correspondence(from, bound));
         process::exit(0);
     }
+
+    println!("Welcome to Leafline v. {}!", env!("CARGO_PKG_VERSION"));
 
     let mut world: WorldState;
     if !from.is_empty() {
