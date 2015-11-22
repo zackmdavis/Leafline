@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::thread;
+use std::time::Duration;
 
 use time;
 
@@ -205,7 +206,7 @@ pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
                 time_radios.swap_remove(i);
             }
         }
-        thread::sleep_ms(2);
+        thread::sleep(Duration::from_millis(2));
     }
     forecasts.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     Some(forecasts)
