@@ -1,5 +1,6 @@
 #![feature(test)]
 #![feature(non_ascii_idents)]
+#![feature(pattern)]
 #![feature(plugin)]
 #![plugin(clippy)]
 
@@ -26,6 +27,7 @@ mod motion;
 mod landmark;
 mod life;
 mod mind;
+mod substrate;
 
 
 use std::io;
@@ -39,6 +41,7 @@ use time::{Duration, get_time};
 use identity::{Agent, Team};
 use life::{WorldState, Commit, Patch};
 use mind::{kickoff, iterative_deepening_kickoff};
+use substrate::inventory_memory_gib;
 
 
 enum LookaheadBound {
@@ -187,6 +190,8 @@ fn main() {
     }
 
     println!("Welcome to Leafline v. {}!", env!("CARGO_PKG_VERSION"));
+    println!("Leafline substrate accountant detected {:.3} GiB of memory.",
+             inventory_memory_gib());
 
     let mut world: WorldState;
     if !from.is_empty() {
