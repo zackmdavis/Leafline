@@ -88,6 +88,16 @@ pub fn score(world: WorldState) -> f32 {
         low_colonelcy).pincount();
     valuation -= 0.2 * blue_subsubascendants as f32;
 
+    // secret service eligbility has option value
+    if world.orange_west_service_eligibility ||
+        world.orange_east_service_eligibility {
+            valuation += 0.1
+    }
+    if world.blue_west_service_eligibility ||
+        world.blue_east_service_eligibility {
+            valuation -= 0.1
+    }
+
     valuation
 }
 
