@@ -1,6 +1,9 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::mem;
 use std::path::Path;
+
+use life::WorldState;
 
 
 pub fn inventory_memory_kib() -> u32 {
@@ -34,6 +37,14 @@ pub fn inventory_memory_kib() -> u32 {
 pub fn inventory_memory_gib() -> f32 {
     inventory_memory_kib() as f32 / (1024. * 1024.)
 }
+
+pub fn speculative_table_size() -> u32 {
+    // Suppose that we don't want the WorldState keys in our déjà vu table to
+    // take up more than half of the substrate's available memory? How many
+    // keys would that be?
+    inventory_memory_kib() * 1024 / 2 / (mem::size_of::<WorldState>() as u32)
+}
+
 
 #[cfg(test)]
 mod tests {

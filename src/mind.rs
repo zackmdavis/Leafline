@@ -1,18 +1,19 @@
 use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
 use time;
+use lru_cache::LruCache;
 
 use identity::{Team, JobDescription, Agent};
 use life::{Commit, WorldState};
 use landmark::{CENTER_OF_THE_WORLD, LOW_COLONELCY,
                LOW_SEVENTH_HEAVEN, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN};
 use space::Pinfield;
+use substrate::speculative_table_size;
 
 
 pub fn orientation(team: Team) -> f32 {
@@ -120,7 +121,7 @@ fn order_moves(commits: &mut Vec<Commit>) {
 
 pub fn α_β_negamax_search(
     world: WorldState, depth: u8, mut α: f32, β: f32,
-    memory_bank: Arc<Mutex<HashMap<WorldState, f32>>>) -> (Option<Commit>, f32) {
+    memory_bank: Arc<Mutex<LruCache<WorldState, f32>>>) -> (Option<Commit>, f32) {
     let team = world.initiative;
     let potential_score = orientation(team) * score(world);
     let mut premonitions = world.reckless_lookahead();
@@ -134,10 +135,10 @@ pub fn α_β_negamax_search(
         let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
         let cached: bool;
         {
-            let open_vault = memory_bank.lock().unwrap();
-            let cached_value_maybe = open_vault.get(&premonition.tree);
+            let mut open_vault = memory_bank.lock().unwrap();
+            let cached_value_maybe = open_vault.get_mut(&premonition.tree);
             match cached_value_maybe {
-                Some(&cached_value) => {
+                Some(&mut cached_value) => {
                     cached = true;
                     value = cached_value;
                 }
@@ -174,7 +175,8 @@ pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
                                      nihilistically: bool,
                                      deadline_maybe: Option<time::Timespec>)
                                      -> Option<Vec<(Commit, f32)>> {
-    let déjà_vu_table: HashMap<WorldState, f32> = HashMap::new();
+    let déjà_vu_table: LruCache<WorldState, f32> =
+        LruCache::new(speculative_table_size() as usize);
     let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
     let mut premonitions;
     if nihilistically {
