@@ -75,18 +75,18 @@ pub fn score(world: WorldState) -> f32 {
     // servants should aspire to something more in life someday
     let orange_subascendants = world.orange_servants.intersection(high_seventh)
         .pincount();
-    valuation += 0.5 * orange_subascendants as f32;
+    valuation += 1.8 * orange_subascendants as f32;
     let high_colonelcy = Pinfield(HIGH_COLONELCY);
     let orange_subsubascendants = world.orange_servants.intersection(
         high_colonelcy).pincount();
-    valuation += 0.2 * orange_subsubascendants as f32;
+    valuation += 0.6 * orange_subsubascendants as f32;
     let blue_subascendants = world.blue_servants.intersection(low_seventh)
         .pincount();
-    valuation -= 0.5 * blue_subascendants as f32;
+    valuation -= 1.8 * blue_subascendants as f32;
     let low_colonelcy = Pinfield(LOW_COLONELCY);
     let blue_subsubascendants = world.blue_servants.intersection(
         low_colonelcy).pincount();
-    valuation -= 0.2 * blue_subsubascendants as f32;
+    valuation -= 0.6 * blue_subsubascendants as f32;
 
     // secret service eligbility has option value
     if world.orange_west_service_eligibility ||
