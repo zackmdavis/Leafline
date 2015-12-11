@@ -4,7 +4,7 @@ version = "0.0.14-plus"
 dependencies = [
  "ansi_term 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "clippy 0.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clippy 0.0.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -22,7 +22,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "clippy"
-version = "0.0.24"
+version = "0.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "unicode-normalization 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
