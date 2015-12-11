@@ -286,6 +286,8 @@ impl WorldState {
         book
     }
 
+    // https://github.com/Manishearth/rust-clippy/issues/491
+    #[allow(cyclomatic_complexity)]
     pub fn reconstruct(scan: String) -> Self {
         let mut rank = 7;
         let mut file = 0;

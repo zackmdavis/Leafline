@@ -257,11 +257,10 @@ fn main() {
 
         loop {
             print!("\nSelect a move>> ");
-            io::stdout().flush().ok().expect("couldn't flush stdout");
+            io::stdout().flush().expect("couldn't flush stdout");
             let mut input_buffer = String::new();
             io::stdin()
                 .read_line(&mut input_buffer)
-                .ok()
                 .expect("couldn't read input");
 
             if input_buffer.trim() == "quit" {
