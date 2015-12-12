@@ -1,12 +1,26 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::mem;
 use std::path::Path;
 
-use life::WorldState;
+
+pub struct Bytes(u64);
+
+impl Bytes {
+    pub fn kibi(n: f32) -> Self { Bytes(1024*n as u64) }
+    pub fn gibi(n: f32) -> Self { Bytes((1024.0f32.powi(3)*n) as u64) }
+
+    pub fn in_gib(&self) -> f32 { (self.0 as f32)/1024.0f32.powi(3) }
+}
 
 
-pub fn inventory_memory_kib() -> u32 {
+impl From<Bytes> for usize {
+    fn from(bytes: Bytes) -> Self {
+        bytes.0 as usize
+    }
+}
+
+
+pub fn meminfo(field: &str) -> Bytes {
     let path = Path::new("/proc/meminfo");
     let proc_meminfo = match File::open(path) {
         Ok(f) => f,
@@ -21,37 +35,34 @@ pub fn inventory_memory_kib() -> u32 {
     };
     let reader = BufReader::new(proc_meminfo);
     for line in reader.lines() {
-        let entry = line.ok().expect("couldn't get line?!");
-        if entry.starts_with("MemFree:") {  // like "MemFree:  3274928 kB"
-            let mut figure = entry.trim_left_matches("MemFree:");
+        let entry = line.expect("couldn't get line?!");
+        let label = &format!("{}:", field);
+        if entry.starts_with(label) {
+            // like "MemFree:  3274928 kB"
+            let mut figure = entry.trim_left_matches(label);
             figure = figure.trim_left();
             figure = &figure[0..figure.len()-3]; // chop off " kB"
-            let value: u32 = figure.parse()
-                .ok().expect("couldn't parse memory inventory entry?!");
-            return value
+            let value: u64 = figure.parse()
+                .expect("couldn't parse memory inventory entry?!");
+            return Bytes::kibi(value as f32)
         }
     }
     moral_panic!("couldn't find amount of free memory");
 }
 
-pub fn inventory_memory_gib() -> f32 {
-    inventory_memory_kib() as f32 / (1024. * 1024.)
-}
 
-pub fn speculative_table_size() -> u32 {
-    // Suppose that we don't want the WorldState keys in our déjà vu table to
-    // take up more than half of the substrate's available memory? How many
-    // keys would that be?
-    inventory_memory_kib() * 1024 / 2 / (mem::size_of::<WorldState>() as u32)
+pub fn memory_free() -> Bytes {
+    meminfo("MemFree")
 }
 
 
 #[cfg(test)]
 mod tests {
-    use super::inventory_memory_kib;
+    use super::Bytes;
 
     #[test]
-    fn concerning_the_inventory_of_memory() {
-        println!("We have this many kB: {}", inventory_memory_kib());
+    fn concerning_conversion_from_bytes() {
+        assert_eq!(3, usize::from(Bytes(3)))
     }
+
 }

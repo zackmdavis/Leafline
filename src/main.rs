@@ -42,7 +42,7 @@ use time::{Duration, get_time};
 use identity::{Agent, Team};
 use life::{WorldState, Commit, Patch};
 use mind::{kickoff, iterative_deepening_kickoff};
-use substrate::{inventory_memory_gib, speculative_table_size};
+use substrate::memory_free;
 
 
 enum LookaheadBound {
@@ -192,8 +192,7 @@ fn main() {
 
     println!("Welcome to Leafline v. {}!", env!("CARGO_PKG_VERSION"));
     println!("Leafline substrate accountant detected {:.3} GiB of memory.",
-             inventory_memory_gib());
-    println!("Déjà vu table key limit: {}", speculative_table_size());
+             memory_free().in_gib());
 
     let mut world: WorldState;
     if !from.is_empty() {

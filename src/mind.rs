@@ -1,5 +1,6 @@
 use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
+use std::mem;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::thread;
@@ -13,7 +14,7 @@ use life::{Commit, WorldState};
 use landmark::{CENTER_OF_THE_WORLD, LOW_COLONELCY,
                LOW_SEVENTH_HEAVEN, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN};
 use space::Pinfield;
-use substrate::speculative_table_size;
+use substrate::Bytes;
 
 
 pub fn orientation(team: Team) -> f32 {
@@ -170,13 +171,20 @@ pub fn α_β_negamax_search(
     (optimand, optimum)
 }
 
+
+pub fn déjà_vu_table_size_bound(gib: f32) -> usize {
+    usize::from(Bytes::gibi(gib)) /
+        (mem::size_of::<WorldState>() + mem::size_of::<f32>())
+}
+
+
 #[allow(type_complexity)]
 pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
                                      nihilistically: bool,
                                      deadline_maybe: Option<time::Timespec>)
                                      -> Option<Vec<(Commit, f32)>> {
     let déjà_vu_table: LruCache<WorldState, f32> =
-        LruCache::new(speculative_table_size() as usize);
+        LruCache::new(déjà_vu_table_size_bound(1.5));
     let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
     let mut premonitions;
     if nihilistically {
