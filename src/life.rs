@@ -953,6 +953,7 @@ impl fmt::Display for WorldState {
 #[cfg(test)]
 mod tests {
     extern crate test;
+    use std::mem;
     use self::test::Bencher;
     use super::{WorldState, Patch, Commit};
     use space::Locale;
@@ -1397,6 +1398,12 @@ mod tests {
             assert_eq!(book, world.preserve());
             assert_eq!(WorldState::reconstruct(book), world);
         }
+    }
+
+    #[test]
+    fn concerning_the_size_of_the_world() {
+        println!("size of the world in bytes: {}",  // 120, it says
+                 mem::size_of::<WorldState>());
     }
 
 }
