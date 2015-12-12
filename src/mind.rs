@@ -181,10 +181,11 @@ pub fn déjà_vu_table_size_bound(gib: f32) -> usize {
 #[allow(type_complexity)]
 pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
                                      nihilistically: bool,
-                                     deadline_maybe: Option<time::Timespec>)
+                                     deadline_maybe: Option<time::Timespec>,
+                                     déjà_vu_bound: f32)
                                      -> Option<Vec<(Commit, f32)>> {
     let déjà_vu_table: LruCache<WorldState, f32> =
-        LruCache::new(déjà_vu_table_size_bound(1.5));
+        LruCache::new(déjà_vu_table_size_bound(déjà_vu_bound));
     let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
     let mut premonitions;
     if nihilistically {
@@ -234,20 +235,21 @@ pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
 
 
 pub fn kickoff(world: &WorldState, depth: u8,
-               nihilistically: bool) -> Vec<(Commit, f32)> {
-    potentially_timebound_kickoff(world, depth, nihilistically, None).unwrap()
+               nihilistically: bool, déjà_vu_bound: f32) -> Vec<(Commit, f32)> {
+    potentially_timebound_kickoff(world, depth, nihilistically, None,
+                                  déjà_vu_bound).unwrap()
 }
 
 
 pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
-                                   nihilistically: bool)
+                                   nihilistically: bool, déjà_vu_bound: f32)
                                    -> (Vec<(Commit, f32)>, u8) {
     let deadline = time::get_time() + timeout;
     let mut depth = 1;
     let mut forecasts = potentially_timebound_kickoff(
-        world, depth, nihilistically, None).unwrap();
+        world, depth, nihilistically, None, déjà_vu_bound).unwrap();
     while let Some(prophecy) = potentially_timebound_kickoff(
-            world, depth, nihilistically, Some(deadline)) {
+            world, depth, nihilistically, Some(deadline), déjà_vu_bound) {
         forecasts = prophecy;
         depth += 1;
     }
@@ -266,6 +268,8 @@ mod tests {
     use life::WorldState;
     use identity::Team;
 
+    const MOCK_DÉJÀ_VU_BOUND: f32 = 2.0;
+
     impl WorldState {
         fn no_castling_at_all(&mut self) {
             self.orange_east_service_eligibility = false;
@@ -275,7 +279,6 @@ mod tests {
         }
     }
 
-
     #[bench]
     fn benchmark_scoring(b: &mut Bencher) {
         b.iter(|| score(WorldState::new()));
@@ -284,25 +287,25 @@ mod tests {
     #[bench]
     fn benchmark_kickoff_depth_1(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 1, true));
+        b.iter(|| kickoff(&ws, 1, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_2_arbys(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 2, true));
+        b.iter(|| kickoff(&ws, 2, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_2_carefully(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 2, false));
+        b.iter(|| kickoff(&ws, 2, false, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_3(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 3, true));
+        b.iter(|| kickoff(&ws, 3, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[test]
@@ -310,7 +313,7 @@ mod tests {
     fn concerning_short_circuiting_upon_finding_critical_endangerment() {
         let ws = WorldState::reconstruct("7K/r7/1r6/8/8/8/8/7k b -".to_owned());
         let start = time::get_time();
-        kickoff(&ws, 30, true);
+        kickoff(&ws, 30, true, MOCK_DÉJÀ_VU_BOUND);
         let duration = time::get_time() - start;
         assert!(duration.num_seconds() < 20);
     }
@@ -330,7 +333,7 @@ mod tests {
         // split, whereby transforming into a pony (rather than
         // transitioning into a princess, as would usually be
         // expected) endangers both the blue princess and figurehead
-        let (ref best_move, score) = kickoff(&ws, 3, true)[0];
+        let (ref best_move, score) = kickoff(&ws, 3, true, MOCK_DÉJÀ_VU_BOUND)[0];
         println!("{:?}", best_move);
         assert!(score > 0.0);
         assert_eq!(best_move.tree.preserve(), "2N5/q3k3/8/8/8/8/6PP/7K b -");
@@ -362,7 +365,7 @@ mod tests {
         world.no_castling_at_all();
 
         let depth = 2;
-        let advisory = kickoff(&world, depth, true);
+        let advisory = kickoff(&world, depth, true, MOCK_DÉJÀ_VU_BOUND);
 
         // taking the pony is the right thing to do
         assert_eq!(Locale { rank: 0, file: 0 }, advisory[0].0.patch.whither);
@@ -396,7 +399,7 @@ mod tests {
 
         negaworld.no_castling_at_all();
 
-        let negadvisory = kickoff(&negaworld, depth, true);
+        let negadvisory = kickoff(&negaworld, depth, true, MOCK_DÉJÀ_VU_BOUND);
 
         // taking the pony is still the right thing to do, even in the
         // negaworld

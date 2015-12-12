@@ -35,7 +35,7 @@ use std::io;
 use std::io::Write;
 use std::process;
 
-use argparse::{ArgumentParser, Store, StoreTrue};
+use argparse::{ArgumentParser, Store, StoreOption, StoreTrue, Print};
 use rustc_serialize::json;
 use time::{Duration, get_time};
 
@@ -60,19 +60,19 @@ impl LookaheadBound {
     }
 }
 
-fn forecast(world: WorldState, bound: LookaheadBound)
+fn forecast(world: WorldState, bound: LookaheadBound, déjà_vu_bound: f32)
             -> (Vec<(Commit, f32)>, u8, Duration) {
     let start_thinking = get_time();
     let forecasts;
     let depth;
     match bound {
         LookaheadBound::Depth(ds) => {
-            forecasts = kickoff(&world, ds, false);
+            forecasts = kickoff(&world, ds, false, déjà_vu_bound);
             depth = ds;
         },
         LookaheadBound::Seconds(_) => {
             let (fs, ds) = iterative_deepening_kickoff(
-                &world, bound.duration(), false);
+                &world, bound.duration(), false, déjà_vu_bound);
             forecasts = fs;
             depth = ds;
         }
@@ -98,9 +98,10 @@ struct LastMissive {
     the_triumphant: Option<Team>
 }
 
-fn correspondence(reminder: String, bound: LookaheadBound) -> String {
+fn correspondence(reminder: String, bound: LookaheadBound, déjà_vu_bound: f32) -> String {
     let in_medias_res = WorldState::reconstruct(reminder);
-    let (mut forecasts, depth, sidereal) = forecast(in_medias_res, bound);
+    let (mut forecasts, depth, sidereal) = forecast(in_medias_res, bound,
+                                                    déjà_vu_bound);
 
     if !forecasts.is_empty() {
         let (determination, _karma) = forecasts.swap_remove(0);
@@ -144,65 +145,76 @@ fn the_end() {
 
 
 fn main() {
-    // Does argparse not offer a way to Store an argument (not a
-    // hardcoded value) into an Option? Contribution opportunity if so??
-    //
-    // For now, use 0 like None.
-    let mut lookahead_depth: u8 = 0;
-    let mut lookahead_seconds: u8 = 0;
-    let mut from: String = "".to_owned();
+    // Does argparse not offer an analogue of Python's argparse's
+    // `add_mutually_exclusive_group`
+    // (https://docs.python.org/3/library/argparse.html#mutual-exclusion)?
+    // Contribution opportunity if so??
+    let mut lookahead_depth: Option<u8> = None;
+    let mut lookahead_seconds: Option<u8> = None;
+    let mut from_runes: Option<String> = None;
     let mut correspond: bool = false;
+    let mut déjà_vu_bound: f32 = 2.0;
     {
         let mut parser = ArgumentParser::new();
         parser.set_description("Leafline: an oppositional strategy game engine");
         parser.refer(&mut lookahead_depth).add_option(
             &["--depth"],
-            Store,
+            StoreOption,
             "rank moves using AI minimax lookahead this deep");
         parser.refer(&mut lookahead_seconds).add_option(
             &["--seconds"],
-            Store,
+            StoreOption,
             "rank moves using AI minimax for about this many seconds");
         parser.refer(&mut correspond).add_option(
             &["--correspond"],
             StoreTrue,
-            "just output the serialization of the AI's top \
-             move");
-        parser.refer(&mut from).add_option(
+            "just output the serialization of the AI's top response and \
+             legal replies thereto");
+        parser.refer(&mut from_runes).add_option(
             &["--from"],
-            Store,
+            StoreOption,
             "start a game from the given book of preservation runes");
+        parser.refer(&mut déjà_vu_bound).add_option(
+            &["--déjà-vu-bound", "--deja-vu-bound"],
+            Store,
+            "try to not store more entries in the déjà vu table than fit in \
+             this many GiB of memory"
+        );
+        parser.add_option(&["--version", "-v"],
+            Print(env!("CARGO_PKG_VERSION").to_owned()), "diplay the version");
         parser.parse_args_or_exit();
     }
 
     if correspond {
-        let bound;
-        if lookahead_depth != 0 && lookahead_seconds == 0 {
-            bound = LookaheadBound::Depth(lookahead_depth)
-        } else if lookahead_seconds != 0 && lookahead_depth == 0 {
-            bound = LookaheadBound::Seconds(lookahead_seconds)
-        } else {
-            println!("`--correspond` requires exactly one of \
-                      `--depth` and `--seconds`");
-            process::exit(1);
+        if (lookahead_depth.is_some() && lookahead_seconds.is_some()) ||
+            (lookahead_depth.is_none() && lookahead_seconds.is_none()) {
+                println!("`--correspond` requires exactly one of \
+                          `--depth` and `--seconds`");
+                process::exit(1);
         }
-        println!("{}", correspondence(from, bound));
+        let from = from_runes.expect("`--correspond` requires `--from`");
+        let bound = match lookahead_depth {
+            Some(depth) => LookaheadBound::Depth(depth),
+            None => match lookahead_seconds {
+                Some(seconds) => LookaheadBound::Seconds(seconds),
+                _ => unreachable!()
+            }
+        };
+        println!("{}", correspondence(from, bound, déjà_vu_bound));
         process::exit(0);
     }
 
     println!("Welcome to Leafline v. {}!", env!("CARGO_PKG_VERSION"));
-    println!("Leafline substrate accountant detected {:.3} GiB of memory.",
+    println!("Leafline substrate accountant detected {:.3} GiB of free memory.",
              memory_free().in_gib());
 
-    let mut world: WorldState;
-    if !from.is_empty() {
-        world = WorldState::reconstruct(from);
-    } else {
-        world = WorldState::new();
-    }
+    let mut world = match from_runes {
+        Some(runes) => WorldState::reconstruct(runes),
+        None => WorldState::new()
+    };
     let mut premonitions: Vec<Commit>;
     loop {
-        if lookahead_depth == 0 && lookahead_seconds == 0 {
+        if lookahead_depth.is_none() && lookahead_seconds.is_none() {
             premonitions = world.lookahead();
             if premonitions.is_empty() {
                 // XXX TODO distinguish between deadlock and
@@ -217,18 +229,20 @@ fn main() {
         else {
             let forecasts;
             // XXX TODO FIXME clean up duplication
-            if lookahead_depth != 0 && lookahead_seconds == 0 {
+            if lookahead_depth.is_some() && lookahead_seconds.is_none() {
+                let depth = lookahead_depth.unwrap();
                 let (our_forecasts, _depth, thinking_time) = forecast(
-                    world, LookaheadBound::Depth(lookahead_depth));
+                    world, LookaheadBound::Depth(depth), déjà_vu_bound);
                 forecasts = our_forecasts;
                 println!("{}", world);
                 println!(
                     "(scoring alternatives {} levels deep took {} ms)",
-                    lookahead_depth, thinking_time.num_milliseconds()
+                    depth, thinking_time.num_milliseconds()
                 );
-            } else if lookahead_seconds != 0 && lookahead_depth == 0 {
+            } else if lookahead_seconds.is_some() && lookahead_depth.is_none() {
                 let (our_forecasts, depth, thinking_time) = forecast(
-                    world, LookaheadBound::Seconds(lookahead_seconds));
+                    world, LookaheadBound::Seconds(lookahead_seconds.unwrap()),
+                    déjà_vu_bound);
                 forecasts = our_forecasts;
                 println!("{}", world);
                 println!(
@@ -292,7 +306,7 @@ mod tests {
     fn concerning_correspondence_victory_conditions() {
         let blue_concession = correspondence(
             "R6k/6pp/8/8/8/8/8/8 b -".to_owned(),
-            LookaheadBound::Depth(2)
+            LookaheadBound::Depth(2), 1.0
         );
         assert_eq!("{\"the_triumphant\":\"Orange\"}".to_owned(),
                    blue_concession);
