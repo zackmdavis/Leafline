@@ -112,7 +112,7 @@ fn mmv_lva_heuristic(commit: &Commit) -> f32 {
     }
 }
 
-fn order_moves(commits: &mut Vec<Commit>) {
+fn order_movements_heuristically(commits: &mut Vec<Commit>) {
     commits.sort_by(|a, b| {
         mmv_lva_heuristic(&b)
             .partial_cmp(&mmv_lva_heuristic(&a))
@@ -126,7 +126,7 @@ pub fn α_β_negamax_search(
     let team = world.initiative;
     let potential_score = orientation(team) * score(world);
     let mut premonitions = world.reckless_lookahead();
-    order_moves(&mut premonitions);
+    order_movements_heuristically(&mut premonitions);
     if depth == 0 || premonitions.is_empty() {
         return (None, potential_score)
     };
@@ -179,11 +179,12 @@ pub fn déjà_vu_table_size_bound(gib: f32) -> usize {
 
 
 #[allow(type_complexity)]
-pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
-                                     nihilistically: bool,
-                                     deadline_maybe: Option<time::Timespec>,
-                                     déjà_vu_bound: f32)
-                                     -> Option<Vec<(Commit, f32)>> {
+pub fn potentially_timebound_kickoff(
+    world: &WorldState, depth: u8,
+    nihilistically: bool,
+    deadline_maybe: Option<time::Timespec>,
+    order_movements: &Fn(&mut Vec<Commit>) -> (), déjà_vu_bound: f32)
+        -> Option<Vec<(Commit, f32)>> {
     let déjà_vu_table: LruCache<WorldState, f32> =
         LruCache::new(déjà_vu_table_size_bound(déjà_vu_bound));
     let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
@@ -193,7 +194,7 @@ pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
     } else {
         premonitions = world.lookahead();
     }
-    order_moves(&mut premonitions);
+    order_movements(&mut premonitions);
     let mut forecasts = Vec::new();
     let mut time_radios: Vec<(Commit, mpsc::Receiver<(Option<Commit>, f32)>)> =
         Vec::new();
@@ -237,6 +238,7 @@ pub fn potentially_timebound_kickoff(world: &WorldState, depth: u8,
 pub fn kickoff(world: &WorldState, depth: u8,
                nihilistically: bool, déjà_vu_bound: f32) -> Vec<(Commit, f32)> {
     potentially_timebound_kickoff(world, depth, nihilistically, None,
+                                  &order_movements_heuristically,
                                   déjà_vu_bound).unwrap()
 }
 
@@ -247,9 +249,12 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
     let deadline = time::get_time() + timeout;
     let mut depth = 1;
     let mut forecasts = potentially_timebound_kickoff(
-        world, depth, nihilistically, None, déjà_vu_bound).unwrap();
+        world, depth, nihilistically, None,
+        &order_movements_heuristically,
+        déjà_vu_bound).unwrap();
     while let Some(prophecy) = potentially_timebound_kickoff(
-            world, depth, nihilistically, Some(deadline), déjà_vu_bound) {
+            world, depth, nihilistically, Some(deadline),
+            &order_movements_heuristically, déjà_vu_bound) {
         forecasts = prophecy;
         depth += 1;
     }
@@ -329,7 +334,7 @@ mod tests {
     #[test]
     fn concerning_servant_ascension_choices() {
         let ws = WorldState::reconstruct("8/q1P1k/8/8/8/8/6PP/7K w -".to_owned());
-        // looking ahead 3 moves allows the Leafline AI to catch the
+        // looking ahead 3 movements allows the Leafline AI to catch the
         // split, whereby transforming into a pony (rather than
         // transitioning into a princess, as would usually be
         // expected) endangers both the blue princess and figurehead
