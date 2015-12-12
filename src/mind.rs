@@ -243,6 +243,17 @@ pub fn kickoff(world: &WorldState, depth: u8,
 }
 
 
+fn inductive_movement_imposition(prophecy: &[(Commit, f32)])
+                                 -> Box<Fn(&mut Vec<Commit>) -> ()> {
+    let premonitions = prophecy.iter().map(|p| p.0).collect::<Vec<_>>();
+    // SNEAKY: we expect to call the returned imposition with an argument whose
+    // elements are the same commits that are the first elements of the tuples
+    // that are the elements of `prophecy`—that's why it's OK to clobber them
+    // like this
+    Box::new(move |ps| { *ps = premonitions.clone(); })
+}
+
+
 pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
                                    nihilistically: bool, déjà_vu_bound: f32)
                                    -> (Vec<(Commit, f32)>, u8) {
@@ -252,9 +263,11 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
         world, depth, nihilistically, None,
         &order_movements_heuristically,
         déjà_vu_bound).unwrap();
+    let mut order_movements = inductive_movement_imposition(&forecasts);
     while let Some(prophecy) = potentially_timebound_kickoff(
             world, depth, nihilistically, Some(deadline),
-            &order_movements_heuristically, déjà_vu_bound) {
+            &*order_movements, déjà_vu_bound) {
+        order_movements = inductive_movement_imposition(&prophecy);
         forecasts = prophecy;
         depth += 1;
     }
