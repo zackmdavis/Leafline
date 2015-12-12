@@ -275,6 +275,26 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
 }
 
 
+pub fn fixed_depth_sequence_kickoff(world: &WorldState, depth_sequence: Vec<u8>,
+                                    nihilistically: bool, déjà_vu_bound: f32)
+                                    -> Vec<(Commit, f32)> {
+    let mut depths = depth_sequence.iter();
+    let mut forecasts = potentially_timebound_kickoff(
+        world, *depths.next().expect("`depth_sequence` should be nonempty"),
+        nihilistically, None, &order_movements_heuristically,
+        déjà_vu_bound
+    ).unwrap();
+    let mut order_movements = inductive_movement_imposition(&forecasts);
+    for &depth in depths {
+        forecasts = potentially_timebound_kickoff(
+            world, depth, nihilistically, None,
+            &*order_movements, déjà_vu_bound).unwrap();
+        order_movements = inductive_movement_imposition(&forecasts);
+    }
+    forecasts
+}
+
+
 #[cfg(test)]
 mod tests {
     extern crate test;

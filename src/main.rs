@@ -31,6 +31,7 @@ mod mind;
 mod substrate;
 
 
+use std::error::Error;
 use std::io;
 use std::io::Write;
 use std::process;
@@ -41,14 +42,17 @@ use time::{Duration, get_time};
 
 use identity::{Agent, Team};
 use life::{WorldState, Commit, Patch};
-use mind::{kickoff, iterative_deepening_kickoff};
+use mind::{kickoff, iterative_deepening_kickoff, fixed_depth_sequence_kickoff};
 use substrate::memory_free;
 
 
+#[derive(Debug, Clone)]
 enum LookaheadBound {
     Depth(u8),
-    Seconds(u8)
+    DepthSequence(Vec<u8>),
+    Seconds(u8),
 }
+
 
 impl LookaheadBound {
     pub fn duration(&self) -> Duration {
@@ -57,6 +61,44 @@ impl LookaheadBound {
             _ => moral_panic!("`duration()` called on non-Seconds \
                                LookaheadBound variant")
         }
+    }
+
+    pub fn new_from_sequence_depiction(depiction: String) -> Self{
+        let depth_runes = depiction.split(',');
+        let depth_sequence = depth_runes
+            .map(|dd| dd.parse::<u8>().expect("couldn't parse depth sequence"))
+            .collect::<Vec<_>>();
+        LookaheadBound::DepthSequence(depth_sequence)
+    }
+
+    pub fn from_args(lookahead_depth: Option<u8>,
+                     lookahead_depth_sequence: Option<String>,
+                     lookahead_seconds: Option<u8>)
+                     -> Result<Option<Self>, String> {
+        let mut bound = None;
+        let confirm_bound_is_none = |b: &Option<LookaheadBound>|
+                                                -> Result<bool, String> {
+            if b.is_some() {
+                Err("more than one of `--depth`, `--depth-sequence`, \
+                     or `--seconds` was passed".to_owned())
+            } else {
+                Ok(true)
+            }
+        };
+        if let Some(depth) = lookahead_depth {
+            try!(confirm_bound_is_none(&bound));
+            bound = Some(LookaheadBound::Depth(depth));
+        }
+        if let Some(sequence_depiction) = lookahead_depth_sequence {
+            try!(confirm_bound_is_none(&bound));
+            bound = Some(LookaheadBound::new_from_sequence_depiction(
+                sequence_depiction));
+        }
+        if let Some(seconds) = lookahead_seconds {
+            try!(confirm_bound_is_none(&bound));
+            bound = Some(LookaheadBound::Seconds(seconds));
+        }
+        Ok(bound)
     }
 }
 
@@ -69,6 +111,13 @@ fn forecast(world: WorldState, bound: LookaheadBound, déjà_vu_bound: f32)
         LookaheadBound::Depth(ds) => {
             forecasts = kickoff(&world, ds, false, déjà_vu_bound);
             depth = ds;
+        },
+        LookaheadBound::DepthSequence(ds) => {
+            depth = *ds.last().unwrap();
+            forecasts = fixed_depth_sequence_kickoff(
+                &world, ds, false, déjà_vu_bound);
+            // XXX TODO: if we're just returning a number, it should be the
+            // lowest depth, but we should really report all of them
         },
         LookaheadBound::Seconds(_) => {
             let (fs, ds) = iterative_deepening_kickoff(
@@ -150,6 +199,8 @@ fn main() {
     // (https://docs.python.org/3/library/argparse.html#mutual-exclusion)?
     // Contribution opportunity if so??
     let mut lookahead_depth: Option<u8> = None;
+    // TODO CONSIDER: would argparse's Collect action be cleaner?
+    let mut lookahead_depth_sequence: Option<String> = None;
     let mut lookahead_seconds: Option<u8> = None;
     let mut from_runes: Option<String> = None;
     let mut correspond: bool = false;
@@ -161,6 +212,10 @@ fn main() {
             &["--depth"],
             StoreOption,
             "rank moves using AI minimax lookahead this deep");
+        parser.refer(&mut lookahead_depth_sequence).add_option(
+            &["--depth-sequence"],
+            StoreOption,
+            "rank moves using AI minimax lookahead to these depths");
         parser.refer(&mut lookahead_seconds).add_option(
             &["--seconds"],
             StoreOption,
@@ -186,20 +241,23 @@ fn main() {
     }
 
     if correspond {
-        if (lookahead_depth.is_some() && lookahead_seconds.is_some()) ||
-            (lookahead_depth.is_none() && lookahead_seconds.is_none()) {
-                println!("`--correspond` requires exactly one of \
-                          `--depth` and `--seconds`");
-                process::exit(1);
-        }
-        let from = from_runes.expect("`--correspond` requires `--from`");
-        let bound = match lookahead_depth {
-            Some(depth) => LookaheadBound::Depth(depth),
-            None => match lookahead_seconds {
-                Some(seconds) => LookaheadBound::Seconds(seconds),
-                _ => unreachable!()
+        let bound_maybe_result = LookaheadBound::from_args(
+            lookahead_depth, lookahead_depth_sequence, lookahead_seconds
+        );
+        let bound = match bound_maybe_result {
+            Ok(bound_maybe) => match bound_maybe {
+                Some(bound) => bound,
+                None => {
+                    moral_panic!(
+                        "`--correspond` passed without exactly \
+                         one of `--depth`, `--depth-sequence`, or `--seconds`");
+                },
+            },
+            Err(error) => {
+                moral_panic!(error);
             }
         };
+        let from = from_runes.expect("`--correspond` requires `--from`");
         println!("{}", correspondence(from, bound, déjà_vu_bound));
         process::exit(0);
     }
@@ -213,58 +271,44 @@ fn main() {
         None => WorldState::new()
     };
     let mut premonitions: Vec<Commit>;
+    let bound_maybe = LookaheadBound::from_args(
+        lookahead_depth, lookahead_depth_sequence, lookahead_seconds
+    ).unwrap();
     loop {
-        if lookahead_depth.is_none() && lookahead_seconds.is_none() {
-            premonitions = world.lookahead();
-            if premonitions.is_empty() {
-                // XXX TODO distinguish between deadlock and
-                // ultimate endangerment
-                the_end();
-            }
-            println!("{}", world);
-            for (index, premonition) in premonitions.iter().enumerate() {
-                println!("{:>2}. {}", index, premonition)
-            }
-        }
-        else {
-            let forecasts;
-            // XXX TODO FIXME clean up duplication
-            if lookahead_depth.is_some() && lookahead_seconds.is_none() {
-                let depth = lookahead_depth.unwrap();
-                let (our_forecasts, _depth, thinking_time) = forecast(
-                    world, LookaheadBound::Depth(depth), déjà_vu_bound);
-                forecasts = our_forecasts;
+        match bound_maybe {
+            None => {
+                premonitions = world.lookahead();
+                if premonitions.is_empty() {
+                    // XXX TODO distinguish between deadlock and
+                    // ultimate endangerment
+                    the_end();
+                }
                 println!("{}", world);
-                println!(
-                    "(scoring alternatives {} levels deep took {} ms)",
-                    depth, thinking_time.num_milliseconds()
-                );
-            } else if lookahead_seconds.is_some() && lookahead_depth.is_none() {
+                for (index, premonition) in premonitions.iter().enumerate() {
+                    println!("{:>2}. {}", index, premonition)
+                }
+            },
+            Some(ref bound) => {
                 let (our_forecasts, depth, thinking_time) = forecast(
-                    world, LookaheadBound::Seconds(lookahead_seconds.unwrap()),
-                    déjà_vu_bound);
-                forecasts = our_forecasts;
+                    world, bound.clone(), déjà_vu_bound);
+                let forecasts = our_forecasts;
                 println!("{}", world);
                 println!(
                     "(scoring alternatives {} levels deep took {} ms)",
                     depth, thinking_time.num_milliseconds()
                 );
-            } else {
-                println!("Supply only one of `--seconds` and `--depth`.");
-                process::exit(1);
-            }
+                for (index, prem_score) in forecasts.iter().enumerate() {
+                    println!("{:>2}. {} (score {:.1})",
+                             index, prem_score.0, prem_score.1);
+                }
+                premonitions = vec!();
+                for prem_score in forecasts {
+                    premonitions.push(prem_score.0);
+                }
 
-            for (index, prem_score) in forecasts.iter().enumerate() {
-                println!("{:>2}. {} (score {:.1})",
-                         index, prem_score.0, prem_score.1);
-            }
-            premonitions = vec!();
-            for prem_score in forecasts {
-                premonitions.push(prem_score.0);
-            }
-
-            if premonitions.is_empty() {
-                the_end();
+                if premonitions.is_empty() {
+                    the_end();
+                }
             }
         }
 
