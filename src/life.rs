@@ -44,6 +44,22 @@ pub struct Commit {
     pub ascension: Option<Agent>,
 }
 
+impl Commit {
+    fn pagan_movement_rune(&self) -> String {
+        format!("{}{}{}{}",
+                self.patch.star.to_pagan_movement_rune_prefix(),
+                if self.hospitalization.is_some() { "x" } else { "" },
+                self.patch.whither.to_algebraic(),
+                // TODO: '+' for subcritical endangerment
+                match self.ascension {
+                    Some(ascended_form) =>
+                        format!("={}",
+                                ascended_form.to_pagan_movement_rune_prefix()),
+                    None => "".to_owned()
+                })
+    }
+}
+
 impl fmt::Display for Commit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let hospital_report = match self.hospitalization {
@@ -71,11 +87,12 @@ impl fmt::Display for Commit {
         let report = hospital_report + &ascension_report;
         write!(
             f,
-            "{} from {} to {}{}",
+            "{} from {} to {}{} ({})",
             self.patch.star,
             self.patch.whence.to_algebraic(),
             self.patch.whither.to_algebraic(),
-            report
+            report,
+            self.pagan_movement_rune()
         )
     }
 }

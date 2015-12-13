@@ -49,6 +49,10 @@ pub struct Agent {
 }
 
 impl Agent {
+    pub fn new(team: Team, job_description: JobDescription) -> Self {
+        Agent { team: team, job_description: job_description }
+    }
+
     pub fn dramatis_personæ(team: Team) -> Vec<Agent> {
         // TODO: return in iterator
         vec![Agent{ team: team,
@@ -127,6 +131,17 @@ impl Agent {
                            job_description: JobDescription::Figurehead },
             _ => moral_panic!("Non-agent-preservation-rune passed to \
                          `from_preservation_rune`"),
+        }
+    }
+
+    pub fn to_pagan_movement_rune_prefix(&self) -> String {
+        match self.job_description {
+            JobDescription::Servant => "".to_owned(),
+            // Pagan movement runes use the Orange job description forms for
+            // nonservants
+            _ => format!("{}",
+                         Agent::new(Team::Orange, self.job_description)
+                             .to_preservation_rune())
         }
     }
 
