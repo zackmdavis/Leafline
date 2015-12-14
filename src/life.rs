@@ -51,7 +51,7 @@ pub struct Commit {
 }
 
 impl Commit {
-    fn pagan_movement_rune(&self) -> String {
+    pub fn pagan_movement_rune(&self) -> String {
         format!("{}{}{}{}",
                 self.patch.star.to_pagan_movement_rune_prefix(),
                 if self.hospitalization.is_some() { "x" } else { "" },

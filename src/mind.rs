@@ -1,5 +1,6 @@
 use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
+use std::fmt;
 use std::mem;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
@@ -122,7 +123,15 @@ fn order_movements_heuristically(commits: &mut Vec<Commit>) {
 
 pub type Variation = Vec<Patch>;
 
-#[derive(Debug, Clone)]
+#[allow(ptr_arg)]
+pub fn pagan_variation_format(variation: &Variation) -> String {
+    variation.iter()
+        .map(|p| p.abbreviated_pagan_movement_rune())
+        .collect::<Vec<_>>().join(" ")
+}
+
+
+#[derive(Clone)]
 pub struct Lodestar {
     pub score: f32,
     pub variation: Variation
@@ -131,6 +140,13 @@ pub struct Lodestar {
 impl Lodestar {
     fn new(score: f32, variation: Variation) -> Self {
         Lodestar { score: score, variation: variation }
+    }
+}
+
+impl fmt::Debug for Lodestar {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "Lodestar {{ score: {}, variation: {} }}",
+               self.score, pagan_variation_format(&self.variation))
     }
 }
 
@@ -159,6 +175,11 @@ pub fn α_β_negamax_search(
                 Some(lodestar) => {
                     cached = true;
                     value = lodestar.score;
+                    debug!("Déjà vu table cache hit on world-state {}; \
+                            cached lodestar was {:?}, search parameters were \
+                            depth={}, α={}, β={}, variation={}",
+                           world.preserve(), lodestar, depth, α, β,
+                           pagan_variation_format(&variation))
                 }
                 None => { cached = false; }
             };
@@ -248,6 +269,8 @@ pub fn potentially_timebound_kickoff(
             }
         }
         thread::sleep(Duration::from_millis(2));
+        debug!("waiting for {} of {} first-movement search threads",
+               time_radios.len(), premonitions.len())
     }
     forecasts.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     Some(forecasts)

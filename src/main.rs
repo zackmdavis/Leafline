@@ -9,19 +9,17 @@
         trivial_casts, trivial_numeric_casts,
         unused_import_braces, unused_qualifications)]
 
-#[macro_use]
-extern crate itertools;
 
 extern crate argparse;
 extern crate ansi_term;
+#[macro_use] extern crate itertools;
+#[macro_use] extern crate log;
 extern crate lru_cache;
 extern crate rustc_serialize;
 extern crate time;
 
 
-#[macro_use]
-mod macros;
-
+#[macro_use] mod macros;
 mod space;
 mod identity;
 mod motion;
@@ -30,13 +28,14 @@ mod life;
 mod mind;
 mod substrate;
 
-
+use std::fs::OpenOptions;
 use std::error::Error;
 use std::io;
 use std::io::Write;
 use std::process;
 
 use argparse::{ArgumentParser, Store, StoreOption, StoreTrue, Print};
+use log::{LogRecord, LogMetadata, LogLevelFilter, SetLoggerError};
 use rustc_serialize::json;
 use time::{Duration, get_time};
 
@@ -45,6 +44,35 @@ use life::{WorldState, Commit, Patch};
 use mind::{kickoff, iterative_deepening_kickoff, fixed_depth_sequence_kickoff,
            Variation};
 use substrate::memory_free;
+
+
+struct DebugLogger;
+
+impl DebugLogger {
+    pub fn init() -> Result<(), SetLoggerError> {
+        log::set_logger(|max_log_level| {
+            max_log_level.set(LogLevelFilter::Debug);
+            Box::new(DebugLogger)
+        })
+    }
+}
+
+impl log::Log for DebugLogger {
+    fn enabled(&self, _metadata: &LogMetadata) -> bool { true }
+
+    fn log(&self, record: &LogRecord) {
+        let mut log_file = OpenOptions::new()
+            .write(true).append(true).create(true)
+            .open("leafline.log").expect("couldn't open log file?!");
+        let log_message = format!(
+            "[{}] {}\n",
+            time::now().strftime("%Y-%m-%d %H:%M:%S.%f").unwrap(),
+            record.args()
+        );
+        log_file.write(&log_message.into_bytes())
+            .expect("couldn't write to log file?!");
+    }
+}
 
 
 #[derive(Debug, Clone)]
@@ -206,6 +234,7 @@ fn main() {
     let mut from_runes: Option<String> = None;
     let mut correspond: bool = false;
     let mut déjà_vu_bound: f32 = 2.0;
+    let mut debug_logging: bool = false;
     {
         let mut parser = ArgumentParser::new();
         parser.set_description("Leafline: an oppositional strategy game engine");
@@ -236,9 +265,18 @@ fn main() {
             "try to not store more entries in the déjà vu table than fit in \
              this many GiB of memory"
         );
+        parser.refer(&mut debug_logging).add_option(
+            &["--debug"],
+            StoreTrue,
+            "run with debug logging to file"
+        );
         parser.add_option(&["--version", "-v"],
             Print(env!("CARGO_PKG_VERSION").to_owned()), "diplay the version");
         parser.parse_args_or_exit();
+    }
+
+    if debug_logging {
+        DebugLogger::init().expect("couldn't initialize logging?!")
     }
 
     if correspond {
