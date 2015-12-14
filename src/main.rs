@@ -1,7 +1,8 @@
-#![feature(test)]
+#![feature(augmented_assignments)]
 #![feature(non_ascii_idents)]
 #![feature(pattern)]
 #![feature(plugin)]
+#![feature(test)]
 #![plugin(clippy)]
 
 #![allow(unused_features)]

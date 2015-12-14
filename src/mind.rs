@@ -1,5 +1,6 @@
 use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::fmt;
 use std::mem;
 use std::sync::{Arc, Mutex};
@@ -121,6 +122,15 @@ fn order_movements_heuristically(commits: &mut Vec<Commit>) {
     });
 }
 
+fn order_movements_intuitively(
+        experience: &HashMap<Patch, u16>, commits: &mut Vec<Commit>) {
+    commits.sort_by(|a, b| {
+        let a_feels = experience.get(&a.patch);
+        let b_feels = experience.get(&b.patch);
+        b_feels.cmp(&a_feels)
+    });
+}
+
 pub type Variation = Vec<Patch>;
 
 #[allow(ptr_arg)]
@@ -153,14 +163,19 @@ impl fmt::Debug for Lodestar {
 
 pub fn α_β_negamax_search(
     world: WorldState, depth: u8, mut α: f32, β: f32, variation: Variation,
-    memory_bank: Arc<Mutex<LruCache<WorldState, Lodestar>>>)
+    memory_bank: Arc<Mutex<LruCache<WorldState, Lodestar>>>,
+    intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>)
         -> Lodestar {
     let mut premonitions = world.reckless_lookahead();
-    order_movements_heuristically(&mut premonitions);
     if depth == 0 || premonitions.is_empty() {
         let potential_score = orientation(world.initiative) * score(world);
         return Lodestar::new(potential_score, variation)
     };
+    order_movements_heuristically(&mut premonitions);
+    {
+        let experience = intuition_bank.lock().unwrap();
+        order_movements_intuitively(&experience, &mut premonitions)
+    }
     let mut optimum = NEG_INFINITY;
     let mut optimand = variation.clone();
     for premonition in premonitions.into_iter() {
@@ -188,7 +203,8 @@ pub fn α_β_negamax_search(
         if !cached {
             let lodestar = α_β_negamax_search(
                 premonition.tree, depth - 1,
-                -β, -α, extended_variation.clone(), memory_bank.clone()
+                -β, -α, extended_variation.clone(),
+                memory_bank.clone(), intuition_bank.clone()
             );
             value = -lodestar.score;
             extended_variation = lodestar.variation;
@@ -206,6 +222,9 @@ pub fn α_β_negamax_search(
             α = value;
         }
         if α >= β {
+            let mut open_vault = intuition_bank.lock().unwrap();
+            let mut intuition = open_vault.entry(premonition.patch).or_insert(0);
+            *intuition += 2u16.pow(depth as u32);
             break;
         }
     }
@@ -230,6 +249,8 @@ pub fn potentially_timebound_kickoff(
     let déjà_vu_table: LruCache<WorldState, Lodestar> =
         LruCache::new(déjà_vu_table_size_bound(déjà_vu_bound));
     let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
+    let experience_table: HashMap<Patch, u16> = HashMap::new();
+    let intuition_bank = Arc::new(Mutex::new(experience_table));
     let mut premonitions;
     if nihilistically {
         premonitions = world.reckless_lookahead();
@@ -240,7 +261,8 @@ pub fn potentially_timebound_kickoff(
     let mut forecasts = Vec::new();
     let mut time_radios: Vec<(Commit, mpsc::Receiver<Lodestar>)> = Vec::new();
     for &premonition in &premonitions {
-        let travel_bank = memory_bank.clone();
+        let travel_memory_bank = memory_bank.clone();
+        let travel_intuition_bank = intuition_bank.clone();
         let (tx, rx) = mpsc::channel();
         let explorer_radio = tx.clone();
         time_radios.push((premonition, rx));
@@ -248,7 +270,7 @@ pub fn potentially_timebound_kickoff(
             let search_hit: Lodestar = α_β_negamax_search(
                 premonition.tree, depth - 1,
                 NEG_INFINITY, INFINITY, vec![premonition.patch],
-                travel_bank
+                travel_memory_bank, travel_intuition_bank
             );
             explorer_radio.send(search_hit).ok();
         });
