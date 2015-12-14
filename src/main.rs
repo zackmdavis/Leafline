@@ -44,7 +44,7 @@ use time::{Duration, get_time};
 use identity::{Agent, Team};
 use life::{WorldState, Commit, Patch};
 use mind::{kickoff, iterative_deepening_kickoff, fixed_depth_sequence_kickoff,
-           Variation};
+           pagan_variation_format, Variation};
 use substrate::memory_free;
 
 
@@ -341,16 +341,11 @@ fn main() {
                 premonitions = Vec::new();
                 for (index, sight) in forecasts.into_iter().enumerate() {
                     let (commit, score, variation) = sight;
-                    println!("{:>2}. {} — score {}",
+                    println!("{:>2}: {} — score {} ‣ principal variation: {}",
                              index, commit,
                              Color::Purple.bold()
-                                 .paint(&format!("{:.1}", score)));
-                    println!(
-                        "      ‣ principal variation: {}",
-                        variation.iter()
-                            .map(|p| p.abbreviated_pagan_movement_rune())
-                            .collect::<Vec<_>>().join(" ")
-                    );
+                                 .paint(&format!("{:.1}", score)),
+                             pagan_variation_format(&variation));
                     premonitions.push(commit);
                 }
 
