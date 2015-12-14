@@ -42,7 +42,8 @@ use time::{Duration, get_time};
 
 use identity::{Agent, Team};
 use life::{WorldState, Commit, Patch};
-use mind::{kickoff, iterative_deepening_kickoff, fixed_depth_sequence_kickoff};
+use mind::{kickoff, iterative_deepening_kickoff, fixed_depth_sequence_kickoff,
+           Variation};
 use substrate::memory_free;
 
 
@@ -103,7 +104,7 @@ impl LookaheadBound {
 }
 
 fn forecast(world: WorldState, bound: LookaheadBound, déjà_vu_bound: f32)
-            -> (Vec<(Commit, f32)>, u8, Duration) {
+            -> (Vec<(Commit, f32, Variation)>, u8, Duration) {
     let start_thinking = get_time();
     let forecasts;
     let depth;
@@ -153,7 +154,7 @@ fn correspondence(reminder: String, bound: LookaheadBound, déjà_vu_bound: f32)
                                                     déjà_vu_bound);
 
     if !forecasts.is_empty() {
-        let (determination, _karma) = forecasts.swap_remove(0);
+        let (determination, _karma, _variation) = forecasts.swap_remove(0);
         // XXX TODO FIXME: this doesn't distinguish amongst ascensions
         // (and we can imagine somewhat contrived situations where only
         // some of them are admissible movements)
@@ -297,13 +298,18 @@ fn main() {
                     "(scoring alternatives {} levels deep took {} ms)",
                     depth, thinking_time.num_milliseconds()
                 );
-                for (index, prem_score) in forecasts.iter().enumerate() {
-                    println!("{:>2}. {} (score {:.1})",
-                             index, prem_score.0, prem_score.1);
-                }
-                premonitions = vec!();
-                for prem_score in forecasts {
-                    premonitions.push(prem_score.0);
+                premonitions = Vec::new();
+                for (index, sight) in forecasts.into_iter().enumerate() {
+                    let (commit, score, variation) = sight;
+                    println!("{:>2}. {} — score {:.1}",
+                             index, commit, score);
+                    println!(
+                        "      ‣ principal variation: {}",
+                        variation.iter()
+                            .map(|p| p.abbreviated_pagan_movement_rune())
+                            .collect::<Vec<_>>().join(" ")
+                    );
+                    premonitions.push(commit);
                 }
 
                 if premonitions.is_empty() {

@@ -29,6 +29,12 @@ impl Patch {
         self.star.job_description == JobDescription::Servant &&
             self.whither.rank == admirality
     }
+
+    pub fn abbreviated_pagan_movement_rune(&self) -> String {
+        format!("{}{}",
+                self.star.to_pagan_movement_rune_prefix(),
+                self.whither.to_algebraic())
+    }
 }
 
 
@@ -79,7 +85,7 @@ impl fmt::Display for Commit {
                     JobDescription::Scholar | JobDescription::Princess =>
                         format!(", transitioning into {}", ascended_form),
                     JobDescription::Figurehead => moral_panic!(
-                        "servant ascending to figurehead"),
+                        "servant purportedly ascending to figurehead (?!)"),
                 }
             }
             None => "".to_owned(),
@@ -87,12 +93,12 @@ impl fmt::Display for Commit {
         let report = hospital_report + &ascension_report;
         write!(
             f,
-            "{} from {} to {}{} ({})",
+            "{} ({} from {} to {}{})",
+            self.pagan_movement_rune(),
             self.patch.star,
             self.patch.whence.to_algebraic(),
             self.patch.whither.to_algebraic(),
-            report,
-            self.pagan_movement_rune()
+            report
         )
     }
 }
