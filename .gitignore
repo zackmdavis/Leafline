@@ -56,3 +56,6 @@ perf.data.old
 # copies of built binary/jar awaiting provisioning
 provisioning/leafline
 provisioning/leafline-web-client.jar
+
+# log file
+leafline.log

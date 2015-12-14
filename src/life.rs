@@ -29,6 +29,21 @@ impl Patch {
         self.star.job_description == JobDescription::Servant &&
             self.whither.rank == admirality
     }
+
+    pub fn abbreviated_pagan_movement_rune(&self) -> String {
+        if self.concerns_secret_service() {
+            match self.whither.file {
+                6 => "O–O".to_owned(),
+                2 => "O–O–O".to_owned(),
+                _ => moral_panic!("secret service movement didn't end with \
+                                   figurehead on file 2 or 6")
+            }
+        } else {
+            format!("{}{}",
+                    self.star.to_pagan_movement_rune_prefix(),
+                    self.whither.to_algebraic())
+        }
+    }
 }
 
 
@@ -42,6 +57,27 @@ pub struct Commit {
     pub tree: WorldState,
     pub hospitalization: Option<Agent>,
     pub ascension: Option<Agent>,
+}
+
+impl Commit {
+    pub fn pagan_movement_rune(&self) -> String {
+        format!("{movement}{endangerment}{ascension}",
+                movement = if self.hospitalization.is_some() {
+                    format!("{}x{}",
+                            self.patch.star.to_pagan_movement_rune_prefix(),
+                            self.patch.whither.to_algebraic())
+                    } else {
+                        self.patch.abbreviated_pagan_movement_rune()
+                    },
+                endangerment = if self.tree.in_critical_endangerment(
+                    self.tree.initiative) { "+" } else { "" },
+                ascension = match self.ascension {
+                    Some(ascended_form) =>
+                        format!("={}",
+                                ascended_form.to_pagan_movement_rune_prefix()),
+                    None => "".to_owned()
+                })
+    }
 }
 
 impl fmt::Display for Commit {
@@ -63,7 +99,7 @@ impl fmt::Display for Commit {
                     JobDescription::Scholar | JobDescription::Princess =>
                         format!(", transitioning into {}", ascended_form),
                     JobDescription::Figurehead => moral_panic!(
-                        "servant ascending to figurehead"),
+                        "servant purportedly ascending to figurehead (?!)"),
                 }
             }
             None => "".to_owned(),
@@ -71,7 +107,10 @@ impl fmt::Display for Commit {
         let report = hospital_report + &ascension_report;
         write!(
             f,
-            "{} from {} to {}{}",
+            "{}{} ({} from {} to {}{})",
+            match self.patch.star.team {
+                Team::Orange => "", Team::Blue => ".." },
+            self.pagan_movement_rune(),
             self.patch.star,
             self.patch.whence.to_algebraic(),
             self.patch.whither.to_algebraic(),

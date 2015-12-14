@@ -1,5 +1,7 @@
 use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fmt;
 use std::mem;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
@@ -10,7 +12,7 @@ use time;
 use lru_cache::LruCache;
 
 use identity::{Team, JobDescription, Agent};
-use life::{Commit, WorldState};
+use life::{Commit, Patch, WorldState};
 use landmark::{CENTER_OF_THE_WORLD, LOW_COLONELCY,
                LOW_SEVENTH_HEAVEN, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN};
 use space::Pinfield;
@@ -120,61 +122,120 @@ fn order_movements_heuristically(commits: &mut Vec<Commit>) {
     });
 }
 
+fn order_movements_intuitively(
+        experience: &HashMap<Patch, u16>, commits: &mut Vec<Commit>) {
+    commits.sort_by(|a, b| {
+        let a_feels = experience.get(&a.patch);
+        let b_feels = experience.get(&b.patch);
+        b_feels.cmp(&a_feels)
+    });
+}
+
+pub type Variation = Vec<Patch>;
+
+#[allow(ptr_arg)]
+pub fn pagan_variation_format(variation: &Variation) -> String {
+    variation.iter()
+        .map(|p| p.abbreviated_pagan_movement_rune())
+        .collect::<Vec<_>>().join(" ")
+}
+
+
+#[derive(Clone)]
+pub struct Lodestar {
+    pub score: f32,
+    pub variation: Variation
+}
+
+impl Lodestar {
+    fn new(score: f32, variation: Variation) -> Self {
+        Lodestar { score: score, variation: variation }
+    }
+}
+
+impl fmt::Debug for Lodestar {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "Lodestar {{ score: {}, variation: {} }}",
+               self.score, pagan_variation_format(&self.variation))
+    }
+}
+
+
 pub fn α_β_negamax_search(
-    world: WorldState, depth: u8, mut α: f32, β: f32,
-    memory_bank: Arc<Mutex<LruCache<WorldState, f32>>>) -> (Option<Commit>, f32) {
-    let team = world.initiative;
-    let potential_score = orientation(team) * score(world);
+    world: WorldState, depth: u8, mut α: f32, β: f32, variation: Variation,
+    memory_bank: Arc<Mutex<LruCache<(WorldState, u8), Lodestar>>>,
+    intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>)
+        -> Lodestar {
     let mut premonitions = world.reckless_lookahead();
-    order_movements_heuristically(&mut premonitions);
     if depth == 0 || premonitions.is_empty() {
-        return (None, potential_score)
+        let potential_score = orientation(world.initiative) * score(world);
+        return Lodestar::new(potential_score, variation)
     };
+    order_movements_heuristically(&mut premonitions);
+    {
+        let experience = intuition_bank.lock().unwrap();
+        order_movements_intuitively(&experience, &mut premonitions)
+    }
     let mut optimum = NEG_INFINITY;
-    let mut optimand = None;
+    let mut optimand = variation.clone();
     for premonition in premonitions.into_iter() {
         let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
+        let mut extended_variation = variation.clone();
+        extended_variation.push(premonition.patch);
         let cached: bool;
         {
             let mut open_vault = memory_bank.lock().unwrap();
-            let cached_value_maybe = open_vault.get_mut(&premonition.tree);
-            match cached_value_maybe {
-                Some(&mut cached_value) => {
+            let lodestar_maybe = open_vault.get_mut(&(premonition.tree, depth));
+            match lodestar_maybe {
+                Some(lodestar) => {
                     cached = true;
-                    value = cached_value;
+                    value = lodestar.score;
+                    debug!("Déjà vu table cache hit on world-state {}; \
+                            cached lodestar was {:?}, search parameters were \
+                            depth={}, α={}, β={}, variation={}",
+                           world.preserve(), lodestar, depth, α, β,
+                           pagan_variation_format(&variation))
                 }
                 None => { cached = false; }
             };
         }
 
         if !cached {
-            let (_, acquired_value) = α_β_negamax_search(
+            let lodestar = α_β_negamax_search(
                 premonition.tree, depth - 1,
-                -β, -α, memory_bank.clone()
+                -β, -α, extended_variation.clone(),
+                memory_bank.clone(), intuition_bank.clone()
             );
-            value = -acquired_value;
-            memory_bank.lock().unwrap().insert(premonition.tree, value);
+            value = -lodestar.score;
+            extended_variation = lodestar.variation;
+            memory_bank.lock().unwrap().insert(
+                (premonition.tree, depth),
+                Lodestar::new(value, extended_variation.clone())
+            );
         }
 
         if value > optimum {
             optimum = value;
-            optimand = Some(premonition);
+            optimand = extended_variation;
         }
         if value > α {
             α = value;
         }
         if α >= β {
+            let mut open_vault = intuition_bank.lock().unwrap();
+            let mut intuition = open_vault.entry(premonition.patch).or_insert(0);
+            *intuition += 2u16.pow(depth as u32);
             break;
         }
     }
 
-    (optimand, optimum)
+    Lodestar::new(optimum, optimand)
 }
 
 
 pub fn déjà_vu_table_size_bound(gib: f32) -> usize {
     usize::from(Bytes::gibi(gib)) /
-        (mem::size_of::<WorldState>() + mem::size_of::<f32>())
+        (mem::size_of::<WorldState>() + mem::size_of::<Lodestar>())
 }
 
 
@@ -183,9 +244,10 @@ pub fn potentially_timebound_kickoff(
     world: &WorldState, depth: u8,
     nihilistically: bool,
     deadline_maybe: Option<time::Timespec>,
-    order_movements: &Fn(&mut Vec<Commit>) -> (), déjà_vu_bound: f32)
-        -> Option<Vec<(Commit, f32)>> {
-    let déjà_vu_table: LruCache<WorldState, f32> =
+    intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>,
+    déjà_vu_bound: f32)
+        -> Option<Vec<(Commit, f32, Variation)>> {
+    let déjà_vu_table: LruCache<(WorldState, u8), Lodestar> =
         LruCache::new(déjà_vu_table_size_bound(déjà_vu_bound));
     let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
     let mut premonitions;
@@ -194,20 +256,24 @@ pub fn potentially_timebound_kickoff(
     } else {
         premonitions = world.lookahead();
     }
-    order_movements(&mut premonitions);
+    order_movements_heuristically(&mut premonitions);
+    {
+        let experience = intuition_bank.lock().unwrap();
+        order_movements_intuitively(&experience, &mut premonitions)
+    }
     let mut forecasts = Vec::new();
-    let mut time_radios: Vec<(Commit, mpsc::Receiver<(Option<Commit>, f32)>)> =
-        Vec::new();
+    let mut time_radios: Vec<(Commit, mpsc::Receiver<Lodestar>)> = Vec::new();
     for &premonition in &premonitions {
-        let travel_bank = memory_bank.clone();
+        let travel_memory_bank = memory_bank.clone();
+        let travel_intuition_bank = intuition_bank.clone();
         let (tx, rx) = mpsc::channel();
         let explorer_radio = tx.clone();
         time_radios.push((premonition, rx));
         thread::spawn(move || {
-            let search_hit: (Option<Commit>, f32) = α_β_negamax_search(
+            let search_hit: Lodestar = α_β_negamax_search(
                 premonition.tree, depth - 1,
-                NEG_INFINITY, INFINITY,
-                travel_bank
+                NEG_INFINITY, INFINITY, vec![premonition.patch],
+                travel_memory_bank, travel_intuition_bank
             );
             explorer_radio.send(search_hit).ok();
         });
@@ -222,13 +288,14 @@ pub fn potentially_timebound_kickoff(
         for i in (0..time_radios.len()).rev() {
             let premonition = time_radios[i].0;
             if let Some(search_hit) = time_radios[i].1.try_recv().ok() {
-                let (_grandchild, mut value) = search_hit;
-                value = -value;
-                forecasts.push((premonition, value));
+                let value = -search_hit.score;
+                forecasts.push((premonition, value, search_hit.variation));
                 time_radios.swap_remove(i);
             }
         }
         thread::sleep(Duration::from_millis(2));
+        debug!("waiting for {} of {} first-movement search threads",
+               time_radios.len(), premonitions.len())
     }
     forecasts.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     Some(forecasts)
@@ -236,38 +303,29 @@ pub fn potentially_timebound_kickoff(
 
 
 pub fn kickoff(world: &WorldState, depth: u8,
-               nihilistically: bool, déjà_vu_bound: f32) -> Vec<(Commit, f32)> {
+               nihilistically: bool, déjà_vu_bound: f32)
+                   -> Vec<(Commit, f32, Variation)> {
+    let experience_table: HashMap<Patch, u16> = HashMap::new();
+    let intuition_bank = Arc::new(Mutex::new(experience_table));
     potentially_timebound_kickoff(world, depth, nihilistically, None,
-                                  &order_movements_heuristically,
-                                  déjà_vu_bound).unwrap()
-}
-
-
-fn inductive_movement_imposition(prophecy: &[(Commit, f32)])
-                                 -> Box<Fn(&mut Vec<Commit>) -> ()> {
-    let premonitions = prophecy.iter().map(|p| p.0).collect::<Vec<_>>();
-    // SNEAKY: we expect to call the returned imposition with an argument whose
-    // elements are the same commits that are the first elements of the tuples
-    // that are the elements of `prophecy`—that's why it's OK to clobber them
-    // like this
-    Box::new(move |ps| { *ps = premonitions.clone(); })
+                                  intuition_bank, déjà_vu_bound).unwrap()
 }
 
 
 pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
                                    nihilistically: bool, déjà_vu_bound: f32)
-                                   -> (Vec<(Commit, f32)>, u8) {
+                                   -> (Vec<(Commit, f32, Variation)>, u8) {
     let deadline = time::get_time() + timeout;
     let mut depth = 1;
+    let experience_table: HashMap<Patch, u16> = HashMap::new();
+    let intuition_bank = Arc::new(Mutex::new(experience_table));
     let mut forecasts = potentially_timebound_kickoff(
         world, depth, nihilistically, None,
-        &order_movements_heuristically,
+        intuition_bank.clone(),
         déjà_vu_bound).unwrap();
-    let mut order_movements = inductive_movement_imposition(&forecasts);
     while let Some(prophecy) = potentially_timebound_kickoff(
             world, depth, nihilistically, Some(deadline),
-            &*order_movements, déjà_vu_bound) {
-        order_movements = inductive_movement_imposition(&prophecy);
+            intuition_bank.clone(), déjà_vu_bound) {
         forecasts = prophecy;
         depth += 1;
     }
@@ -277,19 +335,19 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
 
 pub fn fixed_depth_sequence_kickoff(world: &WorldState, depth_sequence: Vec<u8>,
                                     nihilistically: bool, déjà_vu_bound: f32)
-                                    -> Vec<(Commit, f32)> {
+                                    -> Vec<(Commit, f32, Variation)> {
     let mut depths = depth_sequence.iter();
+    let experience_table: HashMap<Patch, u16> = HashMap::new();
+    let intuition_bank = Arc::new(Mutex::new(experience_table));
     let mut forecasts = potentially_timebound_kickoff(
         world, *depths.next().expect("`depth_sequence` should be nonempty"),
-        nihilistically, None, &order_movements_heuristically,
+        nihilistically, None, intuition_bank.clone(),
         déjà_vu_bound
     ).unwrap();
-    let mut order_movements = inductive_movement_imposition(&forecasts);
     for &depth in depths {
         forecasts = potentially_timebound_kickoff(
             world, depth, nihilistically, None,
-            &*order_movements, déjà_vu_bound).unwrap();
-        order_movements = inductive_movement_imposition(&forecasts);
+            intuition_bank.clone(), déjà_vu_bound).unwrap();
     }
     forecasts
 }
@@ -371,7 +429,9 @@ mod tests {
         // split, whereby transforming into a pony (rather than
         // transitioning into a princess, as would usually be
         // expected) endangers both the blue princess and figurehead
-        let (ref best_move, score) = kickoff(&ws, 3, true, MOCK_DÉJÀ_VU_BOUND)[0];
+        let tops = kickoff(&ws, 3, true, MOCK_DÉJÀ_VU_BOUND);
+        let best_move = tops[0].0;
+        let score = tops[0].1;
         println!("{:?}", best_move);
         assert!(score > 0.0);
         assert_eq!(best_move.tree.preserve(), "2N5/q3k3/8/8/8/8/6PP/7K b -");

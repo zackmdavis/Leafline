@@ -1,6 +1,6 @@
 [package]
 name = "leafline"
-version = "0.0.14-plus"
+version = "0.0.15"
 authors = ["Zack M. Davis <code@zackmdavis.net>"]
 
 [dependencies]
@@ -8,6 +8,7 @@ ansi_term = "0.6"
 argparse = "0.2"
 clippy = "*"
 itertools = "0.4"
+log = "0.3"
 lru-cache = "0.0.5"
 rustc-serialize = "0.3"
 time = "0.1"

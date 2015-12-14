@@ -1,7 +1,8 @@
-#![feature(test)]
+#![feature(augmented_assignments)]
 #![feature(non_ascii_idents)]
 #![feature(pattern)]
 #![feature(plugin)]
+#![feature(test)]
 #![plugin(clippy)]
 
 #![allow(unused_features)]
@@ -9,19 +10,17 @@
         trivial_casts, trivial_numeric_casts,
         unused_import_braces, unused_qualifications)]
 
-#[macro_use]
-extern crate itertools;
 
 extern crate argparse;
 extern crate ansi_term;
+#[macro_use] extern crate itertools;
+#[macro_use] extern crate log;
 extern crate lru_cache;
 extern crate rustc_serialize;
 extern crate time;
 
 
-#[macro_use]
-mod macros;
-
+#[macro_use] mod macros;
 mod space;
 mod identity;
 mod motion;
@@ -30,20 +29,52 @@ mod life;
 mod mind;
 mod substrate;
 
-
+use std::fs::OpenOptions;
 use std::error::Error;
 use std::io;
 use std::io::Write;
 use std::process;
 
+use ansi_term::Colour as Color;
 use argparse::{ArgumentParser, Store, StoreOption, StoreTrue, Print};
+use log::{LogRecord, LogMetadata, LogLevelFilter, SetLoggerError};
 use rustc_serialize::json;
 use time::{Duration, get_time};
 
 use identity::{Agent, Team};
 use life::{WorldState, Commit, Patch};
-use mind::{kickoff, iterative_deepening_kickoff, fixed_depth_sequence_kickoff};
+use mind::{kickoff, iterative_deepening_kickoff, fixed_depth_sequence_kickoff,
+           pagan_variation_format, Variation};
 use substrate::memory_free;
+
+
+struct DebugLogger;
+
+impl DebugLogger {
+    pub fn init() -> Result<(), SetLoggerError> {
+        log::set_logger(|max_log_level| {
+            max_log_level.set(LogLevelFilter::Debug);
+            Box::new(DebugLogger)
+        })
+    }
+}
+
+impl log::Log for DebugLogger {
+    fn enabled(&self, _metadata: &LogMetadata) -> bool { true }
+
+    fn log(&self, record: &LogRecord) {
+        let mut log_file = OpenOptions::new()
+            .write(true).append(true).create(true)
+            .open("leafline.log").expect("couldn't open log file?!");
+        let log_message = format!(
+            "[{}] {}\n",
+            time::now().strftime("%Y-%m-%d %H:%M:%S.%f").unwrap(),
+            record.args()
+        );
+        log_file.write(&log_message.into_bytes())
+            .expect("couldn't write to log file?!");
+    }
+}
 
 
 #[derive(Debug, Clone)]
@@ -103,7 +134,7 @@ impl LookaheadBound {
 }
 
 fn forecast(world: WorldState, bound: LookaheadBound, déjà_vu_bound: f32)
-            -> (Vec<(Commit, f32)>, u8, Duration) {
+            -> (Vec<(Commit, f32, Variation)>, u8, Duration) {
     let start_thinking = get_time();
     let forecasts;
     let depth;
@@ -153,7 +184,7 @@ fn correspondence(reminder: String, bound: LookaheadBound, déjà_vu_bound: f32)
                                                     déjà_vu_bound);
 
     if !forecasts.is_empty() {
-        let (determination, _karma) = forecasts.swap_remove(0);
+        let (determination, _karma, _variation) = forecasts.swap_remove(0);
         // XXX TODO FIXME: this doesn't distinguish amongst ascensions
         // (and we can imagine somewhat contrived situations where only
         // some of them are admissible movements)
@@ -205,6 +236,7 @@ fn main() {
     let mut from_runes: Option<String> = None;
     let mut correspond: bool = false;
     let mut déjà_vu_bound: f32 = 2.0;
+    let mut debug_logging: bool = false;
     {
         let mut parser = ArgumentParser::new();
         parser.set_description("Leafline: an oppositional strategy game engine");
@@ -235,9 +267,18 @@ fn main() {
             "try to not store more entries in the déjà vu table than fit in \
              this many GiB of memory"
         );
+        parser.refer(&mut debug_logging).add_option(
+            &["--debug"],
+            StoreTrue,
+            "run with debug logging to file"
+        );
         parser.add_option(&["--version", "-v"],
             Print(env!("CARGO_PKG_VERSION").to_owned()), "diplay the version");
         parser.parse_args_or_exit();
+    }
+
+    if debug_logging {
+        DebugLogger::init().expect("couldn't initialize logging?!")
     }
 
     if correspond {
@@ -297,13 +338,15 @@ fn main() {
                     "(scoring alternatives {} levels deep took {} ms)",
                     depth, thinking_time.num_milliseconds()
                 );
-                for (index, prem_score) in forecasts.iter().enumerate() {
-                    println!("{:>2}. {} (score {:.1})",
-                             index, prem_score.0, prem_score.1);
-                }
-                premonitions = vec!();
-                for prem_score in forecasts {
-                    premonitions.push(prem_score.0);
+                premonitions = Vec::new();
+                for (index, sight) in forecasts.into_iter().enumerate() {
+                    let (commit, score, variation) = sight;
+                    println!("{:>2}: {} — score {} ‣ principal variation: {}",
+                             index, commit,
+                             Color::Purple.bold()
+                                 .paint(&format!("{:.1}", score)),
+                             pagan_variation_format(&variation));
+                    premonitions.push(commit);
                 }
 
                 if premonitions.is_empty() {
