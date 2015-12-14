@@ -35,6 +35,7 @@ use std::io;
 use std::io::Write;
 use std::process;
 
+use ansi_term::Colour as Color;
 use argparse::{ArgumentParser, Store, StoreOption, StoreTrue, Print};
 use log::{LogRecord, LogMetadata, LogLevelFilter, SetLoggerError};
 use rustc_serialize::json;
@@ -340,8 +341,10 @@ fn main() {
                 premonitions = Vec::new();
                 for (index, sight) in forecasts.into_iter().enumerate() {
                     let (commit, score, variation) = sight;
-                    println!("{:>2}. {} — score {:.1}",
-                             index, commit, score);
+                    println!("{:>2}. {} — score {}",
+                             index, commit,
+                             Color::Purple.bold()
+                                 .paint(&format!("{:.1}", score)));
                     println!(
                         "      ‣ principal variation: {}",
                         variation.iter()
