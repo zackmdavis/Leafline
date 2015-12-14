@@ -163,7 +163,7 @@ impl fmt::Debug for Lodestar {
 
 pub fn α_β_negamax_search(
     world: WorldState, depth: u8, mut α: f32, β: f32, variation: Variation,
-    memory_bank: Arc<Mutex<LruCache<WorldState, Lodestar>>>,
+    memory_bank: Arc<Mutex<LruCache<(WorldState, u8), Lodestar>>>,
     intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>)
         -> Lodestar {
     let mut premonitions = world.reckless_lookahead();
@@ -185,7 +185,7 @@ pub fn α_β_negamax_search(
         let cached: bool;
         {
             let mut open_vault = memory_bank.lock().unwrap();
-            let lodestar_maybe = open_vault.get_mut(&premonition.tree);
+            let lodestar_maybe = open_vault.get_mut(&(premonition.tree, depth));
             match lodestar_maybe {
                 Some(lodestar) => {
                     cached = true;
@@ -209,7 +209,7 @@ pub fn α_β_negamax_search(
             value = -lodestar.score;
             extended_variation = lodestar.variation;
             memory_bank.lock().unwrap().insert(
-                premonition.tree,
+                (premonition.tree, depth),
                 Lodestar::new(value, extended_variation.clone())
             );
         }
@@ -247,7 +247,7 @@ pub fn potentially_timebound_kickoff(
     intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>,
     déjà_vu_bound: f32)
         -> Option<Vec<(Commit, f32, Variation)>> {
-    let déjà_vu_table: LruCache<WorldState, Lodestar> =
+    let déjà_vu_table: LruCache<(WorldState, u8), Lodestar> =
         LruCache::new(déjà_vu_table_size_bound(déjà_vu_bound));
     let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
     let mut premonitions;
