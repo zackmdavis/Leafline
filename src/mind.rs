@@ -244,20 +244,23 @@ pub fn potentially_timebound_kickoff(
     world: &WorldState, depth: u8,
     nihilistically: bool,
     deadline_maybe: Option<time::Timespec>,
-    order_movements: &Fn(&mut Vec<Commit>) -> (), déjà_vu_bound: f32)
+    intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>,
+    déjà_vu_bound: f32)
         -> Option<Vec<(Commit, f32, Variation)>> {
     let déjà_vu_table: LruCache<WorldState, Lodestar> =
         LruCache::new(déjà_vu_table_size_bound(déjà_vu_bound));
     let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
-    let experience_table: HashMap<Patch, u16> = HashMap::new();
-    let intuition_bank = Arc::new(Mutex::new(experience_table));
     let mut premonitions;
     if nihilistically {
         premonitions = world.reckless_lookahead();
     } else {
         premonitions = world.lookahead();
     }
-    order_movements(&mut premonitions);
+    order_movements_heuristically(&mut premonitions);
+    {
+        let experience = intuition_bank.lock().unwrap();
+        order_movements_intuitively(&experience, &mut premonitions)
+    }
     let mut forecasts = Vec::new();
     let mut time_radios: Vec<(Commit, mpsc::Receiver<Lodestar>)> = Vec::new();
     for &premonition in &premonitions {
@@ -302,20 +305,10 @@ pub fn potentially_timebound_kickoff(
 pub fn kickoff(world: &WorldState, depth: u8,
                nihilistically: bool, déjà_vu_bound: f32)
                    -> Vec<(Commit, f32, Variation)> {
+    let experience_table: HashMap<Patch, u16> = HashMap::new();
+    let intuition_bank = Arc::new(Mutex::new(experience_table));
     potentially_timebound_kickoff(world, depth, nihilistically, None,
-                                  &order_movements_heuristically,
-                                  déjà_vu_bound).unwrap()
-}
-
-
-fn inductive_movement_imposition(prophecy: &[(Commit, f32, Variation)])
-                                 -> Box<Fn(&mut Vec<Commit>) -> ()> {
-    let premonitions = prophecy.iter().map(|p| p.0).collect::<Vec<_>>();
-    // SNEAKY: we expect to call the returned imposition with an argument whose
-    // elements are the same commits that are the first elements of the tuples
-    // that are the elements of `prophecy`—that's why it's OK to clobber them
-    // like this
-    Box::new(move |ps| { *ps = premonitions.clone(); })
+                                  intuition_bank, déjà_vu_bound).unwrap()
 }
 
 
@@ -324,15 +317,15 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
                                    -> (Vec<(Commit, f32, Variation)>, u8) {
     let deadline = time::get_time() + timeout;
     let mut depth = 1;
+    let experience_table: HashMap<Patch, u16> = HashMap::new();
+    let intuition_bank = Arc::new(Mutex::new(experience_table));
     let mut forecasts = potentially_timebound_kickoff(
         world, depth, nihilistically, None,
-        &order_movements_heuristically,
+        intuition_bank.clone(),
         déjà_vu_bound).unwrap();
-    let mut order_movements = inductive_movement_imposition(&forecasts);
     while let Some(prophecy) = potentially_timebound_kickoff(
             world, depth, nihilistically, Some(deadline),
-            &*order_movements, déjà_vu_bound) {
-        order_movements = inductive_movement_imposition(&prophecy);
+            intuition_bank.clone(), déjà_vu_bound) {
         forecasts = prophecy;
         depth += 1;
     }
@@ -344,17 +337,17 @@ pub fn fixed_depth_sequence_kickoff(world: &WorldState, depth_sequence: Vec<u8>,
                                     nihilistically: bool, déjà_vu_bound: f32)
                                     -> Vec<(Commit, f32, Variation)> {
     let mut depths = depth_sequence.iter();
+    let experience_table: HashMap<Patch, u16> = HashMap::new();
+    let intuition_bank = Arc::new(Mutex::new(experience_table));
     let mut forecasts = potentially_timebound_kickoff(
         world, *depths.next().expect("`depth_sequence` should be nonempty"),
-        nihilistically, None, &order_movements_heuristically,
+        nihilistically, None, intuition_bank.clone(),
         déjà_vu_bound
     ).unwrap();
-    let mut order_movements = inductive_movement_imposition(&forecasts);
     for &depth in depths {
         forecasts = potentially_timebound_kickoff(
             world, depth, nihilistically, None,
-            &*order_movements, déjà_vu_bound).unwrap();
-        order_movements = inductive_movement_imposition(&forecasts);
+            intuition_bank.clone(), déjà_vu_bound).unwrap();
     }
     forecasts
 }
