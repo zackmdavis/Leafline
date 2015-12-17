@@ -161,9 +161,23 @@ impl fmt::Debug for Lodestar {
 }
 
 
+#[derive(Debug, Clone)]
+pub struct Souvenir {
+    soundness: u8,
+    lodestar: Lodestar
+}
+
+impl Souvenir {
+    fn new(lodestar: Lodestar, field_depth: u8) -> Self {
+        Souvenir { soundness: lodestar.variation.len() as u8 - field_depth,
+                   lodestar: lodestar }
+    }
+}
+
+
 pub fn α_β_negamax_search(
     world: WorldState, depth: u8, mut α: f32, β: f32, variation: Variation,
-    memory_bank: Arc<Mutex<LruCache<(WorldState, u8), Lodestar>>>,
+    memory_bank: Arc<Mutex<LruCache<WorldState, Souvenir>>>,
     intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>)
         -> Lodestar {
     let mut premonitions = world.reckless_lookahead();
@@ -185,32 +199,31 @@ pub fn α_β_negamax_search(
         let cached: bool;
         {
             let mut open_vault = memory_bank.lock().unwrap();
-            let lodestar_maybe = open_vault.get_mut(&(premonition.tree, depth));
-            match lodestar_maybe {
-                Some(lodestar) => {
-                    cached = true;
-                    value = lodestar.score;
-                    debug!("Déjà vu table cache hit on world-state {}; \
-                            cached lodestar was {:?}, search parameters were \
-                            depth={}, α={}, β={}, variation={}",
-                           world.preserve(), lodestar, depth, α, β,
-                           pagan_variation_format(&variation))
+            let souvenir_maybe = open_vault.get_mut(&premonition.tree);
+            match souvenir_maybe {
+                Some(souvenir) => {
+                    if souvenir.soundness >= depth {
+                        cached = true;
+                        value = souvenir.lodestar.score;
+                    } else {
+                        cached = false;
+                    }
                 }
                 None => { cached = false; }
             };
         }
 
         if !cached {
-            let lodestar = α_β_negamax_search(
+            let mut lodestar = α_β_negamax_search(
                 premonition.tree, depth - 1,
                 -β, -α, extended_variation.clone(),
                 memory_bank.clone(), intuition_bank.clone()
             );
-            value = -lodestar.score;
-            extended_variation = lodestar.variation;
+            lodestar.score *= -1.;  // nega-
+            value = lodestar.score;
             memory_bank.lock().unwrap().insert(
-                (premonition.tree, depth),
-                Lodestar::new(value, extended_variation.clone())
+                premonition.tree,
+                Souvenir::new(lodestar, depth)
             );
         }
 
@@ -228,7 +241,6 @@ pub fn α_β_negamax_search(
             break;
         }
     }
-
     Lodestar::new(optimum, optimand)
 }
 
@@ -247,7 +259,7 @@ pub fn potentially_timebound_kickoff(
     intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>,
     déjà_vu_bound: f32)
         -> Option<Vec<(Commit, f32, Variation)>> {
-    let déjà_vu_table: LruCache<(WorldState, u8), Lodestar> =
+    let déjà_vu_table: LruCache<WorldState, Souvenir> =
         LruCache::new(déjà_vu_table_size_bound(déjà_vu_bound));
     let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
     let mut premonitions;
