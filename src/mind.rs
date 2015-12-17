@@ -175,7 +175,7 @@ impl Souvenir {
 }
 
 
-pub fn α_β_negamax_search(
+pub fn negascout_search(
     world: WorldState, depth: u8, mut α: f32, β: f32, variation: Variation,
     memory_bank: Arc<Mutex<LruCache<WorldState, Souvenir>>>,
     intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>)
@@ -192,6 +192,7 @@ pub fn α_β_negamax_search(
     }
     let mut optimum = NEG_INFINITY;
     let mut optimand = variation.clone();
+    let mut scout = true;
     for premonition in premonitions.into_iter() {
         let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
         let mut extended_variation = variation.clone();
@@ -214,13 +215,27 @@ pub fn α_β_negamax_search(
         }
 
         if !cached {
-            let mut lodestar = α_β_negamax_search(
-                premonition.tree, depth - 1,
-                -β, -α, extended_variation.clone(),
-                memory_bank.clone(), intuition_bank.clone()
-            );
-            lodestar.score *= -1.;  // nega-
-            value = lodestar.score;
+            let mut lodestar = Lodestar::new(value, extended_variation.clone());
+            if !scout {
+                lodestar = negascout_search(
+                    premonition.tree, depth - 1,
+                    -α-0.09, -α,
+                    extended_variation.clone(),
+                    memory_bank.clone(), intuition_bank.clone()
+                );
+                lodestar.score *= -1.;
+                value = lodestar.score;
+            }
+            if scout || value > α {
+                lodestar = negascout_search(
+                    premonition.tree, depth - 1,
+                    -β, -α, extended_variation.clone(),
+                    memory_bank.clone(), intuition_bank.clone()
+                );
+                lodestar.score *= -1.;
+                value = lodestar.score;
+            }
+            scout = false;
             memory_bank.lock().unwrap().insert(
                 premonition.tree,
                 Souvenir::new(lodestar, depth)
@@ -282,7 +297,7 @@ pub fn potentially_timebound_kickoff(
         let explorer_radio = tx.clone();
         time_radios.push((premonition, rx));
         thread::spawn(move || {
-            let search_hit: Lodestar = α_β_negamax_search(
+            let search_hit: Lodestar = negascout_search(
                 premonition.tree, depth - 1,
                 NEG_INFINITY, INFINITY, vec![premonition.patch],
                 travel_memory_bank, travel_intuition_bank
