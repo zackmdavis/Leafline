@@ -1,5 +1,5 @@
-#![feature(augmented_assignments, non_ascii_idents, pattern, plugin,
-           test, hashmap_hasher)]
+#![feature(augmented_assignments, hashmap_hasher, iter_arith,
+           non_ascii_idents, pattern, plugin, test)]
 
 #![plugin(clippy)]
 

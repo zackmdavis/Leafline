@@ -22,6 +22,9 @@ use space::Pinfield;
 use substrate::Bytes;
 
 
+const REWARD_FOR_INITIATIVE: f32 = 0.5;
+
+
 pub fn orientation(team: Team) -> f32 {
     match team {
         Team::Orange => 1.0,
@@ -45,6 +48,8 @@ pub fn figurine_valuation(agent: Agent) -> f32 {
 
 pub fn score(world: WorldState) -> f32 {
     let mut valuation = 0.0;
+
+    valuation += REWARD_FOR_INITIATIVE * orientation(world.initiative);
 
     for team in Team::league().into_iter() {
         for agent in Agent::dramatis_personæ(team).into_iter() {
@@ -166,13 +171,18 @@ impl fmt::Debug for Lodestar {
 
 #[derive(Debug, Clone)]
 pub struct Souvenir {
-    soundness: u8,
+    soundness: i8,
     lodestar: Lodestar
 }
 
 impl Souvenir {
     fn new(lodestar: Lodestar, field_depth: u8) -> Self {
-        Souvenir { soundness: lodestar.variation.len() as u8 - field_depth,
+        // XXX: soundness used to be a u8, but it overflows sometimes?!—maybe
+        // this makes sense (that there would be a circumstance where we use a
+        // Souvenir and déjà vu caching in a way such that the variation length
+        // is smaller than the field depth), but someone should think about it
+        // more carefully
+        Souvenir { soundness: lodestar.variation.len() as i8 - field_depth as i8,
                    lodestar: lodestar }
     }
 }
@@ -206,7 +216,7 @@ pub fn α_β_negamax_search(
             let souvenir_maybe = open_vault.get_mut(&premonition.tree);
             match souvenir_maybe {
                 Some(souvenir) => {
-                    if souvenir.soundness >= depth {
+                    if souvenir.soundness >= depth as i8 {
                         cached = true;
                         value = souvenir.lodestar.score;
                     } else {
@@ -376,7 +386,7 @@ mod tests {
     use self::test::Bencher;
 
     use time;
-    use super::{kickoff, score};
+    use super::{kickoff, score, REWARD_FOR_INITIATIVE};
     use space::Locale;
     use life::WorldState;
     use identity::Team;
@@ -436,7 +446,7 @@ mod tests {
     fn concerning_fairness_of_the_initial_position() {
         // It's okay to assume this is really 0.0. Floats may be imprecise,
         // but they do have well-defined behavior.
-        assert_eq!(0.0, score(WorldState::new()));
+        assert_eq!(0.0, score(WorldState::new()) - REWARD_FOR_INITIATIVE);
     }
 
     #[test]
@@ -520,6 +530,58 @@ mod tests {
         // negaworld
         assert_eq!(Locale { rank: 0, file: 0 },
                    negadvisory[0].0.patch.whither);
+    }
+
+    #[test]
+    fn concerning_fortune_favoring_the_bold() {
+        // It would be nice if scores at even and odd plies were comparable,
+        // rather than lurching wildly with parity due to the tempo
+        // difference. We can try to compensate for this by accounting for
+        // initiative in scoring world-states, but it's important to have a
+        // test to demonstrate that the magnitude of that correction is
+        // sane. ... although this is actually a pretty subtle problem where we
+        // should be wary of making things worse.
+        //
+        // some "representative" scenarios ...
+        let world_runesets = vec![
+            // initial position
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            // 1. e4
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+            // princess's gambit declined I
+            "rnbqkbnr/ppp2ppp/4p3/3p4/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3",
+            // princess's gambit declined II
+            "rnbqkbnr/ppp2ppp/4p3/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR b KQkq - 1 3",
+            // powder keg I
+            "r2q1rk1/2p1ppbp/1p4p1/p2p1b2/NnPPn3/PP2PN1P/1B2BPP1/R2Q1RK1 b - - 0 14",
+            // powder keg II
+            "r2q1rk1/2p1ppbp/1pn3p1/p2p1b2/N1PPn3/PP2PN1P/1B2BPP1/R2Q1RK1 w - - 1 15"
+        ];
+        let mut tempo_lurches: Vec<f32> = Vec::new();
+        for world_runeset in world_runesets {
+            let world = WorldState::reconstruct(world_runeset.to_owned());
+            let mut previously = None;
+            for &depth in &[2, 3, 4] {
+                let premonitions = kickoff(&world, depth, true, 1.0);
+                let mut top_showings = 0.;
+                for showing in &premonitions[0..10] {
+                    top_showings += showing.1; // (_commit, score, _variation)
+                }
+                let club_score = top_showings / 10.;
+                if let Some(previous_score) = previously {
+                    let orienting_factor =
+                        if depth % 2 == 0 { -1. } else { 1. };
+                    let lurch = orienting_factor * (club_score - previous_score);
+                    tempo_lurches.push(lurch);
+                }
+                previously = Some(club_score);
+            }
+        }
+        let average_tempo_lurch =
+            tempo_lurches.iter().sum::<f32>()/tempo_lurches.len() as f32;
+        println!("tempo lurches were {:?}, average was {}",
+                 tempo_lurches, average_tempo_lurch);
+        assert_eq_within_ε!(REWARD_FOR_INITIATIVE, average_tempo_lurch, 0.8);
     }
 
 }

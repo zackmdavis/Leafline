@@ -12,3 +12,18 @@ macro_rules! match_agent {
         }
     }
 }
+
+#[macro_use]
+macro_rules! assert_eq_within_ε {
+    // crude edit of the canonical `assert_eq!`
+    ($left:expr, $right:expr, $ε:expr) => ({
+        match (&($left), &($right)) {
+            (left_val, right_val) => {
+                if (*left_val - *right_val).abs() > $ε {
+                    panic!("assertion failed: left and right not within ε \
+                           (left: `{:?}`, right: `{:?}`)", left_val, right_val)
+                }
+            }
+        }
+    })
+}
