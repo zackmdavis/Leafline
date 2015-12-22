@@ -219,6 +219,7 @@ pub fn α_β_negamax_search(
                     if souvenir.soundness >= depth as i8 {
                         cached = true;
                         value = souvenir.lodestar.score;
+                        extended_variation = souvenir.lodestar.variation.clone();
                     } else {
                         cached = false;
                     }

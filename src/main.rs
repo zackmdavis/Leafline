@@ -339,7 +339,7 @@ fn main() {
                 premonitions = Vec::new();
                 for (index, sight) in forecasts.into_iter().enumerate() {
                     let (commit, score, variation) = sight;
-                    println!("{:>2}: {} — score {} ‣ principal variation: {}",
+                    println!("{:>2}: {} — score {} ‣ representative variation: {}",
                              index, commit,
                              Color::Purple.bold()
                                  .paint(&format!("{:.1}", score)),
