@@ -1,6 +1,8 @@
 use std::f32::{NEG_INFINITY, INFINITY};
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::collections::hash_state::DefaultState;
+use std::default::Default;
 use std::fmt;
 use std::mem;
 use std::sync::{Arc, Mutex};
@@ -10,6 +12,7 @@ use std::time::Duration;
 
 use time;
 use lru_cache::LruCache;
+use twox_hash::XxHash;
 
 use identity::{Team, JobDescription, Agent};
 use life::{Commit, Patch, WorldState};
@@ -177,7 +180,8 @@ impl Souvenir {
 
 pub fn α_β_negamax_search(
     world: WorldState, depth: u8, mut α: f32, β: f32, variation: Variation,
-    memory_bank: Arc<Mutex<LruCache<WorldState, Souvenir>>>,
+    memory_bank: Arc<Mutex<LruCache<WorldState, Souvenir,
+                                    DefaultState<XxHash>>>>,
     intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>)
         -> Lodestar {
     let mut premonitions = world.reckless_lookahead();
@@ -259,8 +263,9 @@ pub fn potentially_timebound_kickoff(
     intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>,
     déjà_vu_bound: f32)
         -> Option<Vec<(Commit, f32, Variation)>> {
-    let déjà_vu_table: LruCache<WorldState, Souvenir> =
-        LruCache::new(déjà_vu_table_size_bound(déjà_vu_bound));
+    let déjà_vu_table: LruCache<WorldState, Souvenir, DefaultState<XxHash>> =
+        LruCache::with_hash_state(déjà_vu_table_size_bound(déjà_vu_bound),
+                                  Default::default());
     let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
     let mut premonitions;
     if nihilistically {

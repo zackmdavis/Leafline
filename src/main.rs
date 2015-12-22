@@ -1,8 +1,6 @@
-#![feature(augmented_assignments)]
-#![feature(non_ascii_idents)]
-#![feature(pattern)]
-#![feature(plugin)]
-#![feature(test)]
+#![feature(augmented_assignments, non_ascii_idents, pattern, plugin,
+           test, hashmap_hasher)]
+
 #![plugin(clippy)]
 
 #![allow(unused_features)]
@@ -18,6 +16,7 @@ extern crate ansi_term;
 extern crate lru_cache;
 extern crate rustc_serialize;
 extern crate time;
+extern crate twox_hash;
 
 
 #[macro_use] mod macros;
