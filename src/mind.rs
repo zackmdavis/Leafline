@@ -265,7 +265,6 @@ pub fn déjà_vu_table_size_bound(gib: f32) -> usize {
 }
 
 
-#[allow(type_complexity)]
 pub fn potentially_timebound_kickoff(
     world: &WorldState, depth: u8,
     nihilistically: bool,

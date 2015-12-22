@@ -1,12 +1,12 @@
 [package]
 name = "leafline"
-version = "0.0.15"
+version = "0.0.16-prealpha"
 authors = ["Zack M. Davis <code@zackmdavis.net>"]
 
 [dependencies]
 ansi_term = "0.6"
 argparse = "0.2"
-clippy = "*"
+clippy = { git = "https://github.com/Manishearth/rust-clippy" }
 itertools = "0.4"
 log = "0.3"
 lru-cache = "0.0.5"

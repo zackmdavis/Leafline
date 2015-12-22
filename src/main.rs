@@ -19,7 +19,7 @@ extern crate time;
 extern crate twox_hash;
 
 
-#[macro_use] mod macros;
+#[macro_use] mod sorceries;
 mod space;
 mod identity;
 mod motion;
@@ -29,7 +29,6 @@ mod mind;
 mod substrate;
 
 use std::fs::OpenOptions;
-use std::error::Error;
 use std::io;
 use std::io::Write;
 use std::process;
