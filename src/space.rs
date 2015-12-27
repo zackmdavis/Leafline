@@ -84,6 +84,7 @@ impl Pinfield {
         Pinfield(0)
     }
 
+    #[allow(dead_code)]
     pub fn init(starters: &[Locale]) -> Pinfield {
         let mut board = Pinfield::new();
         for &starter in starters.iter() {

@@ -5,6 +5,7 @@ use std::path::Path;
 
 pub struct Bytes(u64);
 
+#[allow(dead_code)]
 impl Bytes {
     pub fn kibi(n: f32) -> Self { Bytes(1024*n as u64) }
     pub fn gibi(n: f32) -> Self { Bytes((1024.0f32.powi(3)*n) as u64) }
@@ -20,6 +21,7 @@ impl From<Bytes> for usize {
 }
 
 
+#[allow(dead_code)]
 pub fn meminfo(field: &str) -> Bytes {
     let path = Path::new("/proc/meminfo");
     let proc_meminfo = match File::open(path) {
@@ -51,6 +53,7 @@ pub fn meminfo(field: &str) -> Bytes {
 }
 
 
+#[allow(dead_code)]
 pub fn memory_free() -> Bytes {
     meminfo("MemFree")
 }
