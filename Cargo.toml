@@ -3,11 +3,23 @@ name = "leafline"
 version = "0.0.16-prealpha"
 authors = ["Zack M. Davis <code@zackmdavis.net>"]
 
+[lib]
+path = "src/lib.rs"
+crate-type = ["dylib"]
+
+[[bin]]
+name = "leafline"
+path = "src/main.rs"
+
+[features]
+embassy = []
+
 [dependencies]
 ansi_term = "0.6"
 argparse = "0.2"
 clippy = { git = "https://github.com/Manishearth/rust-clippy" }
 itertools = "0.4"
+libc = "0.2"
 log = "0.3"
 lru-cache = "0.0.5"
 rustc-serialize = "0.3"
@@ -15,7 +27,7 @@ time = "0.1"
 twox-hash = "0.1.1"
 
 [profile.dev]
-opt-level = 3
+opt-level = 2
 
 [profile.release]
 lto = true
