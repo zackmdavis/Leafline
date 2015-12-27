@@ -11,6 +11,9 @@ crate-type = ["dylib"]
 name = "leafline"
 path = "src/main.rs"
 
+[features]
+embassy = []
+
 [dependencies]
 ansi_term = "0.6"
 argparse = "0.2"

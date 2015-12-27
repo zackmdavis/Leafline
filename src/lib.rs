@@ -3,6 +3,8 @@
 
 #![plugin(clippy)]
 
+#![cfg(feature = "embassy")]
+
 // XXX: is there a slick way to pass different cfg options to lib and bin
 // builds?
 #![allow(unused_variables, dead_code, unused_features, unused_imports)]
