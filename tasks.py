@@ -138,3 +138,32 @@ def sed(pattern, replacement):
                             d.seek(0)
                             d.write(posterior)
                             d.truncate()
+
+
+@task
+def new_methodize(struct_name, src_file=None):
+    field_subliteral_pattern = "(\w+): ([^\s,]+),?\s+"
+    field_subliteral_regex = re.compile(field_subliteral_pattern)
+    literal_pattern = r"{} ?{{ ({})+}}".format(
+        struct_name, field_subliteral_pattern)
+    literal_regex = re.compile(literal_pattern)
+
+    if src_file is None:
+        filepaths = [os.path.join('src', name) for name in os.listdir('src')]
+    else:
+        filepaths = [os.path.join('src', src_file)]
+
+    for filepath in filepaths:
+        if not filepath.endswith(".rs"):
+            continue
+        with open(filepath) as source_file:
+            source = source_file.read()
+        for struct_literal_match in literal_regex.finditer(source):
+            new_args =  ', '.join(subliteral_match.group(2)
+                                  for subliteral_match
+                                  in field_subliteral_regex.finditer(
+                                      struct_literal_match.group(0)))
+            new_call = "{}::new({})".format(struct_name, new_args)
+            source = source.replace(struct_literal_match.group(0), new_call)
+        with open(filepath, 'w') as source_file:
+            source_file.write(source)

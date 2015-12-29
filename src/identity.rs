@@ -55,18 +55,12 @@ impl Agent {
 
     pub fn dramatis_personæ(team: Team) -> Vec<Agent> {
         // TODO: return in iterator
-        vec![Agent{ team: team,
-                    job_description: JobDescription::Servant },
-             Agent{ team: team,
-                    job_description: JobDescription::Pony },
-             Agent{ team: team,
-                    job_description: JobDescription::Scholar },
-             Agent{ team: team,
-                    job_description: JobDescription::Cop },
-             Agent{ team: team,
-                    job_description: JobDescription::Princess },
-             Agent{ team: team,
-                    job_description: JobDescription::Figurehead }]
+        vec![Agent::new(team, JobDescription::Servant),
+             Agent::new(team, JobDescription::Pony),
+             Agent::new(team, JobDescription::Scholar),
+             Agent::new(team, JobDescription::Cop),
+             Agent::new(team, JobDescription::Princess),
+             Agent::new(team, JobDescription::Figurehead)]
     }
 
     pub fn to_preservation_rune(&self) -> char {
@@ -105,30 +99,18 @@ impl Agent {
         // tedious approach for looking up static ancillary data about an
         // Agent class. Steven Fackler's "Rust-PHF" looks interesting ...
         match rune {
-            'P' => Agent { team: Team::Orange,
-                           job_description: JobDescription::Servant },
-            'N' => Agent { team: Team::Orange,
-                           job_description: JobDescription::Pony },
-            'B' => Agent { team: Team::Orange,
-                           job_description: JobDescription::Scholar },
-            'R' => Agent { team: Team::Orange,
-                           job_description: JobDescription::Cop },
-            'Q' => Agent { team: Team::Orange,
-                           job_description: JobDescription::Princess },
-            'K' => Agent { team: Team::Orange,
-                           job_description: JobDescription::Figurehead },
-            'p' => Agent { team: Team::Blue,
-                           job_description: JobDescription::Servant },
-            'n' => Agent { team: Team::Blue,
-                           job_description: JobDescription::Pony },
-            'b' => Agent { team: Team::Blue,
-                           job_description: JobDescription::Scholar },
-            'r' => Agent { team: Team::Blue,
-                           job_description: JobDescription::Cop },
-            'q' => Agent { team: Team::Blue,
-                           job_description: JobDescription::Princess },
-            'k' => Agent { team: Team::Blue,
-                           job_description: JobDescription::Figurehead },
+            'P' => Agent::new(Team::Orange, JobDescription::Servant),
+            'N' => Agent::new(Team::Orange, JobDescription::Pony),
+            'B' => Agent::new(Team::Orange, JobDescription::Scholar),
+            'R' => Agent::new(Team::Orange, JobDescription::Cop),
+            'Q' => Agent::new(Team::Orange, JobDescription::Princess),
+            'K' => Agent::new(Team::Orange, JobDescription::Figurehead),
+            'p' => Agent::new(Team::Blue, JobDescription::Servant),
+            'n' => Agent::new(Team::Blue, JobDescription::Pony),
+            'b' => Agent::new(Team::Blue, JobDescription::Scholar),
+            'r' => Agent::new(Team::Blue, JobDescription::Cop),
+            'q' => Agent::new(Team::Blue, JobDescription::Princess),
+            'k' => Agent::new(Team::Blue, JobDescription::Figurehead),
             _ => moral_panic!("Non-agent-preservation-rune passed to \
                          `from_preservation_rune`"),
         }
@@ -166,8 +148,7 @@ impl Agent {
         // regrettably, the solid runes look better against locale
         // scenery, even though we would reserve them for Blue Team in
         // other contexts
-        Agent { team: Team::Blue,
-                job_description: self.job_description }
+        Agent::new(Team::Blue, self.job_description)
         .to_figurine_display_rune()
     }
 }

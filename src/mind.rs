@@ -477,26 +477,26 @@ mod tests {
 
         // scholar endangers pony
         world.blue_ponies = world.blue_ponies.alight(
-            Locale { rank: 0, file: 0 });
+            Locale::new(0, 0));
         world.orange_scholars = world.orange_scholars.alight(
-            Locale { rank: 2, file: 2 });
+            Locale::new(2, 2));
 
         // pony endangers servant
         world.blue_servants = world.blue_servants.alight(
-            Locale { rank: 7, file: 1 });
+            Locale::new(7, 1));
         world.orange_ponies = world.orange_ponies.alight(
-            Locale { rank: 5, file: 2 });
+            Locale::new(5, 2));
 
         // Blue has another servant sitting nowhere interesting
         world.blue_servants = world.blue_servants.alight(
-            Locale { rank: 3, file: 6 });
+            Locale::new(3, 6));
         world.no_castling_at_all();
 
         let depth = 2;
         let advisory = kickoff(&world, depth, true, MOCK_DÉJÀ_VU_BOUND);
 
         // taking the pony is the right thing to do
-        assert_eq!(Locale { rank: 0, file: 0 }, advisory[0].0.patch.whither);
+        assert_eq!(Locale::new(0, 0), advisory[0].0.patch.whither);
 
         // And, furthermore, the answer should be the same if we face the
         // same situation with the colors reversed
@@ -510,19 +510,19 @@ mod tests {
 
         // scholar endangers pony
         negaworld.orange_ponies = negaworld.orange_ponies.alight(
-            Locale { rank: 0, file: 0 });
+            Locale::new(0, 0));
         negaworld.blue_scholars = negaworld.blue_scholars.alight(
-            Locale { rank: 2, file: 2 });
+            Locale::new(2, 2));
 
         // pony endangers servant
         negaworld.orange_servants = negaworld.orange_servants.alight(
-            Locale { rank: 7, file: 1 });
+            Locale::new(7, 1));
         negaworld.blue_ponies = negaworld.blue_ponies.alight(
-            Locale { rank: 5, file: 2 });
+            Locale::new(5, 2));
 
         // Orange has another servant sitting nowhere interesting
         negaworld.orange_servants = negaworld.orange_servants.alight(
-            Locale { rank: 3, file: 6 });
+            Locale::new(3, 6));
         negaworld.initiative = Team::Blue;
 
         negaworld.no_castling_at_all();
@@ -531,7 +531,7 @@ mod tests {
 
         // taking the pony is still the right thing to do, even in the
         // negaworld
-        assert_eq!(Locale { rank: 0, file: 0 },
+        assert_eq!(Locale::new(0, 0),
                    negadvisory[0].0.patch.whither);
     }
 

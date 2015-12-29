@@ -9,6 +9,9 @@ static INDEX_TO_FILE_NAME: [char; 8] = [
 ];
 
 impl Locale {
+    pub fn new(rank: u8, file: u8) -> Self {
+        Locale { rank: rank, file: file }
+    }
 
     pub fn to_algebraic(&self) -> String {
         format!("{}{}", INDEX_TO_FILE_NAME[self.file as usize], self.rank + 1)
@@ -136,7 +139,7 @@ impl Pinfield {
         for rank in 0..8 {
             for file in 0..8 {
                 if bitfield & bits != 0 {
-                    let locale = Locale { rank: rank, file: file };
+                    let locale = Locale::new(rank, file);
                     locales.push(locale);
                 }
                 bitfield <<= 1;
@@ -155,7 +158,7 @@ impl Pinfield {
     pub fn display(&self) {
         for rank in 0..8 {
             for file in 0..8 {
-                if self.query(Locale { rank: rank, file: file }) {
+                if self.query(Locale::new(rank, file)) {
                     print!("• ");
                 } else {
                     print!("_ ");
@@ -188,8 +191,8 @@ mod tests {
     fn benchmark_to_locales(b: &mut Bencher) {
         let mut stage = Pinfield(0);
         for r in 0..8 {
-            stage = stage.alight(Locale { rank: 1, file: r });
-            stage = stage.alight(Locale { rank: 7, file: r });
+            stage = stage.alight(Locale::new(1, r));
+            stage = stage.alight(Locale::new(7, r));
         }
 
         b.iter(|| stage.to_locales());
@@ -198,7 +201,7 @@ mod tests {
     #[test]
     fn concerning_converting_to_algebraic() {
         let actual = iproduct!(0..8, 0..8)
-                         .map(|t| Locale { rank: t.0, file: t.1 })
+                         .map(|t| Locale::new(t.0, t.1))
                          .map(|l| l.to_algebraic());
         for (expectation, actuality) in ALGEBRAICS.iter().zip(actual) {
             // TODO: it's more elegant if the conversion happens in
@@ -211,7 +214,7 @@ mod tests {
     #[test]
     fn concerning_converting_from_algebraic() {
         let expected = iproduct!(0..8, 0..8).map(
-            |t| Locale { rank: t.0, file: t.1 });
+            |t| Locale::new(t.0, t.1));
         for (expectation, actuality) in expected.zip(ALGEBRAICS.iter()) {
             assert_eq!(
                 expectation,
@@ -223,22 +226,22 @@ mod tests {
 
     #[test]
     fn test_locale() {
-        let a1 = Locale { rank: 0, file: 0 };
+        let a1 = Locale::new(0, 0);
         assert_eq!(Pinfield(1u64), a1.pinpoint());
 
-        let c4 = Locale { rank: 2, file: 3 };
+        let c4 = Locale::new(2, 3);
         assert_eq!(Pinfield(524288u64), c4.pinpoint());
     }
 
     #[test]
     fn test_displace_locale() {
         assert_eq!(
-            Some(Locale { rank: 3, file: 5 }),
-            Locale { rank: 4, file: 4 }.displace((-1, 1))
+            Some(Locale::new(3, 5)),
+            Locale::new(4, 4).displace((-1, 1))
         );
         assert_eq!(
             None,
-            Locale { rank: 0, file: 0 }.displace((-1, 1))
+            Locale::new(0, 0).displace((-1, 1))
         )
     }
 
@@ -247,17 +250,17 @@ mod tests {
         for i in 0..8 {
             assert_eq!(
                 Some(Locale { rank: i as u8, file: i as u8 }),
-                Locale{ rank: 0, file: 0 }.multidisplace((1, 1), i)
+                Locale::new(0, 0).multidisplace((1, 1), i)
             )
         }
-        assert_eq!(None, Locale{ rank: 0, file: 0 }.multidisplace((1, 1), 8));
+        assert_eq!(None, Locale::new(0, 0).multidisplace((1, 1), 8));
     }
 
 
     #[test]
     fn test_alight_and_quench() {
         let mut stage = Pinfield(0);
-        let b5 = Locale { rank: 1, file: 4 };
+        let b5 = Locale::new(1, 4);
         stage = stage.alight(b5);
         assert!(stage.query(b5));
         stage = stage.quench(b5);
@@ -266,9 +269,9 @@ mod tests {
 
     #[test]
     fn test_init_pinfield() {
-        let starters = vec![Locale{ rank: 1, file: 2 },
-                            Locale{ rank: 3, file: 4 },
-                            Locale{ rank: 5, file: 6 }];
+        let starters = vec![Locale::new(1, 2),
+                            Locale::new(3, 4),
+                            Locale::new(5, 6)];
         let stage = Pinfield::init(&starters);
         for &starter in &starters {
             assert!(stage.query(starter));
@@ -277,9 +280,9 @@ mod tests {
 
     #[test]
     fn concerning_pincount() {
-        let starters = vec![Locale{ rank: 1, file: 2 },
-                            Locale{ rank: 3, file: 4 },
-                            Locale{ rank: 5, file: 6 }];
+        let starters = vec![Locale::new(1, 2),
+                            Locale::new(3, 4),
+                            Locale::new(5, 6)];
         let stage = Pinfield::init(&starters);
         assert_eq!(3, stage.pincount());
     }

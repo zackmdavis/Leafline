@@ -1,4 +1,5 @@
 //! the `life` module of the Leafline oppositional strategy game engine
+use std::default::Default;
 use std::fmt;
 
 use space::{Locale, Pinfield};
@@ -148,47 +149,52 @@ const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
 #[allow(dead_code)]
 const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 };
 
-impl WorldState {
-    #[allow(dead_code)]
-    pub fn new() -> Self {
+impl Default for WorldState {
+    fn default() -> Self {
         let mut orange_servant_locales = Vec::new();
         let mut blue_servant_locales = Vec::new();
         for f in 0..8 {
-            orange_servant_locales.push(Locale { rank: 1, file: f });
-            blue_servant_locales.push(Locale { rank: 6, file: f });
+            orange_servant_locales.push(Locale::new(1, f));
+            blue_servant_locales.push(Locale::new(6, f));
         }
         WorldState {
             initiative: Team::Orange,
 
             orange_servants: Pinfield::init(&orange_servant_locales),
-            orange_ponies: Pinfield::init(&vec![Locale { rank: 0, file: 1 },
-                      Locale { rank: 0, file: 6 }]),
-            orange_scholars: Pinfield::init(&vec![Locale { rank: 0, file: 2 },
-                      Locale { rank: 0, file: 5 }]),
-            orange_cops: Pinfield::init(&vec![Locale { rank: 0, file: 0 },
-                      Locale { rank: 0, file: 7 }]),
+            orange_ponies: Pinfield::init(&vec![Locale::new(0, 1),
+                      Locale::new(0, 6)]),
+            orange_scholars: Pinfield::init(&vec![Locale::new(0, 2),
+                      Locale::new(0, 5)]),
+            orange_cops: Pinfield::init(&vec![Locale::new(0, 0),
+                      Locale::new(0, 7)]),
             orange_princesses: Pinfield::init(
-                &vec![Locale { rank: 0, file: 3 }]),
+                &vec![Locale::new(0, 3)]),
             orange_figurehead: Pinfield::init(&vec![ORANGE_FIGUREHEAD_START]),
             orange_east_service_eligibility: true,
             orange_west_service_eligibility: true,
 
             blue_servants: Pinfield::init(&blue_servant_locales),
-            blue_ponies: Pinfield::init(&vec![Locale { rank: 7, file: 1 },
-                      Locale { rank: 7, file: 6 }]),
-            blue_scholars: Pinfield::init(&vec![Locale { rank: 7, file: 2 },
-                      Locale { rank: 7, file: 5 }]),
-            blue_cops: Pinfield::init(&vec![Locale { rank: 7, file: 0 },
-                      Locale { rank: 7, file: 7 }]),
-            blue_princesses: Pinfield::init(&vec![Locale { rank: 7, file: 3 }]),
+            blue_ponies: Pinfield::init(&vec![Locale::new(7, 1),
+                      Locale::new(7, 6)]),
+            blue_scholars: Pinfield::init(&vec![Locale::new(7, 2),
+                      Locale::new(7, 5)]),
+            blue_cops: Pinfield::init(&vec![Locale::new(7, 0),
+                      Locale::new(7, 7)]),
+            blue_princesses: Pinfield::init(&vec![Locale::new(7, 3)]),
             blue_figurehead: Pinfield::init(&vec![BLUE_FIGUREHEAD_START]),
             blue_east_service_eligibility: true,
             blue_west_service_eligibility: true,
         }
     }
 
-    // XXX: for API consistency with Pinfield, maybe this should be
-    // `new` and the current `new` should be `init`??
+}
+
+impl WorldState {
+    #[allow(dead_code)]
+    pub fn new() -> Self {
+        WorldState::default()
+    }
+
     pub fn new_except_empty() -> Self {
         WorldState {
             initiative: Team::Orange,
@@ -254,8 +260,7 @@ impl WorldState {
     }
 
     pub fn is_being_leered_at_by(&self, locale: Locale, team: Team) -> bool {
-        let agent = Agent { team: team.opposition(),
-                            job_description: JobDescription::Figurehead };
+        let agent = Agent::new(team.opposition(), JobDescription::Figurehead);
         let pinfield = self.agent_to_pinfield_ref(agent);
         let mut tree = self.except_replaced_subboard(
             agent, pinfield.alight(locale));
@@ -281,7 +286,7 @@ impl WorldState {
         for rank in (0..8).rev() {
             for file in 0..8 {
                 let agent_maybe = self.occupying_agent(
-                    Locale { rank: rank, file: file });
+                    Locale::new(rank, file));
                 match agent_maybe {
                     Some(agent) => {
                         if void_run_length > 0 {
@@ -367,7 +372,7 @@ impl WorldState {
                     {
                         let hot_pinfield = world.agent_to_pinfield_ref(agent);
                         derived_pinfield = hot_pinfield.alight(
-                            Locale { rank: rank, file: file });
+                            Locale::new(rank, file));
                     }
                     // XXX: this isn't Clojure; copying a
                     // datastructure with a small diff actually has costs
@@ -513,8 +518,7 @@ impl WorldState {
 
 
         if patch.concerns_secret_service() {
-            let cop_agent = Agent { team: patch.star.team,
-                                    job_description: JobDescription::Cop };
+            let cop_agent = Agent::new(patch.star.team, JobDescription::Cop);
             let (start_file, end_file) = match patch.whither.file {
                 6 => (7, 5),
                 2 => (0, 3),
@@ -525,8 +529,8 @@ impl WorldState {
             let secret_derived_subboard = tree.agent_to_pinfield_ref(
                 cop_agent)
                 .transit(
-                    Locale { rank: patch.whither.rank, file: start_file, },
-                    Locale { rank: patch.whither.rank, file: end_file, });
+                    Locale::new(patch.whither.rank, start_file),
+                    Locale::new(patch.whither.rank, end_file));
             tree = tree.except_replaced_subboard(cop_agent,
                                                  secret_derived_subboard);
         }
@@ -637,8 +641,7 @@ impl WorldState {
                 stun_offsets = [(-1, -1), (-1, 1)];
             }
         }
-        let servant_agent = Agent { team: team,
-                                    job_description: JobDescription::Servant };
+        let servant_agent = Agent::new(team, JobDescription::Servant);
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(
             servant_agent);
         let mut premonitions = Vec::new();
@@ -795,7 +798,7 @@ impl WorldState {
     pub fn pony_lookahead(&self, team: Team,
                           nihilistically: bool) -> Vec<Commit> {
         self.ponylike_lookahead(
-            Agent { team: team, job_description: JobDescription::Pony },
+            Agent::new(team, JobDescription::Pony),
             nihilistically)
     }
 
@@ -805,7 +808,7 @@ impl WorldState {
     pub fn scholar_lookahead(&self, team: Team,
                              nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
-            Agent { team: team, job_description: JobDescription::Scholar },
+            Agent::new(team, JobDescription::Scholar),
             nihilistically)
     }
 
@@ -816,7 +819,7 @@ impl WorldState {
     pub fn cop_lookahead(&self, team: Team,
                          nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
-            Agent { team: team, job_description: JobDescription::Cop },
+            Agent::new(team, JobDescription::Cop),
             nihilistically)
     }
 
@@ -824,7 +827,7 @@ impl WorldState {
     pub fn princess_lookahead(&self, team: Team,
                               nihilistically: bool) -> Vec<Commit> {
         self.princesslike_lookahead(
-            Agent { team: team, job_description: JobDescription::Princess },
+            Agent::new(team, JobDescription::Princess),
             nihilistically)
     }
 
@@ -833,7 +836,7 @@ impl WorldState {
     pub fn figurehead_lookahead(&self, team: Team,
                                 nihilistically: bool) -> Vec<Commit> {
         self.ponylike_lookahead(
-            Agent { team: team, job_description: JobDescription::Figurehead },
+            Agent::new(team, JobDescription::Figurehead),
             nihilistically)
     }
 
@@ -848,8 +851,7 @@ impl WorldState {
                            self.blue_west_service_eligibility),
         };
 
-        let agent = Agent { team: team,
-                            job_description: JobDescription::Figurehead };
+        let agent = Agent::new(team, JobDescription::Figurehead);
 
         let home_rank = match team {
             Team::Orange => 0,
@@ -861,7 +863,7 @@ impl WorldState {
         if east_service || west_service {
             debug_assert!(
                 self.agent_to_pinfield_ref(agent).query(
-                    Locale { rank: home_rank, file: 4 }) ||
+                    Locale::new(home_rank, 4)) ||
                         self.agent_to_pinfield_ref(agent).0 == 0
             );
         } else {
@@ -871,22 +873,22 @@ impl WorldState {
         let mut locales_to_query = Vec::new();
         if west_service {
             locales_to_query.push(
-                (vec![Locale { rank: home_rank, file: 1 },
-                      Locale { rank: home_rank, file: 2 },
-                      Locale { rank: home_rank, file: 3 }],
+                (vec![Locale::new(home_rank, 1),
+                      Locale::new(home_rank, 2),
+                      Locale::new(home_rank, 3)],
                  Patch { star: agent,
-                         whence: Locale { rank: home_rank, file: 4 },
-                         whither: Locale { rank: home_rank, file: 2 } })
+                         whence: Locale::new(home_rank, 4),
+                         whither: Locale::new(home_rank, 2) })
             );
         }
         if east_service {
             locales_to_query.push(
-                (vec![Locale { rank: home_rank, file: 5 },
-                      Locale { rank: home_rank, file: 6 }],
+                (vec![Locale::new(home_rank, 5),
+                      Locale::new(home_rank, 6)],
                  Patch {
                      star: agent,
-                     whence: Locale { rank: home_rank, file: 4 },
-                     whither: Locale { rank: home_rank, file: 6 } })
+                     whence: Locale::new(home_rank, 4),
+                     whither: Locale::new(home_rank, 6) })
             );
         }
         let unoc = self.unoccupied();
@@ -896,7 +898,7 @@ impl WorldState {
                 if let None = being_leered_at {
                     being_leered_at = Some(
                         self.is_being_leered_at_by(
-                            Locale { rank: home_rank, file: 4 },
+                            Locale::new(home_rank, 4),
                             team.opposition())
                         )
                 }
@@ -962,7 +964,7 @@ impl fmt::Display for WorldState {
             output.push_str(&*format!(" {} ", rank+1));
             for file in 0..8 {
                 scenery = sceneries.next().expect("cycles are eternal");
-                let locale = Locale { rank: rank, file: file };
+                let locale = Locale::new(rank, file);
                 if self.unoccupied().query(locale) {
                     output.push_str(
                         &Color::White.on(*scenery).paint("  ").to_string());
@@ -1066,7 +1068,7 @@ mod tests {
     #[test]
     fn basic_leering_test() {
         assert![WorldState::new().is_being_leered_at_by(
-            Locale { rank: 2, file: 5 }, Team::Orange)]
+            Locale::new(2, 5), Team::Orange)]
     }
 
     #[test]
@@ -1087,8 +1089,8 @@ mod tests {
                 team: Team::Orange,
                 job_description: JobDescription::Figurehead,
             },
-            whence: Locale { rank: 0, file: 4 },
-            whither: Locale { rank: 0, file: 5 },
+            whence: Locale::new(0, 4),
+            whither: Locale::new(0, 5),
         };
 
         assert_eq!(false, ws.apply(
@@ -1099,8 +1101,8 @@ mod tests {
                 team: Team::Orange,
                 job_description: JobDescription::Cop,
             },
-            whence: Locale { rank: 0, file: 7 },
-            whither: Locale { rank: 0, file: 6 },
+            whence: Locale::new(0, 7),
+            whither: Locale::new(0, 6),
         };
         assert_eq!(false, ws.apply(
             service_patch).tree.orange_east_service_eligibility);
@@ -1160,8 +1162,7 @@ mod tests {
                                              Locale::from_algebraic(
                                                  "a7".to_owned()));
         worldstate = worldstate.except_replaced_subboard(
-            Agent { team: Team::Orange,
-                    job_description: JobDescription::Servant },
+            Agent::new(Team::Orange, JobDescription::Servant),
             derived_subfield);
         let premonitions = worldstate.servant_lookahead(Team::Orange, true);
         assert!(premonitions.iter().all(
@@ -1176,10 +1177,9 @@ mod tests {
     #[test]
     fn test_agent_to_pinfield_ref_on_new_gamestate() {
         let state = WorldState::new();
-        let agent = Agent { team: Team::Blue,
-                            job_description: JobDescription::Princess };
+        let agent = Agent::new(Team::Blue, JobDescription::Princess);
         let blue_princess_realm = state.agent_to_pinfield_ref(agent);
-        assert!(blue_princess_realm.query(Locale { rank: 7, file: 3 }));
+        assert!(blue_princess_realm.query(Locale::new(7, 3)));
     }
 
     #[test]
@@ -1187,7 +1187,7 @@ mod tests {
         let state = WorldState::new();
         let mut expected = Vec::new();
         for file in 0..8 {
-            expected.push(Locale { rank: 1, file: file });
+            expected.push(Locale::new(1, file));
         }
         assert_eq!(expected, state.orange_servants.to_locales());
     }
@@ -1211,14 +1211,14 @@ mod tests {
                                     .map(|p| p.tree.orange_ponies.to_locales())
                                     .collect::<Vec<_>>();
         assert_eq!(
-            vec![vec![Locale { rank: 0, file: 6 },
-                      Locale { rank: 2, file: 0 }],
-                 vec![Locale { rank: 0, file: 6 },
-                      Locale { rank: 2, file: 2 }],
-                 vec![Locale { rank: 0, file: 1 },
-                      Locale { rank: 2, file: 5 }],
-                 vec![Locale { rank: 0, file: 1 },
-                      Locale { rank: 2, file: 7 }]],
+            vec![vec![Locale::new(0, 6),
+                      Locale::new(2, 0)],
+                 vec![Locale::new(0, 6),
+                      Locale::new(2, 2)],
+                 vec![Locale::new(0, 1),
+                      Locale::new(2, 5)],
+                 vec![Locale::new(0, 1),
+                      Locale::new(2, 7)]],
                  collected
         );
     }
@@ -1249,11 +1249,10 @@ mod tests {
     #[test]
     fn concerning_occupying_agents() {
         let state = WorldState::new();
-        let b8 = Locale { rank: 7, file: 1 };
-        assert_eq!(Agent { team: Team::Blue,
-                           job_description: JobDescription::Pony },
+        let b8 = Locale::new(7, 1);
+        assert_eq!(Agent::new(Team::Blue, JobDescription::Pony),
                    state.occupying_agent(b8).unwrap());
-        let c4 = Locale { rank: 3, file: 2 };
+        let c4 = Locale::new(3, 2);
         assert_eq!(None, state.occupying_agent(c4));
     }
 
@@ -1270,8 +1269,8 @@ mod tests {
     #[test]
     fn concerning_peaceful_patch_application() {
         let state = WorldState::new();
-        let e2 = Locale { rank: 4, file: 1 };
-        let e4 = Locale { rank: 4, file: 3 };
+        let e2 = Locale::new(4, 1);
+        let e4 = Locale::new(4, 3);
         let patch = Patch {
             star: Agent {
                 team: Team::Orange,
@@ -1281,8 +1280,7 @@ mod tests {
             whither: e4,
         };
         let new_state = state.apply(patch).tree;
-        assert_eq!(Agent { team: Team::Orange,
-                           job_description: JobDescription::Servant },
+        assert_eq!(Agent::new(Team::Orange, JobDescription::Servant),
                    new_state.occupying_agent(e4).unwrap());
         assert_eq!(None, new_state.occupying_agent(e2));
     }
@@ -1337,13 +1335,11 @@ mod tests {
 
         let crucial_commit = precrucial_state.apply(orange_counterreplies);
         let new_state = crucial_commit.tree;
-        assert_eq!(Agent { team: Team::Orange,
-                           job_description: JobDescription::Servant },
+        assert_eq!(Agent::new(Team::Orange, JobDescription::Servant),
                    new_state.occupying_agent(
                        Locale::from_algebraic("d5".to_owned())).unwrap());
         let stunned = crucial_commit.hospitalization.unwrap();
-        assert_eq!(Agent { team: Team::Blue,
-                           job_description: JobDescription::Servant },
+        assert_eq!(Agent::new(Team::Blue, JobDescription::Servant),
                    stunned);
     }
 
@@ -1351,16 +1347,13 @@ mod tests {
         // https://en.wikipedia.org/wiki/Fool%27s_mate
         let mut world = WorldState::new();
         let fools_patchset = vec![
-            Patch { star: Agent { team: Team::Orange,
-                                  job_description: JobDescription::Servant },
+            Patch { star: Agent::new(Team::Orange, JobDescription::Servant),
                     whence: Locale::from_algebraic("f2".to_owned()),
                     whither: Locale::from_algebraic("f3".to_owned()) },
-            Patch { star: Agent { team: Team::Blue,
-                                  job_description: JobDescription::Servant },
+            Patch { star: Agent::new(Team::Blue, JobDescription::Servant),
                     whence: Locale::from_algebraic("e7".to_owned()),
                     whither: Locale::from_algebraic("e5".to_owned()) },
-            Patch { star: Agent { team: Team::Orange,
-                                  job_description: JobDescription::Servant },
+            Patch { star: Agent::new(Team::Orange, JobDescription::Servant),
                     whence: Locale::from_algebraic("g2".to_owned()),
                     whither: Locale::from_algebraic("g4".to_owned()) },
         ];
@@ -1410,16 +1403,13 @@ mod tests {
         assert_eq!(eden, WorldState::reconstruct(book_of_eden));
 
         let patchset = vec![
-            Patch { star: Agent { team: Team::Orange,
-                                  job_description: JobDescription::Servant },
+            Patch { star: Agent::new(Team::Orange, JobDescription::Servant),
                     whence: Locale::from_algebraic("e2".to_owned()),
                     whither: Locale::from_algebraic("e4".to_owned()) },
-            Patch { star: Agent { team: Team::Blue,
-                                  job_description: JobDescription::Servant },
+            Patch { star: Agent::new(Team::Blue, JobDescription::Servant),
                     whence: Locale::from_algebraic("c7".to_owned()),
                     whither: Locale::from_algebraic("c5".to_owned()) },
-            Patch { star: Agent { team: Team::Orange,
-                                  job_description: JobDescription::Pony },
+            Patch { star: Agent::new(Team::Orange, JobDescription::Pony),
                     whence: Locale::from_algebraic("g1".to_owned()),
                     whither: Locale::from_algebraic("f3".to_owned()) },
         ];
