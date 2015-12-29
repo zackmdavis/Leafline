@@ -4,8 +4,8 @@ version = "0.0.16-prealpha"
 dependencies = [
  "ansi_term 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "clippy 0.0.32 (git+https://github.com/Manishearth/rust-clippy)",
- "itertools 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clippy 0.0.33 (registry+https://github.com/rust-lang/crates.io-index)",
+ "itertools 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "lru-cache 0.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -35,15 +35,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "clippy"
-version = "0.0.32"
-source = "git+https://github.com/Manishearth/rust-clippy#dd16ac2ad7eeae85bfb9dccb6d57428bce1fbbdf"
+version = "0.0.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "unicode-normalization 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "itertools"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]

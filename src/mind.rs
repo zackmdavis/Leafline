@@ -541,6 +541,7 @@ mod tests {
         assert_eq!(Locale::new(0, 0), negadvisory[0].0.patch.whither);
     }
 
+    #[ignore]  // really slow
     #[test]
     fn concerning_fortune_favoring_the_bold() {
         // It would be nice if scores at even and odd plies were comparable,

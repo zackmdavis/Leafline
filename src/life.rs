@@ -1152,6 +1152,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(block_in_if_condition_stmt)]
     fn concerning_servant_ascension() {
         let mut worldstate = WorldState::new_except_empty();
         let derived_subfield =
