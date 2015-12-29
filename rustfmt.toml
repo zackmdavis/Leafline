@@ -1,0 +1,9 @@
+# I don't trust rustfmt's code-æsthetics enough to take all of its suggestions
+# without manual oversight, but if we do run a pass occasionally, consider this
+# configuration—
+max_width = 85
+verbose = true
+reorder_imports = true
+report_todo = "Never"
+fn_args_density = "Compressed"
+fn_arg_indent = "Tabbed"

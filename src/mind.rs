@@ -1,4 +1,4 @@
-use std::f32::{NEG_INFINITY, INFINITY};
+use std::f32::{INFINITY, NEG_INFINITY};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::hash_state::DefaultState;
@@ -14,10 +14,10 @@ use time;
 use lru_cache::LruCache;
 use twox_hash::XxHash;
 
-use identity::{Team, JobDescription, Agent};
+use identity::{Agent, JobDescription, Team};
 use life::{Commit, Patch, WorldState};
-use landmark::{CENTER_OF_THE_WORLD, LOW_COLONELCY,
-               LOW_SEVENTH_HEAVEN, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN};
+use landmark::{CENTER_OF_THE_WORLD, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN,
+               LOW_COLONELCY, LOW_SEVENTH_HEAVEN};
 use space::Pinfield;
 use substrate::Bytes;
 
@@ -53,8 +53,9 @@ pub fn score(world: WorldState) -> f32 {
 
     for team in Team::league().into_iter() {
         for agent in Agent::dramatis_personæ(team).into_iter() {
-            valuation += world.agent_to_pinfield_ref(
-                agent).pincount() as f32 * figurine_valuation(agent);
+            valuation += world.agent_to_pinfield_ref(agent)
+                              .pincount() as f32 *
+                         figurine_valuation(agent);
         }
         // breadth of scholarship bonus
         if world.agent_to_pinfield_ref(Agent {
@@ -70,10 +71,14 @@ pub fn score(world: WorldState) -> f32 {
     // ponies and servants want to be in the center of the world's action
     let center = Pinfield(CENTER_OF_THE_WORLD);
     // cast to signed to avoid overflow
-    let orange_centerism: i8 = world.orange_servants.union(
-        world.orange_ponies).intersection(center).pincount() as i8;
-    let blue_centerism: i8 = world.blue_servants.union(
-        world.blue_ponies).intersection(center).pincount() as i8;
+    let orange_centerism: i8 = world.orange_servants
+                                    .union(world.orange_ponies)
+                                    .intersection(center)
+                                    .pincount() as i8;
+    let blue_centerism: i8 = world.blue_servants
+                                  .union(world.blue_ponies)
+                                  .intersection(center)
+                                  .pincount() as i8;
     valuation += 0.1 * (orange_centerism - blue_centerism) as f32;
 
     // a cop's favorite beat is the seventh rank
@@ -85,29 +90,32 @@ pub fn score(world: WorldState) -> f32 {
     valuation -= 0.5 * blue_beat as f32;
 
     // servants should aspire to something more in life someday
-    let orange_subascendants = world.orange_servants.intersection(high_seventh)
-        .pincount();
+    let orange_subascendants = world.orange_servants
+                                    .intersection(high_seventh)
+                                    .pincount();
     valuation += 1.8 * orange_subascendants as f32;
     let high_colonelcy = Pinfield(HIGH_COLONELCY);
-    let orange_subsubascendants = world.orange_servants.intersection(
-        high_colonelcy).pincount();
+    let orange_subsubascendants = world.orange_servants
+                                       .intersection(high_colonelcy)
+                                       .pincount();
     valuation += 0.6 * orange_subsubascendants as f32;
-    let blue_subascendants = world.blue_servants.intersection(low_seventh)
-        .pincount();
+    let blue_subascendants = world.blue_servants
+                                  .intersection(low_seventh)
+                                  .pincount();
     valuation -= 1.8 * blue_subascendants as f32;
     let low_colonelcy = Pinfield(LOW_COLONELCY);
-    let blue_subsubascendants = world.blue_servants.intersection(
-        low_colonelcy).pincount();
+    let blue_subsubascendants = world.blue_servants
+                                     .intersection(low_colonelcy)
+                                     .pincount();
     valuation -= 0.6 * blue_subsubascendants as f32;
 
     // secret service eligbility has option value
     if world.orange_west_service_eligibility ||
-        world.orange_east_service_eligibility {
-            valuation += 0.1
+       world.orange_east_service_eligibility {
+        valuation += 0.1
     }
-    if world.blue_west_service_eligibility ||
-        world.blue_east_service_eligibility {
-            valuation -= 0.1
+    if world.blue_west_service_eligibility || world.blue_east_service_eligibility {
+        valuation -= 0.1
     }
 
     valuation
@@ -116,8 +124,9 @@ pub fn score(world: WorldState) -> f32 {
 fn mmv_lva_heuristic(commit: &Commit) -> f32 {
     // https://chessprogramming.wikispaces.com/MVV-LVA
     match commit.hospitalization {
-        Some(patient) => (
-            figurine_valuation(patient) - figurine_valuation(commit.patch.star)),
+        Some(patient) => {
+            (figurine_valuation(patient) - figurine_valuation(commit.patch.star))
+        }
         None => 0.0,
     }
 }
@@ -130,8 +139,8 @@ fn order_movements_heuristically(commits: &mut Vec<Commit>) {
     });
 }
 
-fn order_movements_intuitively(
-        experience: &HashMap<Patch, u16>, commits: &mut Vec<Commit>) {
+fn order_movements_intuitively(experience: &HashMap<Patch, u16>,
+    commits: &mut Vec<Commit>) {
     commits.sort_by(|a, b| {
         let a_feels = experience.get(&a.patch);
         let b_feels = experience.get(&b.patch);
@@ -144,27 +153,33 @@ pub type Variation = Vec<Patch>;
 #[allow(ptr_arg)]
 pub fn pagan_variation_format(variation: &Variation) -> String {
     variation.iter()
-        .map(|p| p.abbreviated_pagan_movement_rune())
-        .collect::<Vec<_>>().join(" ")
+             .map(|p| p.abbreviated_pagan_movement_rune())
+             .collect::<Vec<_>>()
+             .join(" ")
 }
 
 
 #[derive(Clone)]
 pub struct Lodestar {
     pub score: f32,
-    pub variation: Variation
+    pub variation: Variation,
 }
 
 impl Lodestar {
     fn new(score: f32, variation: Variation) -> Self {
-        Lodestar { score: score, variation: variation }
+        Lodestar {
+            score: score,
+            variation: variation,
+        }
     }
 }
 
 impl fmt::Debug for Lodestar {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(f, "Lodestar {{ score: {}, variation: {} }}",
-               self.score, pagan_variation_format(&self.variation))
+        write!(f,
+               "Lodestar {{ score: {}, variation: {} }}",
+               self.score,
+               pagan_variation_format(&self.variation))
     }
 }
 
@@ -172,7 +187,7 @@ impl fmt::Debug for Lodestar {
 #[derive(Debug, Clone)]
 pub struct Souvenir {
     soundness: i8,
-    lodestar: Lodestar
+    lodestar: Lodestar,
 }
 
 impl Souvenir {
@@ -389,7 +404,7 @@ mod tests {
     use self::test::Bencher;
 
     use time;
-    use super::{kickoff, score, REWARD_FOR_INITIATIVE};
+    use super::{REWARD_FOR_INITIATIVE, kickoff, score};
     use space::Locale;
     use life::WorldState;
     use identity::Team;
@@ -476,20 +491,15 @@ mod tests {
         // then Blue will move the servant out of the way.
 
         // scholar endangers pony
-        world.blue_ponies = world.blue_ponies.alight(
-            Locale::new(0, 0));
-        world.orange_scholars = world.orange_scholars.alight(
-            Locale::new(2, 2));
+        world.blue_ponies = world.blue_ponies.alight(Locale::new(0, 0));
+        world.orange_scholars = world.orange_scholars.alight(Locale::new(2, 2));
 
         // pony endangers servant
-        world.blue_servants = world.blue_servants.alight(
-            Locale::new(7, 1));
-        world.orange_ponies = world.orange_ponies.alight(
-            Locale::new(5, 2));
+        world.blue_servants = world.blue_servants.alight(Locale::new(7, 1));
+        world.orange_ponies = world.orange_ponies.alight(Locale::new(5, 2));
 
         // Blue has another servant sitting nowhere interesting
-        world.blue_servants = world.blue_servants.alight(
-            Locale::new(3, 6));
+        world.blue_servants = world.blue_servants.alight(Locale::new(3, 6));
         world.no_castling_at_all();
 
         let depth = 2;
@@ -509,20 +519,17 @@ mod tests {
         negaworld.initiative = Team::Blue;
 
         // scholar endangers pony
-        negaworld.orange_ponies = negaworld.orange_ponies.alight(
-            Locale::new(0, 0));
-        negaworld.blue_scholars = negaworld.blue_scholars.alight(
-            Locale::new(2, 2));
+        negaworld.orange_ponies = negaworld.orange_ponies.alight(Locale::new(0, 0));
+        negaworld.blue_scholars = negaworld.blue_scholars.alight(Locale::new(2, 2));
 
         // pony endangers servant
-        negaworld.orange_servants = negaworld.orange_servants.alight(
-            Locale::new(7, 1));
-        negaworld.blue_ponies = negaworld.blue_ponies.alight(
-            Locale::new(5, 2));
+        negaworld.orange_servants = negaworld.orange_servants
+                                             .alight(Locale::new(7, 1));
+        negaworld.blue_ponies = negaworld.blue_ponies.alight(Locale::new(5, 2));
 
         // Orange has another servant sitting nowhere interesting
-        negaworld.orange_servants = negaworld.orange_servants.alight(
-            Locale::new(3, 6));
+        negaworld.orange_servants = negaworld.orange_servants
+                                             .alight(Locale::new(3, 6));
         negaworld.initiative = Team::Blue;
 
         negaworld.no_castling_at_all();
@@ -531,8 +538,7 @@ mod tests {
 
         // taking the pony is still the right thing to do, even in the
         // negaworld
-        assert_eq!(Locale::new(0, 0),
-                   negadvisory[0].0.patch.whither);
+        assert_eq!(Locale::new(0, 0), negadvisory[0].0.patch.whither);
     }
 
     #[test]

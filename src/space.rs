@@ -75,7 +75,6 @@ impl Locale {
             None
         }
     }
-
 }
 
 
@@ -213,14 +212,11 @@ mod tests {
 
     #[test]
     fn concerning_converting_from_algebraic() {
-        let expected = iproduct!(0..8, 0..8).map(
-            |t| Locale::new(t.0, t.1));
+        let expected = iproduct!(0..8, 0..8).map(|t| Locale::new(t.0, t.1));
         for (expectation, actuality) in expected.zip(ALGEBRAICS.iter()) {
-            assert_eq!(
-                expectation,
-                // TODO: again, conversion in iterator
-                Locale::from_algebraic((*actuality).to_owned())
-            );
+            assert_eq!(expectation,
+                       // TODO: again, conversion in iterator
+                       Locale::from_algebraic((*actuality).to_owned()));
         }
     }
 

@@ -24,7 +24,7 @@ impl Team {
         }
     }
 
-    pub fn figurine_paintjob(&self) ->  Style {
+    pub fn figurine_paintjob(&self) -> Style {
         match *self {
             Team::Orange => Color::Red.bold(),
             Team::Blue => Color::Cyan.normal(),
@@ -98,9 +98,11 @@ impl Agent {
             JobDescription::Servant => "".to_owned(),
             // Pagan movement runes use the Orange job description forms for
             // nonservants
-            _ => format!("{}",
-                         Agent::new(Team::Orange, self.job_description)
-                             .to_preservation_rune())
+            _ => {
+                format!("{}",
+                        Agent::new(Team::Orange, self.job_description)
+                            .to_preservation_rune())
+            }
         }
     }
 
@@ -125,8 +127,7 @@ impl Agent {
         // regrettably, the solid runes look better against locale
         // scenery, even though we would reserve them for Blue Team in
         // other contexts
-        Agent::new(Team::Blue, self.job_description)
-        .to_figurine_display_rune()
+        Agent::new(Team::Blue, self.job_description).to_figurine_display_rune()
     }
 }
 
@@ -146,8 +147,10 @@ impl From<char> for Agent {
             'r' | '♜' => Agent::new(Team::Blue, JobDescription::Cop),
             'q' | '♛' => Agent::new(Team::Blue, JobDescription::Princess),
             'k' | '♚' => Agent::new(Team::Blue, JobDescription::Figurehead),
-            _ => moral_panic!("tried to construct Agent from \
-                               non-agent-preservation-rune (!?)"),
+            _ => {
+                moral_panic!("tried to construct Agent from \
+                              non-agent-preservation-rune (!?)")
+            }
         }
     }
 }
@@ -155,8 +158,10 @@ impl From<char> for Agent {
 
 impl fmt::Display for Agent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}",
-               self.team.figurine_paintjob().paint(
-                   &self.to_figurine_display_rune().to_string()))
+        write!(f,
+               "{}",
+               self.team
+                   .figurine_paintjob()
+                   .paint(&self.to_figurine_display_rune().to_string()))
     }
 }

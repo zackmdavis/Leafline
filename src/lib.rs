@@ -36,13 +36,13 @@ use mind::potentially_timebound_kickoff;
 #[repr(C)]
 pub struct Scoring {
     pub movement: [u8; 10],
-    pub score: f32
+    pub score: f32,
 }
 
 
 #[no_mangle]
-pub extern fn score(preservation_runes: *const libc::c_char, depth: u8,
-                    output_scorings: *mut Scoring) {
+pub extern "C" fn score(preservation_runes: *const libc::c_char, depth: u8,
+    output_scorings: *mut Scoring) {
     let experience_table: HashMap<Patch, u16> = HashMap::new();
     let intuition_bank = Arc::new(Mutex::new(experience_table));
 
@@ -61,12 +61,14 @@ pub extern fn score(preservation_runes: *const libc::c_char, depth: u8,
             let (commit, score, _variation) = c_s_v;
             let mut movement = [0u8; 10];
             for (c, byte) in commit.pagan_movement_rune()
-                    .as_bytes().iter().enumerate() {
+                                   .as_bytes()
+                                   .iter()
+                                   .enumerate() {
                 movement[c] = *byte;
             }
             output[i] = Scoring {
                 movement: movement,
-                score: score
+                score: score,
             }
         }
     }

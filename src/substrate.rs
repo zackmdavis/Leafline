@@ -43,10 +43,11 @@ pub fn meminfo(field: &str) -> Bytes {
             // like "MemFree:  3274928 kB"
             let mut figure = entry.trim_left_matches(label);
             figure = figure.trim_left();
-            figure = &figure[0..figure.len()-3]; // chop off " kB"
+            figure = &figure[0..figure.len() - 3]; // chop off " kB"
             let value: u64 = figure.parse()
-                .expect("couldn't parse memory inventory entry?!");
-            return Bytes::kibi(value as f32)
+                                   .expect("couldn't parse memory inventory \
+                                            entry?!");
+            return Bytes::kibi(value as f32);
         }
     }
     moral_panic!("couldn't find amount of free memory");

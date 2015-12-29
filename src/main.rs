@@ -34,15 +34,15 @@ use std::io::Write;
 use std::process;
 
 use ansi_term::Colour as Color;
-use argparse::{ArgumentParser, Store, StoreOption, StoreTrue, Print};
-use log::{LogRecord, LogMetadata, LogLevelFilter, SetLoggerError};
+use argparse::{ArgumentParser, Print, Store, StoreOption, StoreTrue};
+use log::{LogLevelFilter, LogMetadata, LogRecord, SetLoggerError};
 use rustc_serialize::json;
 use time::{Duration, get_time};
 
 use identity::{Agent, Team};
-use life::{WorldState, Commit, Patch};
-use mind::{kickoff, iterative_deepening_kickoff, fixed_depth_sequence_kickoff,
-           pagan_variation_format, Variation};
+use life::{Commit, Patch, WorldState};
+use mind::{Variation, fixed_depth_sequence_kickoff, iterative_deepening_kickoff,
+           kickoff, pagan_variation_format};
 use substrate::memory_free;
 
 
@@ -58,19 +58,24 @@ impl DebugLogger {
 }
 
 impl log::Log for DebugLogger {
-    fn enabled(&self, _metadata: &LogMetadata) -> bool { true }
+    fn enabled(&self, _metadata: &LogMetadata) -> bool {
+        true
+    }
 
     fn log(&self, record: &LogRecord) {
         let mut log_file = OpenOptions::new()
-            .write(true).append(true).create(true)
-            .open("leafline.log").expect("couldn't open log file?!");
-        let log_message = format!(
-            "[{}] {}\n",
-            time::now().strftime("%Y-%m-%d %H:%M:%S.%f").unwrap(),
-            record.args()
-        );
+                               .write(true)
+                               .append(true)
+                               .create(true)
+                               .open("leafline.log")
+                               .expect("couldn't open log file?!");
+        let log_message = format!("[{}] {}\n",
+                                  time::now()
+                                      .strftime("%Y-%m-%d %H:%M:%S.%f")
+                                      .unwrap(),
+                                  record.args());
         log_file.write(&log_message.into_bytes())
-            .expect("couldn't write to log file?!");
+                .expect("couldn't write to log file?!");
     }
 }
 
@@ -87,33 +92,39 @@ impl LookaheadBound {
     pub fn duration(&self) -> Duration {
         match *self {
             LookaheadBound::Seconds(secs) => Duration::seconds(secs as i64),
-            _ => moral_panic!("`duration()` called on non-Seconds \
-                               LookaheadBound variant")
+            _ => {
+                moral_panic!("`duration()` called on non-Seconds LookaheadBound \
+                              variant")
+            }
         }
     }
 
-    pub fn new_from_sequence_depiction(depiction: String) -> Self{
+    pub fn new_from_sequence_depiction(depiction: String) -> Self {
         let depth_runes = depiction.split(',');
-        let depth_sequence = depth_runes
-            .map(|dd| dd.parse::<u8>().expect("couldn't parse depth sequence"))
-            .collect::<Vec<_>>();
+        let depth_sequence = depth_runes.map(|dd| {
+                                            dd.parse::<u8>()
+                                              .expect("couldn't parse depth \
+                                                       sequence")
+                                        })
+                                        .collect::<Vec<_>>();
         LookaheadBound::DepthSequence(depth_sequence)
     }
 
     pub fn from_args(lookahead_depth: Option<u8>,
-                     lookahead_depth_sequence: Option<String>,
-                     lookahead_seconds: Option<u8>)
+        lookahead_depth_sequence: Option<String>,
+        lookahead_seconds: Option<u8>)
                      -> Result<Option<Self>, String> {
         let mut bound = None;
-        let confirm_bound_is_none = |b: &Option<LookaheadBound>|
-                                                -> Result<bool, String> {
-            if b.is_some() {
-                Err("more than one of `--depth`, `--depth-sequence`, \
-                     or `--seconds` was passed".to_owned())
-            } else {
-                Ok(true)
-            }
-        };
+        let confirm_bound_is_none =
+            |b: &Option<LookaheadBound>| -> Result<bool, String> {
+                if b.is_some() {
+                    Err("more than one of `--depth`, `--depth-sequence`, or \
+                         `--seconds` was passed"
+                            .to_owned())
+                } else {
+                    Ok(true)
+                }
+            };
         if let Some(depth) = lookahead_depth {
             try!(confirm_bound_is_none(&bound));
             bound = Some(LookaheadBound::Depth(depth));
@@ -173,12 +184,14 @@ struct Postcard {
 
 #[derive(RustcEncodable, RustcDecodable)]
 struct LastMissive {
-    the_triumphant: Option<Team>
+    the_triumphant: Option<Team>,
 }
 
-fn correspondence(reminder: String, bound: LookaheadBound, déjà_vu_bound: f32) -> String {
+fn correspondence(reminder: String, bound: LookaheadBound, déjà_vu_bound: f32)
+                  -> String {
     let in_medias_res = WorldState::reconstruct(reminder);
-    let (mut forecasts, depth, sidereal) = forecast(in_medias_res, bound,
+    let (mut forecasts, depth, sidereal) = forecast(in_medias_res,
+                                                    bound,
                                                     déjà_vu_bound);
 
     if !forecasts.is_empty() {
@@ -186,15 +199,19 @@ fn correspondence(reminder: String, bound: LookaheadBound, déjà_vu_bound: f32)
         // XXX TODO FIXME: this doesn't distinguish amongst ascensions
         // (and we can imagine somewhat contrived situations where only
         // some of them are admissible movements)
-        let counterreplies = determination.tree.lookahead()
-            .iter().map(|c| c.patch).collect::<Vec<_>>();
+        let counterreplies = determination.tree
+                                          .lookahead()
+                                          .iter()
+                                          .map(|c| c.patch)
+                                          .collect::<Vec<_>>();
         if counterreplies.is_empty() {
             if determination.tree.in_critical_endangerment(Team::Orange) {
-                return json::encode(
-                    &LastMissive { the_triumphant: Some(Team::Blue) }).unwrap()
+                return json::encode(&LastMissive {
+                           the_triumphant: Some(Team::Blue),
+                       })
+                           .unwrap();
             } else {
-                return json::encode(
-                    &LastMissive { the_triumphant: None }).unwrap()
+                return json::encode(&LastMissive { the_triumphant: None }).unwrap();
             }
         }
         let postcard = Postcard {
@@ -208,7 +225,8 @@ fn correspondence(reminder: String, bound: LookaheadBound, déjà_vu_bound: f32)
         json::encode(&postcard).unwrap()
     } else {
         if in_medias_res.in_critical_endangerment(Team::Blue) {
-            json::encode(&LastMissive { the_triumphant: Some(Team::Orange) }).unwrap()
+            json::encode(&LastMissive { the_triumphant: Some(Team::Orange) })
+                .unwrap()
         } else {
             json::encode(&LastMissive { the_triumphant: None }).unwrap()
         }
@@ -280,18 +298,20 @@ fn main() {
     }
 
     if correspond {
-        let bound_maybe_result = LookaheadBound::from_args(
-            lookahead_depth, lookahead_depth_sequence, lookahead_seconds
-        );
+        let bound_maybe_result = LookaheadBound::from_args(lookahead_depth,
+                                                           lookahead_depth_sequence,
+                                                           lookahead_seconds);
         let bound = match bound_maybe_result {
-            Ok(bound_maybe) => match bound_maybe {
-                Some(bound) => bound,
-                None => {
-                    moral_panic!(
-                        "`--correspond` passed without exactly \
-                         one of `--depth`, `--depth-sequence`, or `--seconds`");
-                },
-            },
+            Ok(bound_maybe) => {
+                match bound_maybe {
+                    Some(bound) => bound,
+                    None => {
+                        moral_panic!("`--correspond` passed without exactly one \
+                                      of `--depth`, `--depth-sequence`, or \
+                                      `--seconds`");
+                    }
+                }
+            }
             Err(error) => {
                 moral_panic!(error);
             }
@@ -307,12 +327,13 @@ fn main() {
 
     let mut world = match from_runes {
         Some(runes) => WorldState::reconstruct(runes),
-        None => WorldState::new()
+        None => WorldState::new(),
     };
     let mut premonitions: Vec<Commit>;
-    let bound_maybe = LookaheadBound::from_args(
-        lookahead_depth, lookahead_depth_sequence, lookahead_seconds
-    ).unwrap();
+    let bound_maybe = LookaheadBound::from_args(lookahead_depth,
+                                                lookahead_depth_sequence,
+                                                lookahead_seconds)
+                          .unwrap();
     loop {
         match bound_maybe {
             None => {
@@ -326,23 +347,23 @@ fn main() {
                 for (index, premonition) in premonitions.iter().enumerate() {
                     println!("{:>2}. {}", index, premonition)
                 }
-            },
+            }
             Some(ref bound) => {
-                let (our_forecasts, depth, thinking_time) = forecast(
-                    world, bound.clone(), déjà_vu_bound);
+                let (our_forecasts, depth, thinking_time) =
+                    forecast(world, bound.clone(), déjà_vu_bound);
                 let forecasts = our_forecasts;
                 println!("{}", world);
-                println!(
-                    "(scoring alternatives {} levels deep took {} ms)",
-                    depth, thinking_time.num_milliseconds()
-                );
+                println!("(scoring alternatives {} levels deep took {} ms)",
+                         depth,
+                         thinking_time.num_milliseconds());
                 premonitions = Vec::new();
                 for (index, sight) in forecasts.into_iter().enumerate() {
                     let (commit, score, variation) = sight;
                     println!("{:>2}: {} — score {} ‣ representative variation: {}",
-                             index, commit,
+                             index,
+                             commit,
                              Color::Purple.bold()
-                                 .paint(&format!("{:.1}", score)),
+                                          .paint(&format!("{:.1}", score)),
                              pagan_variation_format(&variation));
                     premonitions.push(commit);
                 }
@@ -376,8 +397,7 @@ fn main() {
                 world = premonitions[choice].tree;
                 break;
             } else {
-                println!("{} isn't among the choices. Try again.",
-                         choice);
+                println!("{} isn't among the choices. Try again.", choice);
             }
         }
     }
@@ -385,14 +405,13 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{correspondence, LookaheadBound};
+    use super::{LookaheadBound, correspondence};
 
     #[test]
     fn concerning_correspondence_victory_conditions() {
-        let blue_concession = correspondence(
-            "R6k/6pp/8/8/8/8/8/8 b -".to_owned(),
-            LookaheadBound::Depth(2), 1.0
-        );
+        let blue_concession = correspondence("R6k/6pp/8/8/8/8/8/8 b -".to_owned(),
+                                             LookaheadBound::Depth(2),
+                                             1.0);
         assert_eq!("{\"the_triumphant\":\"Orange\"}".to_owned(),
                    blue_concession);
     }
