@@ -139,7 +139,7 @@ fn order_movements_heuristically(commits: &mut Vec<Commit>) {
     });
 }
 
-fn order_movements_intuitively(experience: &HashMap<Patch, u16>,
+fn order_movements_intuitively(experience: &HashMap<Patch, u32>,
     commits: &mut Vec<Commit>) {
     commits.sort_by(|a, b| {
         let a_feels = experience.get(&a.patch);
@@ -207,7 +207,7 @@ pub fn α_β_negamax_search(
     world: WorldState, depth: u8, mut α: f32, β: f32, variation: Variation,
     memory_bank: Arc<Mutex<LruCache<WorldState, Souvenir,
                                     DefaultState<XxHash>>>>,
-    intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>)
+    intuition_bank: Arc<Mutex<HashMap<Patch, u32>>>)
         -> Lodestar {
     let mut premonitions = world.reckless_lookahead();
     if depth == 0 || premonitions.is_empty() {
@@ -267,7 +267,7 @@ pub fn α_β_negamax_search(
         if α >= β {
             let mut open_vault = intuition_bank.lock().unwrap();
             let mut intuition = open_vault.entry(premonition.patch).or_insert(0);
-            *intuition += 2u16.pow(depth as u32);
+            *intuition += 2u32.pow(depth as u32);
             break;
         }
     }
@@ -285,7 +285,7 @@ pub fn potentially_timebound_kickoff(
     world: &WorldState, depth: u8,
     nihilistically: bool,
     deadline_maybe: Option<time::Timespec>,
-    intuition_bank: Arc<Mutex<HashMap<Patch, u16>>>,
+    intuition_bank: Arc<Mutex<HashMap<Patch, u32>>>,
     déjà_vu_bound: f32)
         -> Option<Vec<(Commit, f32, Variation)>> {
     let déjà_vu_table: LruCache<WorldState, Souvenir, DefaultState<XxHash>> =
@@ -348,7 +348,7 @@ pub fn potentially_timebound_kickoff(
 pub fn kickoff(world: &WorldState, depth: u8,
                nihilistically: bool, déjà_vu_bound: f32)
                    -> Vec<(Commit, f32, Variation)> {
-    let experience_table: HashMap<Patch, u16> = HashMap::new();
+    let experience_table: HashMap<Patch, u32> = HashMap::new();
     let intuition_bank = Arc::new(Mutex::new(experience_table));
     potentially_timebound_kickoff(world, depth, nihilistically, None,
                                   intuition_bank, déjà_vu_bound).unwrap()
@@ -361,7 +361,7 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
                                    -> (Vec<(Commit, f32, Variation)>, u8) {
     let deadline = time::get_time() + timeout;
     let mut depth = 1;
-    let experience_table: HashMap<Patch, u16> = HashMap::new();
+    let experience_table: HashMap<Patch, u32> = HashMap::new();
     let intuition_bank = Arc::new(Mutex::new(experience_table));
     let mut forecasts = potentially_timebound_kickoff(
         world, depth, nihilistically, None,
@@ -382,7 +382,7 @@ pub fn fixed_depth_sequence_kickoff(world: &WorldState, depth_sequence: Vec<u8>,
                                     nihilistically: bool, déjà_vu_bound: f32)
                                     -> Vec<(Commit, f32, Variation)> {
     let mut depths = depth_sequence.iter();
-    let experience_table: HashMap<Patch, u16> = HashMap::new();
+    let experience_table: HashMap<Patch, u32> = HashMap::new();
     let intuition_bank = Arc::new(Mutex::new(experience_table));
     let mut forecasts = potentially_timebound_kickoff(
         world, *depths.next().expect("`depth_sequence` should be nonempty"),
