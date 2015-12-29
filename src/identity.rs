@@ -93,29 +93,6 @@ impl Agent {
         )
     }
 
-    pub fn from_preservation_rune(rune: char) -> Self {
-        // XXX TODO FIXME: I've heard of code duplication, but this is
-        // ridiculous. Not to mention ridiculous. Think of some less
-        // tedious approach for looking up static ancillary data about an
-        // Agent class. Steven Fackler's "Rust-PHF" looks interesting ...
-        match rune {
-            'P' => Agent::new(Team::Orange, JobDescription::Servant),
-            'N' => Agent::new(Team::Orange, JobDescription::Pony),
-            'B' => Agent::new(Team::Orange, JobDescription::Scholar),
-            'R' => Agent::new(Team::Orange, JobDescription::Cop),
-            'Q' => Agent::new(Team::Orange, JobDescription::Princess),
-            'K' => Agent::new(Team::Orange, JobDescription::Figurehead),
-            'p' => Agent::new(Team::Blue, JobDescription::Servant),
-            'n' => Agent::new(Team::Blue, JobDescription::Pony),
-            'b' => Agent::new(Team::Blue, JobDescription::Scholar),
-            'r' => Agent::new(Team::Blue, JobDescription::Cop),
-            'q' => Agent::new(Team::Blue, JobDescription::Princess),
-            'k' => Agent::new(Team::Blue, JobDescription::Figurehead),
-            _ => moral_panic!("Non-agent-preservation-rune passed to \
-                         `from_preservation_rune`"),
-        }
-    }
-
     pub fn to_pagan_movement_rune_prefix(&self) -> String {
         match self.job_description {
             JobDescription::Servant => "".to_owned(),
@@ -150,6 +127,28 @@ impl Agent {
         // other contexts
         Agent::new(Team::Blue, self.job_description)
         .to_figurine_display_rune()
+    }
+}
+
+
+impl From<char> for Agent {
+    fn from(rune: char) -> Self {
+        match rune {
+            'P' | '♙' => Agent::new(Team::Orange, JobDescription::Servant),
+            'N' | '♘' => Agent::new(Team::Orange, JobDescription::Pony),
+            'B' | '♗' => Agent::new(Team::Orange, JobDescription::Scholar),
+            'R' | '♖' => Agent::new(Team::Orange, JobDescription::Cop),
+            'Q' | '♕' => Agent::new(Team::Orange, JobDescription::Princess),
+            'K' | '♔' => Agent::new(Team::Orange, JobDescription::Figurehead),
+            'p' | '♟' => Agent::new(Team::Blue, JobDescription::Servant),
+            'n' | '♞' => Agent::new(Team::Blue, JobDescription::Pony),
+            'b' | '♝' => Agent::new(Team::Blue, JobDescription::Scholar),
+            'r' | '♜' => Agent::new(Team::Blue, JobDescription::Cop),
+            'q' | '♛' => Agent::new(Team::Blue, JobDescription::Princess),
+            'k' | '♚' => Agent::new(Team::Blue, JobDescription::Figurehead),
+            _ => moral_panic!("tried to construct Agent from \
+                               non-agent-preservation-rune (!?)"),
+        }
     }
 }
 

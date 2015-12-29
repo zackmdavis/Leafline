@@ -352,22 +352,8 @@ impl WorldState {
                                                        .unwrap();
                     file += file_offset;
                 }
-                // XXX "If you use `@` with `|`, you need to make sure
-                // the name is bound in each part of the pattern" oh like
-                // that's ergonomic
-                r @ 'P' |
-                r @ 'N' |
-                r @ 'B' |
-                r @ 'R' |
-                r @ 'Q' |
-                r @ 'K' |
-                r @ 'p' |
-                r @ 'n' |
-                r @ 'b' |
-                r @ 'r' |
-                r @ 'q' |
-                r @ 'k' => {
-                    let agent = Agent::from_preservation_rune(r);
+                r => {
+                    let agent = Agent::from(r);
                     let derived_pinfield;
                     {
                         let hot_pinfield = world.agent_to_pinfield_ref(agent);
@@ -380,7 +366,6 @@ impl WorldState {
                         agent, derived_pinfield);
                     file += 1;
                 }
-                r => moral_panic!(format!("Unexpected rune '{}'", r)),
             }
         }
         let rune_of_those_with_initiative = volumes.next()
