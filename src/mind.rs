@@ -186,19 +186,14 @@ impl fmt::Debug for Lodestar {
 
 #[derive(Debug, Clone)]
 pub struct Souvenir {
-    soundness: i8,
+    soundness: u8,
     lodestar: Lodestar,
 }
 
 impl Souvenir {
     fn new(lodestar: Lodestar, field_depth: u8) -> Self {
-        // XXX: soundness used to be a u8, but it overflows sometimes?!—maybe
-        // this makes sense (that there would be a circumstance where we use a
-        // Souvenir and déjà vu caching in a way such that the variation length
-        // is smaller than the field depth), but someone should think about it
-        // more carefully
-        Souvenir { soundness: lodestar.variation.len() as i8 - field_depth as i8,
-                   lodestar: lodestar }
+        let soundness = lodestar.variation.len() as u8 - field_depth;
+        Souvenir { soundness: soundness, lodestar: lodestar }
     }
 }
 
@@ -231,7 +226,7 @@ pub fn α_β_negamax_search(
             let souvenir_maybe = open_vault.get_mut(&premonition.tree);
             match souvenir_maybe {
                 Some(souvenir) => {
-                    if souvenir.soundness >= depth as i8 {
+                    if souvenir.soundness >= depth {
                         cached = true;
                         value = souvenir.lodestar.score;
                         extended_variation = souvenir.lodestar.variation.clone();
@@ -251,9 +246,10 @@ pub fn α_β_negamax_search(
             );
             lodestar.score *= -1.;  // nega-
             value = lodestar.score;
+            extended_variation = lodestar.variation.clone();
             memory_bank.lock().unwrap().insert(
                 premonition.tree,
-                Souvenir::new(lodestar, depth)
+                Souvenir::new(lodestar, extended_variation.len() as u8)
             );
         }
 
@@ -268,7 +264,7 @@ pub fn α_β_negamax_search(
             let mut open_vault = intuition_bank.lock().unwrap();
             let mut intuition = open_vault.entry(premonition.patch).or_insert(0);
             *intuition += 2u32.pow(depth as u32);
-            break;
+            break;  // cutoff!
         }
     }
     Lodestar::new(optimum, optimand)
