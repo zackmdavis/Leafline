@@ -1,6 +1,6 @@
 [package]
 name = "leafline"
-version = "0.0.16-prealpha"
+version = "0.0.16"
 authors = ["Zack M. Davis <code@zackmdavis.net>"]
 
 [lib]

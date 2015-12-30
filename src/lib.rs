@@ -43,7 +43,7 @@ pub struct Scoring {
 #[no_mangle]
 pub extern "C" fn score(preservation_runes: *const libc::c_char, depth: u8,
     output_scorings: *mut Scoring) {
-    let experience_table: HashMap<Patch, u16> = HashMap::new();
+    let experience_table: HashMap<Patch, u32> = HashMap::new();
     let intuition_bank = Arc::new(Mutex::new(experience_table));
 
     let buffer = unsafe { CStr::from_ptr(preservation_runes).to_bytes() };
@@ -52,7 +52,7 @@ pub extern "C" fn score(preservation_runes: *const libc::c_char, depth: u8,
     let world = WorldState::reconstruct(scan);
 
     if let Some(result) = potentially_timebound_kickoff(
-            &world, depth, true, None, intuition_bank, 1.0) {
+            &world, depth, None, true, None, intuition_bank, 1.0) {
         let mut output = unsafe {
             std::slice::from_raw_parts_mut(output_scorings, 60)
         };
