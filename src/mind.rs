@@ -199,23 +199,42 @@ impl Souvenir {
 
 
 pub fn α_β_negamax_search(
-    world: WorldState, depth: u8, mut α: f32, β: f32, variation: Variation,
-    memory_bank: Arc<Mutex<LruCache<WorldState, Souvenir,
-                                    DefaultState<XxHash>>>>,
-    intuition_bank: Arc<Mutex<HashMap<Patch, u32>>>)
+    world: WorldState, depth: i8, mut α: f32, β: f32, variation: Variation,
+    memory_bank: Arc<Mutex<LruCache<WorldState, Souvenir, DefaultState<XxHash>>>>,
+    intuition_bank: Arc<Mutex<HashMap<Patch, u32>>>,
+    quiet: Option<u8>)
         -> Lodestar {
+
     let mut premonitions = world.reckless_lookahead();
-    if depth == 0 || premonitions.is_empty() {
+    let mut optimum = NEG_INFINITY;
+    let mut optimand = variation.clone();
+    if depth <= 0 || premonitions.is_empty() {
         let potential_score = orientation(world.initiative) * score(world);
-        return Lodestar::new(potential_score, variation)
+        match quiet {
+            None => {
+                return Lodestar::new(potential_score, variation);
+            },
+            Some(extension) => {
+                if depth.abs() >= extension as i8 {
+                    return Lodestar::new(potential_score, variation);
+                }
+                premonitions = premonitions.into_iter()
+                    .filter(|c| c.hospitalization.is_some())
+                    .collect::<Vec<_>>();
+                if premonitions.is_empty() {
+                    return Lodestar::new(potential_score, variation)
+                } else {
+                    optimum = potential_score;
+                }
+            }
+        }
     };
+
     order_movements_heuristically(&mut premonitions);
     {
         let experience = intuition_bank.lock().unwrap();
         order_movements_intuitively(&experience, &mut premonitions)
     }
-    let mut optimum = NEG_INFINITY;
-    let mut optimand = variation.clone();
     for premonition in premonitions.into_iter() {
         let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
         let mut extended_variation = variation.clone();
@@ -226,7 +245,7 @@ pub fn α_β_negamax_search(
             let souvenir_maybe = open_vault.get_mut(&premonition.tree);
             match souvenir_maybe {
                 Some(souvenir) => {
-                    if souvenir.soundness >= depth {
+                    if souvenir.soundness as i8 >= depth {
                         cached = true;
                         value = souvenir.lodestar.score;
                         extended_variation = souvenir.lodestar.variation.clone();
@@ -242,7 +261,8 @@ pub fn α_β_negamax_search(
             let mut lodestar = α_β_negamax_search(
                 premonition.tree, depth - 1,
                 -β, -α, extended_variation.clone(),
-                memory_bank.clone(), intuition_bank.clone()
+                memory_bank.clone(), intuition_bank.clone(),
+                quiet
             );
             lodestar.score *= -1.;  // nega-
             value = lodestar.score;
@@ -261,9 +281,12 @@ pub fn α_β_negamax_search(
             α = value;
         }
         if α >= β {
-            let mut open_vault = intuition_bank.lock().unwrap();
-            let mut intuition = open_vault.entry(premonition.patch).or_insert(0);
-            *intuition += 2u32.pow(depth as u32);
+            if depth > 0 { // not a quietness extension
+                let mut open_vault = intuition_bank.lock().unwrap();
+                let mut intuition = open_vault.entry(premonition.patch)
+                    .or_insert(0);
+                *intuition += 2u32.pow(depth as u32);
+            }
             break;  // cutoff!
         }
     }
@@ -279,6 +302,7 @@ pub fn déjà_vu_table_size_bound(gib: f32) -> usize {
 
 pub fn potentially_timebound_kickoff(
     world: &WorldState, depth: u8,
+    extension_maybe: Option<u8>,
     nihilistically: bool,
     deadline_maybe: Option<time::Timespec>,
     intuition_bank: Arc<Mutex<HashMap<Patch, u32>>>,
@@ -309,9 +333,10 @@ pub fn potentially_timebound_kickoff(
         time_radios.push((premonition, rx));
         thread::spawn(move || {
             let search_hit: Lodestar = α_β_negamax_search(
-                premonition.tree, depth - 1,
+                premonition.tree, (depth - 1) as i8,
                 NEG_INFINITY, INFINITY, vec![premonition.patch],
-                travel_memory_bank, travel_intuition_bank
+                travel_memory_bank, travel_intuition_bank,
+                extension_maybe
             );
             explorer_radio.send(search_hit).ok();
         });
@@ -341,12 +366,12 @@ pub fn potentially_timebound_kickoff(
 
 
 #[allow(dead_code)]
-pub fn kickoff(world: &WorldState, depth: u8,
+pub fn kickoff(world: &WorldState, depth: u8, extension: Option<u8>,
                nihilistically: bool, déjà_vu_bound: f32)
                    -> Vec<(Commit, f32, Variation)> {
     let experience_table: HashMap<Patch, u32> = HashMap::new();
     let intuition_bank = Arc::new(Mutex::new(experience_table));
-    potentially_timebound_kickoff(world, depth, nihilistically, None,
+    potentially_timebound_kickoff(world, depth, extension, nihilistically, None,
                                   intuition_bank, déjà_vu_bound).unwrap()
 }
 
@@ -360,11 +385,11 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
     let experience_table: HashMap<Patch, u32> = HashMap::new();
     let intuition_bank = Arc::new(Mutex::new(experience_table));
     let mut forecasts = potentially_timebound_kickoff(
-        world, depth, nihilistically, None,
+        world, depth, None, nihilistically, None,
         intuition_bank.clone(),
         déjà_vu_bound).unwrap();
     while let Some(prophecy) = potentially_timebound_kickoff(
-            world, depth, nihilistically, Some(deadline),
+            world, depth, None, nihilistically, Some(deadline),
             intuition_bank.clone(), déjà_vu_bound) {
         forecasts = prophecy;
         depth += 1;
@@ -382,12 +407,12 @@ pub fn fixed_depth_sequence_kickoff(world: &WorldState, depth_sequence: Vec<u8>,
     let intuition_bank = Arc::new(Mutex::new(experience_table));
     let mut forecasts = potentially_timebound_kickoff(
         world, *depths.next().expect("`depth_sequence` should be nonempty"),
-        nihilistically, None, intuition_bank.clone(),
+        None, nihilistically, None, intuition_bank.clone(),
         déjà_vu_bound
     ).unwrap();
     for &depth in depths {
         forecasts = potentially_timebound_kickoff(
-            world, depth, nihilistically, None,
+            world, depth, None, nihilistically, None,
             intuition_bank.clone(), déjà_vu_bound).unwrap();
     }
     forecasts
@@ -424,25 +449,25 @@ mod tests {
     #[bench]
     fn benchmark_kickoff_depth_1(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 1, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff(&ws, 1, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_2_arbys(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 2, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff(&ws, 2, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_2_carefully(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 2, false, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff(&ws, 2, None, false, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_3(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 3, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[test]
@@ -450,7 +475,7 @@ mod tests {
     fn concerning_short_circuiting_upon_finding_critical_endangerment() {
         let ws = WorldState::reconstruct("7K/r7/1r6/8/8/8/8/7k b -".to_owned());
         let start = time::get_time();
-        kickoff(&ws, 30, true, MOCK_DÉJÀ_VU_BOUND);
+        kickoff(&ws, 30, None, true, MOCK_DÉJÀ_VU_BOUND);
         let duration = time::get_time() - start;
         assert!(duration.num_seconds() < 20);
     }
@@ -470,7 +495,7 @@ mod tests {
         // split, whereby transforming into a pony (rather than
         // transitioning into a princess, as would usually be
         // expected) endangers both the blue princess and figurehead
-        let tops = kickoff(&ws, 3, true, MOCK_DÉJÀ_VU_BOUND);
+        let tops = kickoff(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND);
         let best_move = tops[0].0;
         let score = tops[0].1;
         println!("{:?}", best_move);
@@ -499,7 +524,7 @@ mod tests {
         world.no_castling_at_all();
 
         let depth = 2;
-        let advisory = kickoff(&world, depth, true, MOCK_DÉJÀ_VU_BOUND);
+        let advisory = kickoff(&world, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
 
         // taking the pony is the right thing to do
         assert_eq!(Locale::new(0, 0), advisory[0].0.patch.whither);
@@ -530,7 +555,7 @@ mod tests {
 
         negaworld.no_castling_at_all();
 
-        let negadvisory = kickoff(&negaworld, depth, true, MOCK_DÉJÀ_VU_BOUND);
+        let negadvisory = kickoff(&negaworld, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
 
         // taking the pony is still the right thing to do, even in the
         // negaworld
@@ -568,7 +593,7 @@ mod tests {
             let world = WorldState::reconstruct(world_runeset.to_owned());
             let mut previously = None;
             for &depth in &[2, 3, 4] {
-                let premonitions = kickoff(&world, depth, true, 1.0);
+                let premonitions = kickoff(&world, depth, None, true, 1.0);
                 let mut top_showings = 0.;
                 for showing in &premonitions[0..10] {
                     top_showings += showing.1; // (_commit, score, _variation)

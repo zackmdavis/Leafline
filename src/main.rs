@@ -82,7 +82,7 @@ impl log::Log for DebugLogger {
 
 #[derive(Debug, Clone)]
 enum LookaheadBound {
-    Depth(u8),
+    Depth(u8, Option<u8>),
     DepthSequence(Vec<u8>),
     Seconds(u8),
 }
@@ -111,6 +111,7 @@ impl LookaheadBound {
     }
 
     pub fn from_args(lookahead_depth: Option<u8>,
+                     lookahead_extension: Option<u8>,
         lookahead_depth_sequence: Option<String>,
         lookahead_seconds: Option<u8>)
                      -> Result<Option<Self>, String> {
@@ -127,7 +128,7 @@ impl LookaheadBound {
             };
         if let Some(depth) = lookahead_depth {
             try!(confirm_bound_is_none(&bound));
-            bound = Some(LookaheadBound::Depth(depth));
+            bound = Some(LookaheadBound::Depth(depth, lookahead_extension));
         }
         if let Some(sequence_depiction) = lookahead_depth_sequence {
             try!(confirm_bound_is_none(&bound));
@@ -148,8 +149,8 @@ fn forecast(world: WorldState, bound: LookaheadBound, déjà_vu_bound: f32)
     let forecasts;
     let depth;
     match bound {
-        LookaheadBound::Depth(ds) => {
-            forecasts = kickoff(&world, ds, false, déjà_vu_bound);
+        LookaheadBound::Depth(ds, es) => {
+            forecasts = kickoff(&world, ds, es, false, déjà_vu_bound);
             depth = ds;
         },
         LookaheadBound::DepthSequence(ds) => {
@@ -246,6 +247,7 @@ fn main() {
     // (https://docs.python.org/3/library/argparse.html#mutual-exclusion)?
     // Contribution opportunity if so??
     let mut lookahead_depth: Option<u8> = None;
+    let mut lookahead_extension: Option<u8> = None;
     // TODO CONSIDER: would argparse's Collect action be cleaner?
     let mut lookahead_depth_sequence: Option<String> = None;
     let mut lookahead_seconds: Option<u8> = None;
@@ -260,6 +262,10 @@ fn main() {
             &["--depth"],
             StoreOption,
             "rank moves using AI minimax lookahead this deep");
+        parser.refer(&mut lookahead_extension).add_option(
+            &["--quiet"],
+            StoreOption,
+            "search with quietness extension this deep");
         parser.refer(&mut lookahead_depth_sequence).add_option(
             &["--depth-sequence"],
             StoreOption,
@@ -299,6 +305,7 @@ fn main() {
 
     if correspond {
         let bound_maybe_result = LookaheadBound::from_args(lookahead_depth,
+                                                           lookahead_extension,
                                                            lookahead_depth_sequence,
                                                            lookahead_seconds);
         let bound = match bound_maybe_result {
@@ -331,6 +338,7 @@ fn main() {
     };
     let mut premonitions: Vec<Commit>;
     let bound_maybe = LookaheadBound::from_args(lookahead_depth,
+                                                lookahead_extension,
                                                 lookahead_depth_sequence,
                                                 lookahead_seconds)
                           .unwrap();
@@ -353,8 +361,20 @@ fn main() {
                     forecast(world, bound.clone(), déjà_vu_bound);
                 let forecasts = our_forecasts;
                 println!("{}", world);
+                let depth_report = match *bound {
+                    LookaheadBound::Depth(standard, extension) => {
+                        match extension {
+                            Some(quietening) => format!(
+                                "at least {} and up to {}",
+                                standard,
+                                standard + quietening),
+                            None => format!("{}", depth)
+                        }
+                    }
+                    _ => format!("{}", depth),
+                };
                 println!("(scoring alternatives {} levels deep took {} ms)",
-                         depth,
+                         depth_report,
                          thinking_time.num_milliseconds());
                 premonitions = Vec::new();
                 for (index, sight) in forecasts.into_iter().enumerate() {
@@ -410,7 +430,7 @@ mod tests {
     #[test]
     fn concerning_correspondence_victory_conditions() {
         let blue_concession = correspondence("R6k/6pp/8/8/8/8/8/8 b -".to_owned(),
-                                             LookaheadBound::Depth(2),
+                                             LookaheadBound::Depth(2, None),
                                              1.0);
         assert_eq!("{\"the_triumphant\":\"Orange\"}".to_owned(),
                    blue_concession);
