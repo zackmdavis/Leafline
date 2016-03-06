@@ -1,9 +1,9 @@
 use std::f32::{INFINITY, NEG_INFINITY};
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::collections::hash_state::DefaultState;
 use std::default::Default;
 use std::fmt;
+use std::hash::BuildHasherDefault;
 use std::mem;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
@@ -200,7 +200,8 @@ impl Souvenir {
 
 pub fn α_β_negamax_search(
     world: WorldState, depth: i8, mut α: f32, β: f32, variation: Variation,
-    memory_bank: Arc<Mutex<LruCache<WorldState, Souvenir, DefaultState<XxHash>>>>,
+    memory_bank: Arc<Mutex<LruCache<WorldState, Souvenir,
+                                    BuildHasherDefault<XxHash>>>>,
     intuition_bank: Arc<Mutex<HashMap<Patch, u32>>>,
     quiet: Option<u8>)
         -> Lodestar {
@@ -308,7 +309,8 @@ pub fn potentially_timebound_kickoff(
     intuition_bank: Arc<Mutex<HashMap<Patch, u32>>>,
     déjà_vu_bound: f32)
         -> Option<Vec<(Commit, f32, Variation)>> {
-    let déjà_vu_table: LruCache<WorldState, Souvenir, DefaultState<XxHash>> =
+    let déjà_vu_table: LruCache<WorldState, Souvenir,
+                                BuildHasherDefault<XxHash>> =
         LruCache::with_hash_state(déjà_vu_table_size_bound(déjà_vu_bound),
                                   Default::default());
     let memory_bank = Arc::new(Mutex::new(déjà_vu_table));

@@ -3,6 +3,7 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 
+#[derive(Debug, Copy, Clone)]
 pub struct Bytes(u64);
 
 #[allow(dead_code)]

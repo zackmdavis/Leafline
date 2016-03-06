@@ -1,9 +1,8 @@
-#![feature(augmented_assignments, hashmap_hasher, iter_arith,
-           non_ascii_idents, pattern, plugin, test)]
+#![feature(hashmap_hasher, iter_arith, non_ascii_idents, pattern, plugin, test)]
 
 #![plugin(clippy)]
 
-#![allow(unused_features)]
+#![allow(if_not_else, unused_features)]
 #![warn(missing_debug_implementations, missing_copy_implementations,
         trivial_casts, trivial_numeric_casts,
         unused_import_braces, unused_qualifications)]
@@ -188,6 +187,7 @@ struct LastMissive {
     the_triumphant: Option<Team>,
 }
 
+#[allow(collapsible_if)]
 fn correspondence(reminder: String, bound: LookaheadBound, déjà_vu_bound: f32)
                   -> String {
     let in_medias_res = WorldState::reconstruct(reminder);

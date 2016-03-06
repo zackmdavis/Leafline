@@ -174,23 +174,23 @@ impl Default for WorldState {
             initiative: Team::Orange,
 
             orange_servants: Pinfield::init(&orange_servant_locales),
-            orange_ponies: Pinfield::init(&vec![Locale::new(0, 1),
-                                                Locale::new(0, 6)]),
-            orange_scholars: Pinfield::init(&vec![Locale::new(0, 2),
-                                                  Locale::new(0, 5)]),
-            orange_cops: Pinfield::init(&vec![Locale::new(0, 0), Locale::new(0, 7)]),
-            orange_princesses: Pinfield::init(&vec![Locale::new(0, 3)]),
-            orange_figurehead: Pinfield::init(&vec![ORANGE_FIGUREHEAD_START]),
+            orange_ponies: Pinfield::init(&[Locale::new(0, 1),
+                                            Locale::new(0, 6)]),
+            orange_scholars: Pinfield::init(&[Locale::new(0, 2),
+                                              Locale::new(0, 5)]),
+            orange_cops: Pinfield::init(&[Locale::new(0, 0), Locale::new(0, 7)]),
+            orange_princesses: Pinfield::init(&[Locale::new(0, 3)]),
+            orange_figurehead: Pinfield::init(&[ORANGE_FIGUREHEAD_START]),
             orange_east_service_eligibility: true,
             orange_west_service_eligibility: true,
 
             blue_servants: Pinfield::init(&blue_servant_locales),
-            blue_ponies: Pinfield::init(&vec![Locale::new(7, 1), Locale::new(7, 6)]),
-            blue_scholars: Pinfield::init(&vec![Locale::new(7, 2),
-                                                Locale::new(7, 5)]),
-            blue_cops: Pinfield::init(&vec![Locale::new(7, 0), Locale::new(7, 7)]),
-            blue_princesses: Pinfield::init(&vec![Locale::new(7, 3)]),
-            blue_figurehead: Pinfield::init(&vec![BLUE_FIGUREHEAD_START]),
+            blue_ponies: Pinfield::init(&[Locale::new(7, 1), Locale::new(7, 6)]),
+            blue_scholars: Pinfield::init(&[Locale::new(7, 2),
+                                            Locale::new(7, 5)]),
+            blue_cops: Pinfield::init(&[Locale::new(7, 0), Locale::new(7, 7)]),
+            blue_princesses: Pinfield::init(&[Locale::new(7, 3)]),
+            blue_figurehead: Pinfield::init(&[BLUE_FIGUREHEAD_START]),
             blue_east_service_eligibility: true,
             blue_west_service_eligibility: true,
         }
@@ -416,7 +416,7 @@ impl WorldState {
 
     pub fn except_replaced_subboard(&self, for_whom: Agent, subboard: Pinfield)
                                     -> Self {
-        let mut resultant_state = self.clone();
+        let mut resultant_state = *self;
         resultant_state.agent_to_pinfield_mutref(for_whom).0 = subboard.0;
         resultant_state
     }
@@ -581,7 +581,7 @@ impl WorldState {
                    ascended.job_description == JobDescription::Figurehead {
                     continue;
                 }
-                let mut ascendency = premonition.clone();
+                let mut ascendency = premonition;
                 ascendency.ascension = Some(ascended);
                 let vessel_pinfield =
                     premonition.tree
