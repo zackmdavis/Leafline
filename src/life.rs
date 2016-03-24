@@ -1256,6 +1256,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(similar_names)]
     fn concerning_taking_turns() {
         let state1 = WorldState::new();
         let state2 = state1.lookahead()[0].tree;

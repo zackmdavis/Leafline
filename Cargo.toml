@@ -24,7 +24,7 @@ log = "0.3"
 lru-cache = "0.0.7"
 rustc-serialize = "0.3"
 time = "0.1"
-twox-hash = "0.1.1"
+twox-hash = "1.0"
 
 [profile.dev]
 opt-level = 2

@@ -198,6 +198,7 @@ impl Souvenir {
 }
 
 
+#[allow(too_many_arguments)]
 pub fn α_β_negamax_search(
     world: WorldState, depth: i8, mut α: f32, β: f32, variation: Variation,
     memory_bank: Arc<Mutex<LruCache<WorldState, Souvenir,

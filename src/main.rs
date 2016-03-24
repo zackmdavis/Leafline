@@ -1,4 +1,4 @@
-#![feature(hashmap_hasher, iter_arith, non_ascii_idents, pattern, plugin, test)]
+#![feature(iter_arith, non_ascii_idents, pattern, plugin, test, question_mark)]
 
 #![plugin(clippy)]
 
@@ -126,16 +126,16 @@ impl LookaheadBound {
                 }
             };
         if let Some(depth) = lookahead_depth {
-            try!(confirm_bound_is_none(&bound));
+            confirm_bound_is_none(&bound)?;
             bound = Some(LookaheadBound::Depth(depth, lookahead_extension));
         }
         if let Some(sequence_depiction) = lookahead_depth_sequence {
-            try!(confirm_bound_is_none(&bound));
+            confirm_bound_is_none(&bound)?;
             bound = Some(LookaheadBound::new_from_sequence_depiction(
                 sequence_depiction));
         }
         if let Some(seconds) = lookahead_seconds {
-            try!(confirm_bound_is_none(&bound));
+            confirm_bound_is_none(&bound)?;
             bound = Some(LookaheadBound::Seconds(seconds));
         }
         Ok(bound)
