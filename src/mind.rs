@@ -5,6 +5,7 @@ use std::default::Default;
 use std::fmt;
 use std::hash::BuildHasherDefault;
 use std::mem;
+use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::thread;
@@ -19,7 +20,7 @@ use life::{Commit, Patch, WorldState};
 use landmark::{CENTER_OF_THE_WORLD, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN,
                LOW_COLONELCY, LOW_SEVENTH_HEAVEN};
 use space::Pinfield;
-use substrate::Bytes;
+use substrate::{Bytes, cpu_count};
 
 
 const REWARD_FOR_INITIATIVE: f32 = 0.5;
@@ -149,6 +150,96 @@ fn order_movements_intuitively(experience: &HashMap<Patch, u32>,
 }
 
 pub type Variation = Vec<Patch>;
+
+struct Frame {
+    world: WorldState,
+    α: Mutex<f32>,
+    β: Mutex<f32>,
+    score: Mutex<Option<f32>>,
+    variation: Variation,
+    parent: Option<Arc<Frame>>,
+}
+
+impl Default for Frame {
+    fn default() -> Self {
+        Frame {
+            world: WorldState::new(),
+            α: Mutex::new(NEG_INFINITY),
+            β: Mutex::new(INFINITY),
+            variation: Vec::new(),
+            previously: None,
+        }
+    }
+}
+
+impl Frame {
+    fn new(world: WorldState) -> Self {
+        Frame { world: world, .. Frame::default() }
+    }
+
+    fn advance(previously: &Arc<Frame>, commit: Commit) -> Self {
+        let mut extended_variation = previously.deref().variation.clone();
+        extended_variation.push(commit.patch);
+        Frame {
+            world: commit.tree,
+            α: -previously.β,
+            β: -previously.α,
+            variation: extended_variation,
+            previously: Some(previously.clone()),
+        }
+    }
+}
+
+pub fn stackpool_search(world: WorldState, depth: usize) -> Vec<Frame> {
+    let premonitions = world.lookahead();
+    let mut stack: Arc<Mutex<Vec<Arc<Frame>>>> =
+                       Arc::new(Mutex::new(vec![Arc::new(Frame::new(world))]));
+    for _ in 0..cpu_count() {
+        thread::spawn(move || {
+            let stack_handle = stack.clone();
+            loop {
+                let shared_frame: Arc<Frame>;
+                {
+                    let stack = stack_handle.deref().lock().unwrap();
+                    frame = match stack.pop() {
+                        Some(f) => f,
+                        None => { // it's empty; we must be all done
+                            return;
+                        }
+                    };
+                }
+                let frame: &Frame = *shared_frame;
+
+                let mut propagate = false;
+                if frame.variation.len() >= depth {
+                    propagate = true
+                }
+
+                let collective_premonitions: Vec<Arc<Frame>>;
+                if !propagate {
+                    let possible_world = frame.world;
+                    collective_premonitions =
+                        world.reckless_lookahead()
+                        .iter().map(|p| { Arc::new(Frame::new(p)) })
+                        .collect::<Vec<_>>();
+                    if collective_premonitions.is_empty() {
+                        propagate = true;
+                    }
+                }
+
+                if propagate {
+
+                } else {
+
+
+                }
+
+            }
+        });
+    }
+    vec![] // TODO
+}
+
 
 #[allow(ptr_arg)]
 pub fn pagan_variation_format(variation: &Variation) -> String {

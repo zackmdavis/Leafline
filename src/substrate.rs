@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
+use libc;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Bytes(u64);
@@ -58,6 +59,16 @@ pub fn meminfo(field: &str) -> Bytes {
 #[allow(dead_code)]
 pub fn memory_free() -> Bytes {
     meminfo("MemFree")
+}
+
+
+/// one-line function copied from `num_cpus` crate
+/// (https://github.com/seanmonstar/num_cpus/blob/eeaa60b9/src/lib.rs#L100-L104)
+/// in memory of the left-pad catastrophe
+pub fn cpu_count() -> usize {
+    unsafe {
+        libc::sysconf(libc::_SC_NPROCESSORS_ONLN) as usize
+    }
 }
 
 
