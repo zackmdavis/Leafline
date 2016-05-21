@@ -17,7 +17,8 @@ embassy = []
 [dependencies]
 ansi_term = "0.6"
 argparse = "0.2"
-clippy = "*"
+# Clippy seems to be failing to build with this nightly?
+# clippy = { git = "https://github.com/Manishearth/rust-clippy.git" }
 itertools = "0.4"
 libc = "0.2"
 log = "0.3"

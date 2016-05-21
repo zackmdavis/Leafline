@@ -1,6 +1,9 @@
 #![feature(iter_arith, non_ascii_idents, pattern, plugin, test, question_mark)]
 
-#![plugin(clippy)]
+// Clippy is failing to build?
+#![allow(unknown_lints)]
+// #![plugin(clippy)]
+
 
 #![allow(if_not_else, unused_features)]
 #![warn(missing_debug_implementations, missing_copy_implementations,
