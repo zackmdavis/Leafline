@@ -3,17 +3,6 @@ name = "leafline"
 version = "0.0.16"
 authors = ["Zack M. Davis <code@zackmdavis.net>"]
 
-[lib]
-path = "src/lib.rs"
-crate-type = ["dylib"]
-
-[[bin]]
-name = "leafline"
-path = "src/main.rs"
-
-[features]
-embassy = []
-
 [dependencies]
 ansi_term = "0.6"
 argparse = "0.2"
