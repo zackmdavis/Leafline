@@ -1,8 +1,13 @@
-#![feature(augmented_assignments, hashmap_hasher, non_ascii_idents, plugin)]
+#![feature(augmented_assignments, hashmap_hasher, iter_arith,
+           non_ascii_idents, pattern, plugin, test)]
 
 #![plugin(clippy)]
 
 #![cfg(feature = "embassy")]
+
+// XXX: is there a slick way to pass different cfg options to lib and bin
+// builds?
+#![allow(unused_variables, dead_code, unused_features, unused_imports)]
 
 extern crate argparse;
 extern crate ansi_term;
@@ -25,7 +30,7 @@ mod mind;
 mod substrate;
 
 use std::collections::HashMap;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::sync::{Arc, Mutex};
 
 use life::{Patch, WorldState};
@@ -33,7 +38,6 @@ use mind::potentially_timebound_kickoff;
 
 
 #[derive(Debug)]
-#[repr(C)]
 pub struct Scoring {
     pub movement: [u8; 10],
     pub score: f32,
