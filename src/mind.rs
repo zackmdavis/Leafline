@@ -368,7 +368,6 @@ pub fn potentially_timebound_kickoff(
 }
 
 
-#[allow(dead_code)]
 pub fn kickoff(world: &WorldState, depth: u8, extension: Option<u8>,
                nihilistically: bool, déjà_vu_bound: f32)
                    -> Vec<(Commit, f32, Variation)> {
@@ -379,7 +378,6 @@ pub fn kickoff(world: &WorldState, depth: u8, extension: Option<u8>,
 }
 
 
-#[allow(dead_code)]
 pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
                                    nihilistically: bool, déjà_vu_bound: f32)
                                    -> (Vec<(Commit, f32, Variation)>, u8) {
@@ -401,7 +399,6 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
 }
 
 
-#[allow(dead_code)]
 pub fn fixed_depth_sequence_kickoff(world: &WorldState, depth_sequence: Vec<u8>,
                                     nihilistically: bool, déjà_vu_bound: f32)
                                     -> Vec<(Commit, f32, Variation)> {

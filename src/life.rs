@@ -157,9 +157,7 @@ pub struct WorldState {
     pub blue_west_service_eligibility: bool,
 }
 
-#[allow(dead_code)]
 const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
-#[allow(dead_code)]
 const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 };
 
 impl Default for WorldState {
@@ -276,7 +274,6 @@ impl WorldState {
         prems.iter().any(|c| (*c).patch.whither == locale)
     }
 
-    #[allow(dead_code)]
     pub fn preserve(&self) -> String {
         fn void_void_run_length(work: &mut String, counter: &mut u8) {
             work.push(counter.to_string().chars().next().unwrap());
@@ -459,7 +456,6 @@ impl WorldState {
         None
     }
 
-    #[allow(dead_code)]
     fn occupying_agent(&self, at: Locale) -> Option<Agent> {
         for &team in &Team::league() {
             let agent_maybe = self.occupying_affiliated_agent(at, team);
