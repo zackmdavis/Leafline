@@ -1,6 +1,6 @@
 [package]
 name = "leafline"
-version = "0.0.16"
+version = "0.0.17-prealpha"
 authors = ["Zack M. Davis <code@zackmdavis.net>"]
 
 [dependencies]
@@ -11,6 +11,7 @@ itertools = "0.4"
 libc = "0.2"
 log = "0.3"
 lru-cache = "0.0.7"
+parking_lot = "0.2"
 rustc-serialize = "0.3"
 time = "0.1"
 twox-hash = "1.0"

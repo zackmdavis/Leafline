@@ -5,13 +5,14 @@ use std::default::Default;
 use std::fmt;
 use std::hash::BuildHasherDefault;
 use std::mem;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
 use time;
 use lru_cache::LruCache;
+use parking_lot;
 use twox_hash::XxHash;
 
 use identity::{Agent, JobDescription, Team};
@@ -201,9 +202,9 @@ impl Souvenir {
 #[allow(too_many_arguments)]
 pub fn α_β_negamax_search(
     world: WorldState, depth: i8, mut α: f32, β: f32, variation: Variation,
-    memory_bank: Arc<Mutex<LruCache<WorldState, Souvenir,
+    memory_bank: Arc<parking_lot::Mutex<LruCache<WorldState, Souvenir,
                                     BuildHasherDefault<XxHash>>>>,
-    intuition_bank: Arc<Mutex<HashMap<Patch, u32>>>,
+    intuition_bank: Arc<parking_lot::Mutex<HashMap<Patch, u32>>>,
     quiet: Option<u8>)
         -> Lodestar {
 
@@ -234,7 +235,7 @@ pub fn α_β_negamax_search(
 
     order_movements_heuristically(&mut premonitions);
     {
-        let experience = intuition_bank.lock().unwrap();
+        let experience = intuition_bank.lock();
         order_movements_intuitively(&experience, &mut premonitions)
     }
     for premonition in premonitions.into_iter() {
@@ -243,7 +244,7 @@ pub fn α_β_negamax_search(
         extended_variation.push(premonition.patch);
         let cached: bool;
         {
-            let mut open_vault = memory_bank.lock().unwrap();
+            let mut open_vault = memory_bank.lock();
             let souvenir_maybe = open_vault.get_mut(&premonition.tree);
             match souvenir_maybe {
                 Some(souvenir) => {
@@ -269,7 +270,7 @@ pub fn α_β_negamax_search(
             lodestar.score *= -1.;  // nega-
             value = lodestar.score;
             extended_variation = lodestar.variation.clone();
-            memory_bank.lock().unwrap().insert(
+            memory_bank.lock().insert(
                 premonition.tree,
                 Souvenir::new(lodestar, extended_variation.len() as u8)
             );
@@ -284,7 +285,7 @@ pub fn α_β_negamax_search(
         }
         if α >= β {
             if depth > 0 { // not a quietness extension
-                let mut open_vault = intuition_bank.lock().unwrap();
+                let mut open_vault = intuition_bank.lock();
                 let mut intuition = open_vault.entry(premonition.patch)
                     .or_insert(0);
                 *intuition += 2u32.pow(depth as u32);
@@ -307,14 +308,14 @@ pub fn potentially_timebound_kickoff(
     extension_maybe: Option<u8>,
     nihilistically: bool,
     deadline_maybe: Option<time::Timespec>,
-    intuition_bank: Arc<Mutex<HashMap<Patch, u32>>>,
+    intuition_bank: Arc<parking_lot::Mutex<HashMap<Patch, u32>>>,
     déjà_vu_bound: f32)
         -> Option<Vec<(Commit, f32, Variation)>> {
     let déjà_vu_table: LruCache<WorldState, Souvenir,
                                 BuildHasherDefault<XxHash>> =
         LruCache::with_hash_state(déjà_vu_table_size_bound(déjà_vu_bound),
                                   Default::default());
-    let memory_bank = Arc::new(Mutex::new(déjà_vu_table));
+    let memory_bank = Arc::new(parking_lot::Mutex::new(déjà_vu_table));
     let mut premonitions;
     if nihilistically {
         premonitions = world.reckless_lookahead();
@@ -323,7 +324,7 @@ pub fn potentially_timebound_kickoff(
     }
     order_movements_heuristically(&mut premonitions);
     {
-        let experience = intuition_bank.lock().unwrap();
+        let experience = intuition_bank.lock();
         order_movements_intuitively(&experience, &mut premonitions)
     }
     let mut forecasts = Vec::new();
@@ -372,7 +373,7 @@ pub fn kickoff(world: &WorldState, depth: u8, extension: Option<u8>,
                nihilistically: bool, déjà_vu_bound: f32)
                    -> Vec<(Commit, f32, Variation)> {
     let experience_table: HashMap<Patch, u32> = HashMap::new();
-    let intuition_bank = Arc::new(Mutex::new(experience_table));
+    let intuition_bank = Arc::new(parking_lot::Mutex::new(experience_table));
     potentially_timebound_kickoff(world, depth, extension, nihilistically, None,
                                   intuition_bank, déjà_vu_bound).unwrap()
 }
@@ -384,7 +385,7 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
     let deadline = time::get_time() + timeout;
     let mut depth = 1;
     let experience_table: HashMap<Patch, u32> = HashMap::new();
-    let intuition_bank = Arc::new(Mutex::new(experience_table));
+    let intuition_bank = Arc::new(parking_lot::Mutex::new(experience_table));
     let mut forecasts = potentially_timebound_kickoff(
         world, depth, None, nihilistically, None,
         intuition_bank.clone(),
@@ -404,7 +405,7 @@ pub fn fixed_depth_sequence_kickoff(world: &WorldState, depth_sequence: Vec<u8>,
                                     -> Vec<(Commit, f32, Variation)> {
     let mut depths = depth_sequence.iter();
     let experience_table: HashMap<Patch, u32> = HashMap::new();
-    let intuition_bank = Arc::new(Mutex::new(experience_table));
+    let intuition_bank = Arc::new(parking_lot::Mutex::new(experience_table));
     let mut forecasts = potentially_timebound_kickoff(
         world, *depths.next().expect("`depth_sequence` should be nonempty"),
         None, nihilistically, None, intuition_bank.clone(),
