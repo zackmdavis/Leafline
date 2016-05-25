@@ -133,8 +133,8 @@ fn mmv_lva_heuristic(commit: &Commit) -> f32 {
 
 fn order_movements_heuristically(commits: &mut Vec<Commit>) {
     commits.sort_by(|a, b| {
-        mmv_lva_heuristic(&b)
-            .partial_cmp(&mmv_lva_heuristic(&a))
+        mmv_lva_heuristic(b)
+            .partial_cmp(&mmv_lva_heuristic(a))
             .unwrap_or(Ordering::Equal)
     });
 }
