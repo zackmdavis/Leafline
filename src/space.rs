@@ -78,11 +78,10 @@ impl Locale {
 }
 
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone, Hash, Default)]
 pub struct Pinfield(pub u64);
 
 impl Pinfield {
-    #[allow(new_without_default)]
     pub fn new() -> Pinfield {
         Pinfield(0)
     }
