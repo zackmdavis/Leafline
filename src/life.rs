@@ -448,7 +448,7 @@ impl WorldState {
     }
 
     pub fn occupying_affiliated_agent(&self, at: Locale, team: Team) -> Option<Agent> {
-        for agent in Agent::dramatis_personæ(team).into_iter() {
+        for agent in Agent::dramatis_personæ(team) {
             if self.agent_to_pinfield_ref(agent).query(at) {
                 return Some(agent);
             }
@@ -642,7 +642,7 @@ impl WorldState {
         let servant_agent = Agent::new(team, JobDescription::Servant);
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(servant_agent);
         let mut premonitions = Vec::new();
-        for start_locale in positional_chart.to_locales().into_iter() {
+        for start_locale in positional_chart.to_locales() {
             // can move one locale if he's not blocked
             let std_destination_maybe = start_locale.displace(standard_offset);
             if let Some(destination_locale) = std_destination_maybe {
@@ -703,13 +703,13 @@ impl WorldState {
             JobDescription::Figurehead => FIGUREHEAD_MOVEMENT_TABLE,
             _ => moral_panic!("non-ponylike agent passed to `ponylike_lookahead`"),
         };
-        for start_locale in positional_chart.to_locales().into_iter() {
+        for start_locale in positional_chart.to_locales() {
             let destinations = self.occupied_by(agent.team)
                                    .invert()
                                    .intersection(Pinfield(movement_table[
                         start_locale.pindex() as usize]))
                                    .to_locales();
-            for destination in destinations.into_iter() {
+            for destination in destinations {
                 self.predict(&mut premonitions,
                              Patch {
                                  star: agent,
@@ -742,7 +742,7 @@ impl WorldState {
             _ => moral_panic!("non-princesslike agent passed to \
                                `princesslike_lookahead`"),
         };
-        for start_locale in positional_chart.to_locales().into_iter() {
+        for start_locale in positional_chart.to_locales() {
             for &offset in &offsets {
                 let mut venture = 1;
                 loop {
@@ -1350,7 +1350,7 @@ mod tests {
                     whence: Locale::from_algebraic("g2".to_owned()),
                     whither: Locale::from_algebraic("g4".to_owned()) },
         ];
-        for patch in fools_patchset.into_iter() {
+        for patch in fools_patchset {
             world = world.careful_apply(patch).unwrap().tree;
         }
         world

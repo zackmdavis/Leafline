@@ -52,8 +52,8 @@ pub fn score(world: WorldState) -> f32 {
 
     valuation += REWARD_FOR_INITIATIVE * orientation(world.initiative);
 
-    for team in Team::league().into_iter() {
-        for agent in Agent::dramatis_personæ(team).into_iter() {
+    for team in Team::league() {
+        for agent in Agent::dramatis_personæ(team) {
             valuation += world.agent_to_pinfield_ref(agent)
                               .pincount() as f32 *
                          figurine_valuation(agent);
@@ -236,7 +236,7 @@ pub fn α_β_negamax_search(
         let experience = intuition_bank.lock();
         order_movements_intuitively(&experience, &mut premonitions)
     }
-    for premonition in premonitions.into_iter() {
+    for premonition in premonitions {
         let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
         let mut extended_variation = variation.clone();
         extended_variation.push(premonition.patch);
