@@ -314,12 +314,11 @@ pub fn potentially_timebound_kickoff(
         LruCache::with_hash_state(déjà_vu_table_size_bound(déjà_vu_bound),
                                   Default::default());
     let memory_bank = Arc::new(parking_lot::Mutex::new(déjà_vu_table));
-    let mut premonitions;
-    if nihilistically {
-        premonitions = world.reckless_lookahead();
+    let mut premonitions = if nihilistically {
+        world.reckless_lookahead()
     } else {
-        premonitions = world.lookahead();
-    }
+        world.lookahead()
+    };
     order_movements_heuristically(&mut premonitions);
     {
         let experience = intuition_bank.lock();
