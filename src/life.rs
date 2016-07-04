@@ -1178,11 +1178,6 @@ mod tests {
     }
 
     #[test]
-    fn concerning_pasing_by() {
-
-    }
-
-    #[test]
     fn concerning_castling_legality() {
         assert_eq!(true, WorldState::new().orange_east_service_eligibility());
         assert_eq!(true, WorldState::new().blue_east_service_eligibility());
@@ -1532,7 +1527,7 @@ mod tests {
                 .to_owned(),
             "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6" // 0 2
                 .to_owned(),
-            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -" // - 1 2
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -" // 1 2
                 .to_owned(),
         ];
 
