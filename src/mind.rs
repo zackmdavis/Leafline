@@ -18,7 +18,7 @@ use twox_hash::XxHash;
 use identity::{Agent, JobDescription, Team};
 use life::{Commit, Patch, WorldState};
 use landmark::{CENTER_OF_THE_WORLD, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN,
-               LOW_COLONELCY, LOW_SEVENTH_HEAVEN};
+               LOW_COLONELCY, LOW_SEVENTH_HEAVEN, FILES};
 use space::Pinfield;
 use substrate::Bytes;
 
@@ -87,6 +87,28 @@ pub fn score(world: WorldState) -> f32 {
     let low_seventh = Pinfield(LOW_SEVENTH_HEAVEN);
     let blue_beat = world.blue_cops.intersection(low_seventh).pincount();
     valuation -= 0.5 * blue_beat as f32;
+
+    // servants who walk behind other servants to hide must be punished
+    for raw_file in &FILES {
+        let file = Pinfield(*raw_file);
+        let orange_servants_in_line = world.orange_servants
+                                           .intersection(file)
+                                           .pincount();
+        // Putting a precise number on how bad extra servants on a file are
+        // seems to be quite hard, and a smarter engine might choose more
+        // dynamically, but half-a-point is OK i think.
+        // Wikipedia has examples where a doubled servant is worth anywhere
+        // from .3 to .75 points.
+        if orange_servants_in_line > 1 {
+            valuation -= 0.5 * (orange_servants_in_line - 1) as f32;
+        }
+        let blue_servants_in_line = world.blue_servants
+                                           .intersection(file)
+                                           .pincount();
+        if blue_servants_in_line > 1 {
+            valuation += 0.5 * (blue_servants_in_line - 1) as f32;
+        }
+    }
 
     // servants should aspire to something more in life someday
     let orange_subascendants = world.orange_servants
@@ -613,4 +635,10 @@ mod tests {
         assert_eq_within_ε!(REWARD_FOR_INITIATIVE, average_tempo_lurch, 0.8);
     }
 
+    #[test]
+    fn concerning_lazy_servants() {
+        let orange_doubled = WorldState::reconstruct("k7/pp6/8/8/8/P7/P7/K7 w - -".to_owned());
+        let orange_not_doubled = WorldState::reconstruct("k7/pp6/8/8/8/8/PP6/K7 w - -".to_owned());
+        assert!(score(orange_doubled) < score(orange_not_doubled));
+    }
 }
