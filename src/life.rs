@@ -152,7 +152,7 @@ pub struct WorldState {
     pub blue_princesses: Pinfield,
     pub blue_figurehead: Pinfield,
     pub service_eligibility: u8,
-    pub passing_by_square: Option<Locale>,
+    pub passing_by_locale: Option<Locale>,
 }
 
 const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
@@ -191,7 +191,7 @@ impl Default for WorldState {
             blue_princesses: Pinfield::init(&[Locale::new(7, 3)]),
             blue_figurehead: Pinfield::init(&[BLUE_FIGUREHEAD_START]),
             service_eligibility: 0b1111,
-            passing_by_square: None,
+            passing_by_locale: None,
         }
     }
 }
@@ -219,7 +219,7 @@ impl WorldState {
             blue_princesses: Pinfield::new(),
             blue_figurehead: Pinfield::new(),
             service_eligibility: 0,
-            passing_by_square: None,
+            passing_by_locale: None,
         }
     }
 
@@ -334,7 +334,7 @@ impl WorldState {
             book.push('-');
         }
         book.push(' ');
-        match self.passing_by_square {
+        match self.passing_by_locale {
             Some(locale) =>  { book.push_str(&locale.to_algebraic()) },
             None => { book.push('-'); }
         }
@@ -478,11 +478,11 @@ impl WorldState {
             }
         }
 
-        let passing_by_square = volumes.next().unwrap();
-        if passing_by_square == "-" {
-            world.passing_by_square = None;
+        let passing_by_locale = volumes.next().unwrap();
+        if passing_by_locale == "-" {
+            world.passing_by_locale = None;
         } else {
-            world.passing_by_square = Some(Locale::from_algebraic(passing_by_square.to_owned()));
+            world.passing_by_locale = Some(Locale::from_algebraic(passing_by_locale.to_owned()));
         }
         world
     }
@@ -612,7 +612,7 @@ impl WorldState {
 
         if hospitalization.is_none() &&
             patch.star.job_description == JobDescription::Servant {
-            if let Some(passed_by) = self.passing_by_square {
+            if let Some(passed_by) = self.passing_by_locale {
                 if passed_by == patch.whither {
 
                     let direction = match opposition {
@@ -639,9 +639,9 @@ impl WorldState {
                     Team::Orange => (1, 0),
                     Team::Blue => (-1, 0)
                 };
-                tree.passing_by_square = patch.whence.displace(direction);
+                tree.passing_by_locale = patch.whence.displace(direction);
         } else {
-            tree.passing_by_square = None;
+            tree.passing_by_locale = None;
         }
         Commit {
             patch: patch,
@@ -792,7 +792,7 @@ impl WorldState {
                                          whither: stun_destination,
                                      },
                                      nihilistically)
-                    } else if let Some(passing_by_target) = self.passing_by_square {
+                    } else if let Some(passing_by_target) = self.passing_by_locale {
                         if passing_by_target == stun_destination {
                             self.predict(&mut premonitions,
                                          Patch {
@@ -1552,12 +1552,12 @@ mod tests {
             Patch { star: Agent::new(Team::Orange, JobDescription::Servant),
                     whence: Locale::from_algebraic("e2".to_owned()),
                     whither: Locale::from_algebraic("e4".to_owned()) }).unwrap().tree;
-        assert_eq!(Some(Locale::from_algebraic("e3".to_owned())), world.passing_by_square);
+        assert_eq!(Some(Locale::from_algebraic("e3".to_owned())), world.passing_by_locale);
         world = world.careful_apply(
             Patch { star: Agent::new(Team::Blue, JobDescription::Servant),
                     whence: Locale::from_algebraic("c7".to_owned()),
                     whither: Locale::from_algebraic("c6".to_owned()) }).unwrap().tree;
-        assert_eq!(None, world.passing_by_square);
+        assert_eq!(None, world.passing_by_locale);
     }
 
     #[test]
