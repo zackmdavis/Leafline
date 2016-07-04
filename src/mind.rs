@@ -488,7 +488,7 @@ mod tests {
 
     #[test]
     fn concerning_servant_ascension_choices() {
-        let ws = WorldState::reconstruct("8/q1P1k/8/8/8/8/6PP/7K w -".to_owned());
+        let ws = WorldState::reconstruct("8/q1P1k/8/8/8/8/6PP/7K w - -".to_owned());
         // looking ahead 3 movements allows the Leafline AI to catch the
         // split, whereby transforming into a pony (rather than
         // transitioning into a princess, as would usually be
@@ -498,7 +498,7 @@ mod tests {
         let score = tops[0].1;
         println!("{:?}", best_move);
         assert!(score > 0.0);
-        assert_eq!(best_move.tree.preserve(), "2N5/q3k3/8/8/8/8/6PP/7K b -");
+        assert_eq!(best_move.tree.preserve(), "2N5/q3k3/8/8/8/8/6PP/7K b - -");
     }
 
     #[test]

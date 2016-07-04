@@ -6,7 +6,7 @@ authors = ["Zack M. Davis <code@zackmdavis.net>"]
 [dependencies]
 ansi_term = "0.6"
 argparse = "0.2"
-clippy = "*"
+clippy = "0.0.78"
 itertools = "0.4"
 libc = "0.2"
 log = "0.3"
