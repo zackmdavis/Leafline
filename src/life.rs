@@ -606,14 +606,32 @@ impl WorldState {
 
         // was anyone stunned?
         let opposition = tree.initiative.opposition();
-        let hospitalization = self.occupying_affiliated_agent(patch.whither,
-                                                              opposition);
+        let mut hospitalization = self.occupying_affiliated_agent(patch.whither,
+                                                                  opposition);
+        let mut ambulance_target = patch.whither;
+
+        if hospitalization.is_none() &&
+            patch.star.job_description == JobDescription::Servant {
+            if let Some(passed_by) = self.passing_by_square {
+                if passed_by == patch.whither {
+
+                    let direction = match opposition {
+                        Team::Orange => (1, 0),
+                        Team::Blue => (-1, 0)
+                    };
+                    ambulance_target = passed_by.displace(direction).unwrap();
+                    hospitalization = self.occupying_affiliated_agent(ambulance_target,
+                                                                      opposition);
+                }
+            }
+        }
         if let Some(stunned) = hospitalization {
             // if someone was stunned, put her or him in the hospital
             let further_derived_subboard = tree.agent_to_pinfield_ref(stunned)
-                                               .quench(patch.whither);
+                                               .quench(ambulance_target);
             tree = tree.except_replaced_subboard(stunned, further_derived_subboard);
         }
+
         tree.initiative = opposition;
         if patch.star.job_description == JobDescription::Servant &&
            (patch.whither.rank as i8 - patch.whence.rank as i8).abs() == 2 {
@@ -774,6 +792,16 @@ impl WorldState {
                                          whither: stun_destination,
                                      },
                                      nihilistically)
+                    } else if let Some(passing_by_target) = self.passing_by_square {
+                        if passing_by_target == stun_destination {
+                            self.predict(&mut premonitions,
+                                         Patch {
+                                             star: servant_agent,
+                                             whence: start_locale,
+                                             whither: stun_destination,
+                                         },
+                                         nihilistically)
+                        }
                     }
                 }
             }
@@ -1539,14 +1567,14 @@ mod tests {
 
     #[test]
     fn concerning_passing_by_in_action() {
-        let world = WorldState::reconstruct("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3".to_owned());
+        let world = WorldState::reconstruct("rnbqkbnr/ppp2ppp/4p3/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3".to_owned());
         let premonitions = world.servant_lookahead(Team::Orange, false)
                                 .into_iter()
                                 .filter(|p| {
                                     p.patch.whence == Locale::from_algebraic("e5".to_owned())
                                 })
                                 .collect::<Vec<_>>();
-        assert_eq!(2, premonitions.len());
+        assert_eq!(1, premonitions.len());
         let best = premonitions[0];
         assert_eq!(Patch {
             star: Agent::new(Team::Orange, JobDescription::Servant),
@@ -1555,5 +1583,9 @@ mod tests {
             best.patch);
         assert_eq!(Some(Agent::new(Team::Blue, JobDescription::Servant)),
                    best.hospitalization);
+        assert_eq!("rnbqkbnr/ppp2ppp/3Pp3/8/8/8/PPPP1PPP/RNBQKBNR b KQkq -",
+                   best.tree.preserve());
+
+
     }
 }

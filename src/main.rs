@@ -1,4 +1,4 @@
-#![feature(non_ascii_idents, pattern, plugin, test, question_mark)]
+#![feature(iter_arith, non_ascii_idents, pattern, plugin, test, question_mark)]
 
 #![plugin(clippy)]
 
