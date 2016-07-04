@@ -1223,7 +1223,7 @@ mod tests {
     #[test]
     fn concerning_castling_actually_working() {
         let ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K -".to_owned());
-        assert!(ws.orange_east_service_eligibility);
+        assert!(ws.orange_east_service_eligibility());
         let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
         assert_eq!(false, prems[0].tree.orange_east_service_eligibility());
