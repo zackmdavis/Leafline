@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Error};
 use std::path::Path;
 
 
@@ -21,17 +21,13 @@ impl From<Bytes> for usize {
 }
 
 
-pub fn meminfo(field: &str) -> Bytes {
+pub fn meminfo(field: &str) -> Result<Bytes, Error> {
     let path = Path::new("/proc/meminfo");
     let proc_meminfo = match File::open(path) {
         Ok(f) => f,
         Err(e) => {
             println!("Error: {:?}", e);
-            // XXX TODO: be kinder to our friends still under Cupertino's rule
-            moral_panic!("couldn't read /proc/meminfo?! It is possible \
-                          that you are struggling with an inferior nonfree \
-                          operating system forced on you by your masters in \
-                          Cupertino or Redmond");
+            return Err(e);
         }
     };
     let reader = BufReader::new(proc_meminfo);
@@ -46,15 +42,18 @@ pub fn meminfo(field: &str) -> Bytes {
             let value: u64 = figure.parse()
                                    .expect("couldn't parse memory inventory \
                                             entry?!");
-            return Bytes::kibi(value as f32);
+            return Ok(Bytes::kibi(value as f32));
         }
     }
     moral_panic!("couldn't find amount of free memory");
 }
 
 
-pub fn memory_free() -> Bytes {
-    meminfo("MemFree")
+pub fn memory_free() -> Option<Bytes> {
+    match meminfo("MemFree") {
+        Ok(bytes) => Some(bytes),
+        Err(_) => None
+    }
 }
 
 

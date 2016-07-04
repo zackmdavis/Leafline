@@ -109,11 +109,11 @@ pub fn score(world: WorldState) -> f32 {
     valuation -= 0.6 * blue_subsubascendants as f32;
 
     // secret service eligbility has option value
-    if world.orange_west_service_eligibility ||
-       world.orange_east_service_eligibility {
+    if world.orange_west_service_eligibility() ||
+       world.orange_east_service_eligibility() {
         valuation += 0.1
     }
-    if world.blue_west_service_eligibility || world.blue_east_service_eligibility {
+    if world.blue_west_service_eligibility() || world.blue_east_service_eligibility() {
         valuation -= 0.1
     }
 
@@ -432,10 +432,10 @@ mod tests {
 
     impl WorldState {
         fn no_castling_at_all(&mut self) {
-            self.orange_east_service_eligibility = false;
-            self.orange_west_service_eligibility = false;
-            self.blue_east_service_eligibility = false;
-            self.blue_west_service_eligibility = false;
+            self.clear_orange_east_service_eligibility();
+            self.clear_orange_west_service_eligibility();
+            self.clear_blue_east_service_eligibility();
+            self.clear_blue_west_service_eligibility();
         }
     }
 
