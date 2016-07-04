@@ -152,6 +152,7 @@ pub struct WorldState {
     pub blue_princesses: Pinfield,
     pub blue_figurehead: Pinfield,
     pub service_eligibility: u8,
+    pub passing_by_locale: Option<Locale>,
 }
 
 const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
@@ -190,6 +191,7 @@ impl Default for WorldState {
             blue_princesses: Pinfield::init(&[Locale::new(7, 3)]),
             blue_figurehead: Pinfield::init(&[BLUE_FIGUREHEAD_START]),
             service_eligibility: 0b1111,
+            passing_by_locale: None,
         }
     }
 }
@@ -217,6 +219,7 @@ impl WorldState {
             blue_princesses: Pinfield::new(),
             blue_figurehead: Pinfield::new(),
             service_eligibility: 0,
+            passing_by_locale: None,
         }
     }
 
@@ -329,6 +332,11 @@ impl WorldState {
         }
         if !any_service {
             book.push('-');
+        }
+        book.push(' ');
+        match self.passing_by_locale {
+            Some(locale) =>  { book.push_str(&locale.to_algebraic()) },
+            None => { book.push('-'); }
         }
         book
     }
@@ -469,6 +477,13 @@ impl WorldState {
                 }
             }
         }
+
+        let passing_by_locale = volumes.next().unwrap();
+        if passing_by_locale == "-" {
+            world.passing_by_locale = None;
+        } else {
+            world.passing_by_locale = Some(Locale::from_algebraic(passing_by_locale.to_owned()));
+        }
         world
     }
 
@@ -591,15 +606,43 @@ impl WorldState {
 
         // was anyone stunned?
         let opposition = tree.initiative.opposition();
-        let hospitalization = self.occupying_affiliated_agent(patch.whither,
-                                                              opposition);
+        let mut hospitalization = self.occupying_affiliated_agent(patch.whither,
+                                                                  opposition);
+        let mut ambulance_target = patch.whither;
+
+        if hospitalization.is_none() &&
+            patch.star.job_description == JobDescription::Servant {
+            if let Some(passed_by) = self.passing_by_locale {
+                if passed_by == patch.whither {
+
+                    let direction = match opposition {
+                        Team::Orange => (1, 0),
+                        Team::Blue => (-1, 0)
+                    };
+                    ambulance_target = passed_by.displace(direction).unwrap();
+                    hospitalization = self.occupying_affiliated_agent(ambulance_target,
+                                                                      opposition);
+                }
+            }
+        }
         if let Some(stunned) = hospitalization {
             // if someone was stunned, put her or him in the hospital
             let further_derived_subboard = tree.agent_to_pinfield_ref(stunned)
-                                               .quench(patch.whither);
+                                               .quench(ambulance_target);
             tree = tree.except_replaced_subboard(stunned, further_derived_subboard);
         }
+
         tree.initiative = opposition;
+        if patch.star.job_description == JobDescription::Servant &&
+           (patch.whither.rank as i8 - patch.whence.rank as i8).abs() == 2 {
+                let direction = match patch.star.team {
+                    Team::Orange => (1, 0),
+                    Team::Blue => (-1, 0)
+                };
+                tree.passing_by_locale = patch.whence.displace(direction);
+        } else {
+            tree.passing_by_locale = None;
+        }
         Commit {
             patch: patch,
             tree: tree,
@@ -749,6 +792,16 @@ impl WorldState {
                                          whither: stun_destination,
                                      },
                                      nihilistically)
+                    } else if let Some(passing_by_target) = self.passing_by_locale {
+                        if passing_by_target == stun_destination {
+                            self.predict(&mut premonitions,
+                                         Patch {
+                                             star: servant_agent,
+                                             whence: start_locale,
+                                             whither: stun_destination,
+                                         },
+                                         nihilistically)
+                        }
                     }
                 }
             }
@@ -1058,7 +1111,7 @@ mod tests {
 
     // an arbitrarily chosen "complicated" looking position from a Kasparov
     // game
-    static VISION: &'static str = "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b -";
+    static VISION: &'static str = "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b - -";
 
     #[bench]
     fn benchmark_servant_lookahead(b: &mut Bencher) {
@@ -1135,7 +1188,7 @@ mod tests {
     #[test]
     fn concerning_castling_restrictions() {
         let ws = WorldState::reconstruct(
-            "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPBPPP/RNBQK2R w KQkq"
+            "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPBPPP/RNBQK2R w KQkq -"
                 .to_owned());
         let mut service_patch = Patch {
             star: Agent {
@@ -1167,19 +1220,19 @@ mod tests {
 
     #[test]
     fn concerning_castling_availability() {
-        let mut ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K".to_owned());
+        let mut ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K -".to_owned());
         let mut prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
-        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3K2R w KQ".to_owned());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3K2R w KQ -".to_owned());
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(2, prems.len());
 
-        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3KN1R w Q".to_owned());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3KN1R w Q -".to_owned());
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
-        ws = WorldState::reconstruct("8/8/4k3/8/8/4b3/8/R3KN1R w Q".to_owned());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/4b3/8/R3KN1R w Q -".to_owned());
         // can't move into endangerment
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
@@ -1192,17 +1245,17 @@ mod tests {
 
     #[test]
     fn concerning_castling_actually_working() {
-        let ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K".to_owned());
+        let ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K -".to_owned());
         assert!(ws.orange_east_service_eligibility());
         let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
         assert_eq!(false, prems[0].tree.orange_east_service_eligibility());
-        assert_eq!("8/8/4k3/8/8/8/8/5RK1 b -", prems[0].tree.preserve());
+        assert_eq!("8/8/4k3/8/8/8/8/5RK1 b - -", prems[0].tree.preserve());
     }
 
     #[test]
     fn concerning_castling_out_of_check() {
-        let ws = WorldState::reconstruct("8/8/4k3/8/4r3/8/8/4K2R w K".to_owned());
+        let ws = WorldState::reconstruct("8/8/4k3/8/4r3/8/8/4K2R w K -".to_owned());
         assert!(ws.orange_east_service_eligibility());
         let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
@@ -1452,7 +1505,7 @@ mod tests {
     fn concerning_preservation_and_reconstruction_of_historical_worlds() {
         // en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation#Examples
         let eden = WorldState::new();
-        let book_of_eden = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq"
+        let book_of_eden = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -"
                                .to_owned();
         assert_eq!(book_of_eden, eden.preserve());
         assert_eq!(eden, WorldState::reconstruct(book_of_eden));
@@ -1470,11 +1523,11 @@ mod tests {
         ];
 
         let book_of_patches = vec![
-            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq" // e3 0 1
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3" // 0 1
                 .to_owned(),
-            "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq" // c6 0 2
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6" // 0 2
                 .to_owned(),
-            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq" // - 1 2
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -" // 1 2
                 .to_owned(),
         ];
 
@@ -1492,4 +1545,42 @@ mod tests {
                  mem::size_of::<WorldState>());
     }
 
+    #[test]
+    fn concerning_passing_by() {
+        let mut world = WorldState::new();
+        world = world.careful_apply(
+            Patch { star: Agent::new(Team::Orange, JobDescription::Servant),
+                    whence: Locale::from_algebraic("e2".to_owned()),
+                    whither: Locale::from_algebraic("e4".to_owned()) }).unwrap().tree;
+        assert_eq!(Some(Locale::from_algebraic("e3".to_owned())), world.passing_by_locale);
+        world = world.careful_apply(
+            Patch { star: Agent::new(Team::Blue, JobDescription::Servant),
+                    whence: Locale::from_algebraic("c7".to_owned()),
+                    whither: Locale::from_algebraic("c6".to_owned()) }).unwrap().tree;
+        assert_eq!(None, world.passing_by_locale);
+    }
+
+    #[test]
+    fn concerning_passing_by_in_action() {
+        let world = WorldState::reconstruct("rnbqkbnr/ppp2ppp/4p3/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3".to_owned());
+        let premonitions = world.servant_lookahead(Team::Orange, false)
+                                .into_iter()
+                                .filter(|p| {
+                                    p.patch.whence == Locale::from_algebraic("e5".to_owned())
+                                })
+                                .collect::<Vec<_>>();
+        assert_eq!(1, premonitions.len());
+        let best = premonitions[0];
+        assert_eq!(Patch {
+            star: Agent::new(Team::Orange, JobDescription::Servant),
+            whence: Locale::from_algebraic("e5".to_owned()),
+            whither: Locale::from_algebraic("d6".to_owned())}, 
+            best.patch);
+        assert_eq!(Some(Agent::new(Team::Blue, JobDescription::Servant)),
+                   best.hospitalization);
+        assert_eq!("rnbqkbnr/ppp2ppp/3Pp3/8/8/8/PPPP1PPP/RNBQKBNR b KQkq -",
+                   best.tree.preserve());
+
+
+    }
 }
