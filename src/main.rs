@@ -330,8 +330,20 @@ fn main() {
     }
 
     println!("Welcome to Leafline v. {}!", env!("CARGO_PKG_VERSION"));
-    println!("Leafline substrate accountant detected {:.3} GiB of free memory.",
-             memory_free().in_gib());
+    match memory_free() {
+        Some(bytes) => {
+            println!("Leafline substrate accountant detected {:.3} \
+                     GiB of free memory.",
+                     bytes.in_gib());
+        },
+        None => {
+            println!("Could not detect amount of free memory! \
+                      It is possible \
+                      that you are struggling with an inferior nonfree \
+                      operating system forced on you by your masters in \
+                      Cupertino or Redmond");
+        }
+    }
 
     let mut world = match from_runes {
         Some(runes) => WorldState::reconstruct(runes),
