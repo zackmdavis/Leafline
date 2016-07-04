@@ -27,6 +27,7 @@ mod landmark;
 mod life;
 mod mind;
 mod substrate;
+mod test_landmark;
 
 use std::fs::OpenOptions;
 use std::io;
