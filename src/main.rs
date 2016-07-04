@@ -1,4 +1,4 @@
-#![feature(non_ascii_idents, pattern, plugin, test, question_mark)]
+#![feature(iter_arith, non_ascii_idents, pattern, plugin, test, question_mark)]
 
 #![plugin(clippy)]
 
@@ -27,6 +27,7 @@ mod landmark;
 mod life;
 mod mind;
 mod substrate;
+mod test_landmark;
 
 use std::fs::OpenOptions;
 use std::io;
