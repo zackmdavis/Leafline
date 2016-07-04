@@ -1,4 +1,4 @@
-#![feature(non_ascii_idents, pattern, plugin, test, question_mark)]
+#![feature(iter_arith, non_ascii_idents, pattern, plugin, test, question_mark)]
 
 #![plugin(clippy)]
 
@@ -442,7 +442,7 @@ mod tests {
 
     #[test]
     fn concerning_correspondence_victory_conditions() {
-        let blue_concession = correspondence("R6k/6pp/8/8/8/8/8/8 b -".to_owned(),
+        let blue_concession = correspondence("R6k/6pp/8/8/8/8/8/8 b - -".to_owned(),
                                              LookaheadBound::Depth(2, None),
                                              1.0);
         assert_eq!("{\"the_triumphant\":\"Orange\"}".to_owned(),
