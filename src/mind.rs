@@ -264,20 +264,24 @@ pub fn α_β_negamax_search(
         extended_variation.push(premonition.patch);
         let cached: bool;
         {
-            let mut open_vault = memory_bank.lock();
-            let souvenir_maybe = open_vault.get_mut(&premonition.tree);
-            match souvenir_maybe {
-                Some(souvenir) => {
-                    if souvenir.soundness as i8 >= depth {
-                        cached = true;
-                        value = souvenir.lodestar.score;
-                        extended_variation = souvenir.lodestar.variation.clone();
-                    } else {
-                        cached = false;
+            // try to look at the cache, but don't wait for the lock if someone else has it
+            if let Some(mut open_vault) = memory_bank.try_lock() {
+                let souvenir_maybe = open_vault.get_mut(&premonition.tree);
+                match souvenir_maybe {
+                    Some(souvenir) => {
+                        if souvenir.soundness as i8 >= depth {
+                            cached = true;
+                            value = souvenir.lodestar.score;
+                            extended_variation = souvenir.lodestar.variation.clone();
+                        } else {
+                            cached = false;
+                        }
                     }
-                }
-                None => { cached = false; }
-            };
+                    None => { cached = false; }
+                };
+            } else {
+                cached = false;
+            }
         }
 
         if !cached {
@@ -290,10 +294,15 @@ pub fn α_β_negamax_search(
             lodestar.score *= -1.;  // nega-
             value = lodestar.score;
             extended_variation = lodestar.variation.clone();
-            memory_bank.lock().insert(
-                premonition.tree,
-                Souvenir::new(lodestar, extended_variation.len() as u8)
-            );
+            // we'd like to cache what we just learned, but we can do without
+            // if it would mean tying up the thread waiting for the lock—maybe
+            // this won't help
+            if let Some(mut b) = memory_bank.try_lock() {
+                b.insert(
+                    premonition.tree,
+                    Souvenir::new(lodestar, extended_variation.len() as u8)
+                );
+            }
         }
 
         if value > optimum {
