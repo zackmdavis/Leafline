@@ -41,8 +41,10 @@ class WorldState {
     }
 
     validateMovement(movement) {
-        let validations = (for (reply of this.replies)
-            (_.isEqual(movement, reply)));
+        let validations = [];
+        for (var reply of this.replies) {
+            validations.push(_.isEqual(movement, reply))
+        }
         for (var validity of validations) {
             if (validity) {
                 return true;

@@ -49,9 +49,6 @@ CHESSBOARDJS_ZIPBALL_DOWNLOAD_PATH = os.path.join('web_client', 'resources',
 UNDERSCORE_PATH = os.path.join('web_client', 'resources', 'public', 'js',
                                "underscore-min.js")
 
-REGENERATOR_PATH = os.path.join('web_client', 'resources', 'public', 'js',
-                                "regenerator.js")
-
 @not_if_files_exist(CHESSBOARDJS_ZIPBALL_DOWNLOAD_PATH)
 def download_chessboard_js():
     urlretrieve("http://chessboardjs.com/releases/0.3.0/chessboardjs-0.3.0.zip",
@@ -80,23 +77,14 @@ def download_underscore():
     urlretrieve("http://underscorejs.org/underscore-min.js", UNDERSCORE_PATH)
 
 
-@not_if_files_exist(REGENERATOR_PATH)
-def download_regenerator():
-    # ECMAScript 6 generators
-    urlretrieve("https://raw.githubusercontent.com/facebook/regenerator/"
-                "master/runtime.js", REGENERATOR_PATH)
-
-
 @task
 def download_statics():
     install_chessboard_js()
     download_underscore()
-    download_regenerator()
 
 
 BABEL_COMMAND = [
     "babel", "web_client/resources/public/js/client.js",
-    "--optional", "es7.comprehensions",
     "--watch",
     "--out-file", "web_client/resources/public/js/client-built.js"
 ]
