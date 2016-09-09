@@ -29,7 +29,9 @@ class WorldState {
     preserve() {
         return `${this.multifield.fen()} ` +
             `${this.preserveInitiative()} ` +
-            `${this.preservedServiceEligibilities}`;
+            `${this.preservedServiceEligibilities} ` +
+            // XXX TODO: track and report passing-by locale
+            `-`;
     }
 
     cedeInitiative() {

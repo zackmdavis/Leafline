@@ -478,7 +478,7 @@ impl WorldState {
             }
         }
 
-        let passing_by_locale = volumes.next().unwrap();
+        let passing_by_locale = volumes.next().expect("expected passing-by locale rune");
         if passing_by_locale == "-" {
             world.passing_by_locale = None;
         } else {
@@ -1574,7 +1574,7 @@ mod tests {
         assert_eq!(Patch {
             star: Agent::new(Team::Orange, JobDescription::Servant),
             whence: Locale::from_algebraic("e5".to_owned()),
-            whither: Locale::from_algebraic("d6".to_owned())}, 
+            whither: Locale::from_algebraic("d6".to_owned())},
             best.patch);
         assert_eq!(Some(Agent::new(Team::Blue, JobDescription::Servant)),
                    best.hospitalization);
