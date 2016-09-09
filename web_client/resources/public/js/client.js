@@ -29,7 +29,9 @@ class WorldState {
     preserve() {
         return `${this.multifield.fen()} ` +
             `${this.preserveInitiative()} ` +
-            `${this.preservedServiceEligibilities}`;
+            `${this.preservedServiceEligibilities} ` +
+            // XXX TODO: track and report passing-by locale
+            `-`;
     }
 
     cedeInitiative() {
@@ -41,8 +43,10 @@ class WorldState {
     }
 
     validateMovement(movement) {
-        let validations = (for (reply of this.replies)
-            (_.isEqual(movement, reply)));
+        let validations = [];
+        for (var reply of this.replies) {
+            validations.push(_.isEqual(movement, reply))
+        }
         for (var validity of validations) {
             if (validity) {
                 return true;
