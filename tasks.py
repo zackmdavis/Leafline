@@ -64,8 +64,10 @@ def download_chessboard_js():
      os.path.join('js', "chessboard-0.3.0.min.js"))
 ])
 def unpack_chessboard_js():
-    "#TODO"
-
+    boardzip = zipfile.ZipFile(CHESSBOARDJS_ZIPBALL_DOWNLOAD_PATH)
+    for name in boardzip.namelist():
+        if name.startswith("js") or name.startswith("css"):
+            boardzip.extract(name, path=os.path.join('web_client', 'resources', 'public'))
 
 @task
 def install_chessboard_js():
