@@ -1060,7 +1060,7 @@ impl WorldState {
 
 impl fmt::Display for WorldState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let scenes = vec![Color::Fixed(058), Color::Fixed(017)];
+        let scenes = vec![Color::Fixed(58), Color::Fixed(17)];
         let mut sceneries = scenes.iter().cycle();
         let mut scenery;
         let mut output = String::new();

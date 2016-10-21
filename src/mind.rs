@@ -373,7 +373,7 @@ pub fn potentially_timebound_kickoff(
         // iterate over indices so that we can use swap_remove during the loop
         for i in (0..time_radios.len()).rev() {
             let premonition = time_radios[i].0;
-            if let Some(search_hit) = time_radios[i].1.try_recv().ok() {
+            if let Ok(search_hit) = time_radios[i].1.try_recv() {
                 let value = -search_hit.score;
                 forecasts.push((premonition, value, search_hit.variation));
                 time_radios.swap_remove(i);
