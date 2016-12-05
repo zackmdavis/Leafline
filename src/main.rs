@@ -1,6 +1,6 @@
 #![feature(non_ascii_idents, pattern, plugin, test)]
 
-#![plugin(clippy)]
+// #![plugin(clippy)]
 #![allow(unknown_lints)]
 
 #![allow(if_not_else, unused_features)]
