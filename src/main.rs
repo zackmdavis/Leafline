@@ -1,4 +1,4 @@
-#![feature(non_ascii_idents, pattern, plugin, test)]
+#![feature(more_struct_aliases, non_ascii_idents, pattern, plugin, test)]
 
 // #![plugin(clippy)]
 #![allow(unknown_lints)]

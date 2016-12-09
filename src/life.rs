@@ -199,11 +199,11 @@ impl Default for WorldState {
 impl WorldState {
     #[allow(dead_code)]
     pub fn new() -> Self {
-        WorldState::default()
+        Self::default()
     }
 
     pub fn new_except_empty() -> Self {
-        WorldState {
+        Self {
             initiative: Team::Orange,
 
             orange_servants: Pinfield::new(),

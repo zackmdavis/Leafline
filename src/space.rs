@@ -10,7 +10,7 @@ static INDEX_TO_FILE_NAME: [char; 8] = [
 
 impl Locale {
     pub fn new(rank: u8, file: u8) -> Self {
-        Locale { rank: rank, file: file }
+        Self { rank: rank, file: file }
     }
 
     pub fn to_algebraic(&self) -> String {
@@ -82,7 +82,7 @@ impl Locale {
 pub struct Pinfield(pub u64);
 
 impl Pinfield {
-    pub fn new() -> Pinfield {
+    pub fn new() -> Self {
         Pinfield(0)
     }
 

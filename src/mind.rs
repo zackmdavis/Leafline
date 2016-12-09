@@ -188,7 +188,7 @@ pub struct Lodestar {
 
 impl Lodestar {
     fn new(score: f32, variation: Variation) -> Self {
-        Lodestar {
+        Self {
             score: score,
             variation: variation,
         }
@@ -214,7 +214,7 @@ pub struct Souvenir {
 impl Souvenir {
     fn new(lodestar: Lodestar, field_depth: u8) -> Self {
         let soundness = lodestar.variation.len() as u8 - field_depth;
-        Souvenir { soundness: soundness, lodestar: lodestar }
+        Self { soundness: soundness, lodestar: lodestar }
     }
 }
 
