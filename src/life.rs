@@ -1005,7 +1005,7 @@ impl WorldState {
         let mut being_leered_at = None;
         for (locales, patch) in locales_to_query {
             if locales.iter().all(|l| unoc.query(*l)) {
-                if let None = being_leered_at {
+                if being_leered_at.is_none() {
                     being_leered_at = Some(
                         self.is_being_leered_at_by(
                             Locale::new(home_rank, 4),

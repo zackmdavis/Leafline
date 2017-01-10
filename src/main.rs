@@ -1,6 +1,6 @@
 #![feature(more_struct_aliases, non_ascii_idents, pattern, plugin, test)]
 
-// #![plugin(clippy)]
+#![plugin(clippy)]
 #![allow(unknown_lints)]
 
 #![allow(if_not_else, unused_features)]
@@ -76,7 +76,7 @@ impl log::Log for DebugLogger {
                                       .strftime("%Y-%m-%d %H:%M:%S.%f")
                                       .unwrap(),
                                   record.args());
-        log_file.write(&log_message.into_bytes())
+        log_file.write_all(&log_message.into_bytes())
                 .expect("couldn't write to log file?!");
     }
 }
