@@ -1,6 +1,6 @@
 #![feature(non_ascii_idents, pattern, plugin, test)]
 
-// #![plugin(clippy)]
+#![plugin(clippy)]
 #![allow(unknown_lints)]
 
 #![allow(if_not_else, unused_features)]
@@ -11,7 +11,7 @@
 
 extern crate argparse;
 extern crate ansi_term;
-extern crate itertools;
+#[macro_use] extern crate itertools;
 #[macro_use] extern crate log;
 extern crate lru_cache;
 extern crate parking_lot;

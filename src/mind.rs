@@ -419,6 +419,7 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
 }
 
 
+#[allow(needless_pass_by_value)] // `depth_sequence`
 pub fn fixed_depth_sequence_kickoff(world: &WorldState, depth_sequence: Vec<u8>,
                                     nihilistically: bool, déjà_vu_bound: f32)
                                     -> Vec<(Commit, f32, Variation)> {
