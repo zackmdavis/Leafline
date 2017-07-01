@@ -3,7 +3,7 @@
 ### Dependencies
 
 Essential:
-* [Rust Nightly 1.12.0+](https://github.com/brson/multirust) for the main game engine
+* [Rust Nightly 1.20.0+](https://github.com/brson/multirust) for the main game engine
 * [Leiningen](http://leiningen.org/) for the web client server
 * NodeJS and [Babel](https://babeljs.io/) to compile the web client JavaScripts
 

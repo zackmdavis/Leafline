@@ -30,7 +30,7 @@ There are some other rules which apply in special circumstnaces:
 
 #### concerning the program
 
-"Leafline" refers both to the oppositional strategy game and this software application in development which aims to someday provide a playable implementation of the game and an artificially-intelligent Leafline play engine. Leafline is written in Rust 1.12.0-nightly!
+"Leafline" refers both to the oppositional strategy game and this software application in development which aims to someday provide a playable implementation of the game and an artificially-intelligent Leafline play engine. Leafline is written in Rust 1.20.0-nightly!
 
 A web application GUI to Leafline, the Leafline Web Client, is written in Clojure 1.7 and ECMAScript 6.
 
