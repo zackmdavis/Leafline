@@ -1,6 +1,5 @@
 #![feature(non_ascii_idents, plugin, test)]
 
-#![plugin(clippy)]
 #![allow(unknown_lints)]
 
 #![allow(if_not_else, unused_features)]
