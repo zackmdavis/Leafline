@@ -1,4 +1,4 @@
-#![feature(non_ascii_idents, pattern, plugin, test)]
+#![feature(non_ascii_idents, plugin, test)]
 
 #![plugin(clippy)]
 #![allow(unknown_lints)]
