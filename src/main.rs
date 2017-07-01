@@ -223,8 +223,8 @@ fn correspondence(reminder: String, bound: LookaheadBound, déjà_vu_bound: f32)
             patch: determination.patch,
             hospitalization: determination.hospitalization,
             thinking_time: sidereal.num_milliseconds() as u64,
-            depth: depth,
-            counterreplies: counterreplies,
+            depth,
+            counterreplies,
         };
         json::encode(&postcard).unwrap()
     } else {

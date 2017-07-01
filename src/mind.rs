@@ -60,7 +60,7 @@ pub fn score(world: WorldState) -> f32 {
         }
         // breadth of scholarship bonus
         if world.agent_to_pinfield_ref(Agent {
-                    team: team,
+                    team,
                     job_description: JobDescription::Scholar,
                 }).pincount() >= 2 {
             valuation += orientation(team) * 0.5
@@ -189,8 +189,8 @@ pub struct Lodestar {
 impl Lodestar {
     fn new(score: f32, variation: Variation) -> Self {
         Self {
-            score: score,
-            variation: variation,
+            score,
+            variation,
         }
     }
 }
@@ -214,7 +214,7 @@ pub struct Souvenir {
 impl Souvenir {
     fn new(lodestar: Lodestar, field_depth: u8) -> Self {
         let soundness = lodestar.variation.len() as u8 - field_depth;
-        Self { soundness: soundness, lodestar: lodestar }
+        Self { soundness, lodestar }
     }
 }
 

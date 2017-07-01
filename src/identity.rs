@@ -50,7 +50,7 @@ pub struct Agent {
 
 impl Agent {
     pub fn new(team: Team, job_description: JobDescription) -> Self {
-        Self { team: team, job_description: job_description }
+        Self { team, job_description }
     }
 
     pub fn dramatis_personæ(team: Team) -> Vec<Agent> {

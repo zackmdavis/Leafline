@@ -644,9 +644,9 @@ impl WorldState {
             tree.passing_by_locale = None;
         }
         Commit {
-            patch: patch,
-            tree: tree,
-            hospitalization: hospitalization,
+            patch,
+            tree,
+            hospitalization,
             ascension: None,
         }
     }
