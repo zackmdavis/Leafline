@@ -5,7 +5,7 @@ macro_rules! moral_panic {
 
 #[macro_use]
 macro_rules! match_agent {
-    ( $agent:expr, $($team:ident, $job:ident => $val:expr),* ) => {
+    ($agent:expr, $($team:ident, $job:ident => $val:expr),*) => {
         match $agent {
             $( Agent { team: Team::$team,
                        job_description: JobDescription::$job } => $val ),*
@@ -13,6 +13,7 @@ macro_rules! match_agent {
     }
 }
 
+#[allow(unused_macros)] // it is too used, in tests—hrmph
 #[macro_use]
 macro_rules! assert_eq_within_ε {
     // crude edit of the canonical `assert_eq!`

@@ -10,7 +10,7 @@
 
 extern crate argparse;
 extern crate ansi_term;
-#[macro_use] extern crate itertools;
+extern crate itertools;
 #[macro_use] extern crate log;
 extern crate lru_cache;
 extern crate parking_lot;
