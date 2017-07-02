@@ -1,14 +1,16 @@
+use std::collections::HashMap;
 use std::io;
-use std::io::Write;
 
-use mind::kickoff;
+use time::Duration;
+
+use mind::{kickoff, iterative_deepening_kickoff};
 use life::WorldState;
 use space::Locale;
-
+use identity::Team;
 
 // Unlikely Command Integration dæmon
 
-pub fn dæmon(depth: u8) {
+pub fn dæmon() {
     let mut input_buffer = String::new();
     let mut world = WorldState::new();
 
@@ -59,10 +61,35 @@ pub fn dæmon(depth: u8) {
                 }
             },
             "go" => {
-                // we should at least be able to support "depth" and "nodes"
-                // options from the game-driver but don't worry about that now;
-                // just search at the depth we want to
-                let mut forecasts = kickoff(&world, depth, None, false, 2.0);
+                let mut options = HashMap::new();
+                while let Some(key) = tokens.next() {
+                    let value = tokens.next()
+                        .expect("expected option value").parse::<usize>()
+                        .expect("expected an integer literal");
+                    options.insert(key, value);
+                }
+
+                let mut forecasts;
+                if let Some(depth) = options.get("depth") {
+                    forecasts = kickoff(&world, *depth as u8, None, false, 2.0);
+                } else {
+                    let allegiance = world.initiative;
+                    let (time_key, increment_key) = match allegiance {
+                        Team::Orange => ("wtime", "winc"),
+                        Team::Blue => ("btime", "binc")
+                    };
+                    let remaining_movements = options.get("movestogo")
+                        .expect("expected movestogo");
+                    let remaining_moments = options.get(time_key).expect(time_key);
+                    let zero = 0; // XXX really? really??
+                    let grace = options.get(increment_key).unwrap_or(&zero);
+                    let deadline = ((remaining_moments /
+                                     remaining_movements) + grace - 1200) / 1000;
+                    let (beforecasts, depth) = iterative_deepening_kickoff(
+                        &world, Duration::seconds(deadline as i64), false, 2.0);
+                    forecasts = beforecasts;
+                    println!("info depth {}", depth);
+                }
                 let movement = forecasts.swap_remove(0).0;
                 println!("bestmove {}{}",
                          movement.patch.whence.to_algebraic(),

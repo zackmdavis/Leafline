@@ -338,7 +338,7 @@ fn main() {
     }
 
     if uci_dæmon {
-        uci::dæmon(lookahead_depth.expect("UCI dæmon expects `--depth`"));
+        uci::dæmon();
         // ↑ dæmon will loop
         process::exit(0);
     }
