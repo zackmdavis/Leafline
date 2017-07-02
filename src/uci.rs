@@ -21,7 +21,7 @@ pub fn dæmon() {
 
         match input_buffer.as_ref() {
             "uci\n" => {
-                println!("id name Leafline");
+                println!("id name Leafline v. {}", env!("CARGO_PKG_VERSION"));
                 println!("id author Zack M. Davis and friends");
                 println!("uciok");
                 continue;
