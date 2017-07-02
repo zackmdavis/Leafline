@@ -88,7 +88,8 @@ pub fn dæmon() {
                     let (beforecasts, depth) = iterative_deepening_kickoff(
                         &world, Duration::seconds(deadline as i64), false, 2.0);
                     forecasts = beforecasts;
-                    println!("info depth {}", depth);
+                    let centis = (forecasts[0].1 * 100.) as isize;
+                    println!("info depth {} score cp {}", depth, centis);
                 }
                 let movement = forecasts.swap_remove(0).0;
                 println!("bestmove {}{}",
