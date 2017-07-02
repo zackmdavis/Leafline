@@ -84,7 +84,7 @@ pub fn dæmon() {
                     let zero = 0; // XXX really? really??
                     let grace = options.get(increment_key).unwrap_or(&zero);
                     let deadline = ((remaining_moments /
-                                     remaining_movements) + grace - 1200) / 1000;
+                                     remaining_movements) + grace) / 1000;
                     let (beforecasts, depth) = iterative_deepening_kickoff(
                         &world, Duration::seconds(deadline as i64), false, 2.0);
                     forecasts = beforecasts;
