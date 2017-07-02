@@ -17,14 +17,12 @@ impl Locale {
         format!("{}{}", INDEX_TO_FILE_NAME[self.file as usize], self.rank + 1)
     }
 
-    // XXX: this should probably take a &str instead of String,
-    // because the argument is typically going to be a string literal
-    // rather than a value from somewhere else
-    #[allow(dead_code)]
-    pub fn from_algebraic(notation: String) -> Self {
+    pub fn from_algebraic(notation: &str) -> Self {
         let mut notation_pieces = notation.chars();
-        let file_note = notation_pieces.next().unwrap();
-        let rank_note = notation_pieces.next().unwrap();
+        let file_note = notation_pieces.next()
+            .expect("expected a first character");
+        let rank_note = notation_pieces.next()
+            .expect("expected a second character");
         Locale {
             rank: (rank_note as u8) - 49, // 49 == '1'
             file: (file_note as u8) - 97, // 97 == 'a'

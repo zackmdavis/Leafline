@@ -27,6 +27,7 @@ mod landmark;
 mod life;
 mod mind;
 mod substrate;
+mod uci; // Unlikely Command Integration
 mod test_landmark;
 
 use std::fs::OpenOptions;
@@ -64,6 +65,7 @@ impl log::Log for DebugLogger {
     }
 
     fn log(&self, record: &LogRecord) {
+        // XXX: can't the open file handle live inside the DebugLogger struct?!
         let mut log_file = OpenOptions::new()
                                .write(true)
                                .append(true)
@@ -255,6 +257,7 @@ fn main() {
     let mut lookahead_seconds: Option<u8> = None;
     let mut from_runes: Option<String> = None;
     let mut correspond: bool = false;
+    let mut uci_dæmon: bool = false;
     let mut déjà_vu_bound: f32 = 2.0;
     let mut debug_logging: bool = false;
     {
@@ -281,6 +284,10 @@ fn main() {
             StoreTrue,
             "just output the serialization of the AI's top response and \
              legal replies thereto");
+        parser.refer(&mut uci_dæmon).add_option(
+            &["--uci", "--deamon", "--dæmon"],
+            StoreTrue,
+            "run Unlikely Command Integration dæmon for external driver play");
         parser.refer(&mut from_runes).add_option(
             &["--from"],
             StoreOption,
@@ -327,6 +334,12 @@ fn main() {
         };
         let from = from_runes.expect("`--correspond` requires `--from`");
         println!("{}", correspondence(from, bound, déjà_vu_bound));
+        process::exit(0);
+    }
+
+    if uci_dæmon {
+        uci::dæmon(lookahead_depth.expect("UCI dæmon expects `--depth`"));
+        // ↑ dæmon will loop
         process::exit(0);
     }
 

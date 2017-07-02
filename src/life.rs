@@ -482,7 +482,7 @@ impl WorldState {
         if passing_by_locale == "-" {
             world.passing_by_locale = None;
         } else {
-            world.passing_by_locale = Some(Locale::from_algebraic(passing_by_locale.to_owned()));
+            world.passing_by_locale = Some(Locale::from_algebraic(passing_by_locale));
         }
         world
     }
