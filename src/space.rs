@@ -213,7 +213,7 @@ mod tests {
         for (expectation, actuality) in expected.zip(ALGEBRAICS.iter()) {
             assert_eq!(expectation,
                        // TODO: again, conversion in iterator
-                       Locale::from_algebraic((*actuality).to_owned()));
+                       Locale::from_algebraic(*actuality));
         }
     }
 

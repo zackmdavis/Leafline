@@ -205,7 +205,7 @@ impl fmt::Debug for Lodestar {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Souvenir {
     soundness: u8,
     lodestar: Lodestar,

@@ -482,7 +482,7 @@ impl WorldState {
         if passing_by_locale == "-" {
             world.passing_by_locale = None;
         } else {
-            world.passing_by_locale = Some(Locale::from_algebraic(passing_by_locale));
+            world.passing_by_locale = Some(Locale::from_algebraic(&passing_by_locale));
         }
         world
     }
@@ -1267,14 +1267,14 @@ mod tests {
         let mut worldstate = WorldState::new_except_empty();
         let derived_subfield =
             worldstate.orange_servants
-                      .alight(Locale::from_algebraic("a7".to_owned()));
+                      .alight(Locale::from_algebraic("a7"));
         worldstate =
             worldstate.except_replaced_subboard(Agent::new(Team::Orange,
                                                            JobDescription::Servant),
                                                 derived_subfield);
         let premonitions = worldstate.servant_lookahead(Team::Orange, true);
         assert!(premonitions.iter().all(|p| {
-            p.patch.whither == Locale::from_algebraic("a8".to_owned())
+            p.patch.whither == Locale::from_algebraic("a8")
         }));
         for (&expected_ascension, commit) in [JobDescription::Pony,
                                               JobDescription::Scholar,
@@ -1337,17 +1337,17 @@ mod tests {
         let mut world = WorldState::new_except_empty();
         world.orange_scholars =
             world.orange_scholars
-                 .alight(Locale::from_algebraic("e1".to_owned()));
+                 .alight(Locale::from_algebraic("e1"));
         world.orange_princesses =
             world.orange_princesses
-                 .alight(Locale::from_algebraic("c3".to_owned()));
+                 .alight(Locale::from_algebraic("c3"));
         world.blue_princesses =
             world.blue_princesses
-                 .alight(Locale::from_algebraic("g3".to_owned()));
+                 .alight(Locale::from_algebraic("g3"));
         let premonitions = world.scholar_lookahead(Team::Orange, false);
         let expected = vec!["d2", "f2", "g3"]
                            .iter()
-                           .map(|a| Locale::from_algebraic((*a).to_owned()))
+                           .map(|a| Locale::from_algebraic(*a))
                            .collect::<Vec<_>>();
         let actual = premonitions.iter()
                                  .map(|p| p.tree.orange_scholars.to_locales()[0])
@@ -1408,18 +1408,18 @@ mod tests {
         };
         let orange_begins = Patch {
             star: orange_servant_agent,
-            whence: Locale::from_algebraic("e2".to_owned()),
-            whither: Locale::from_algebraic("e4".to_owned()),
+            whence: Locale::from_algebraic("e2"),
+            whither: Locale::from_algebraic("e4"),
         };
         let blue_replies = Patch {
             star: blue_servant_agent,
-            whence: Locale::from_algebraic("d7".to_owned()),
-            whither: Locale::from_algebraic("d5".to_owned()),
+            whence: Locale::from_algebraic("d7"),
+            whither: Locale::from_algebraic("d5"),
         };
         let orange_counterreplies = Patch {
             star: orange_servant_agent,
-            whence: Locale::from_algebraic("e4".to_owned()),
-            whither: Locale::from_algebraic("d5".to_owned()),
+            whence: Locale::from_algebraic("e4"),
+            whither: Locale::from_algebraic("d5"),
         };
 
         let first_commit = state.apply(orange_begins);
@@ -1438,14 +1438,14 @@ mod tests {
         assert_eq!(1, available_stunnings.len());
         assert_eq!(blue_servant_agent,
                    available_stunnings[0].hospitalization.unwrap());
-        assert_eq!(Locale::from_algebraic("d5".to_owned()),
+        assert_eq!(Locale::from_algebraic("d5"),
                    available_stunnings[0].patch.whither);
 
         let crucial_commit = precrucial_state.apply(orange_counterreplies);
         let new_state = crucial_commit.tree;
         assert_eq!(Agent::new(Team::Orange, JobDescription::Servant),
                    new_state.occupying_agent(
-                       Locale::from_algebraic("d5".to_owned())).unwrap());
+                       Locale::from_algebraic("d5")).unwrap());
         let stunned = crucial_commit.hospitalization.unwrap();
         assert_eq!(Agent::new(Team::Blue, JobDescription::Servant), stunned);
     }
@@ -1455,14 +1455,14 @@ mod tests {
         let mut world = WorldState::new();
         let fools_patchset = vec![
             Patch { star: Agent::new(Team::Orange, JobDescription::Servant),
-                    whence: Locale::from_algebraic("f2".to_owned()),
-                    whither: Locale::from_algebraic("f3".to_owned()) },
+                    whence: Locale::from_algebraic("f2"),
+                    whither: Locale::from_algebraic("f3") },
             Patch { star: Agent::new(Team::Blue, JobDescription::Servant),
-                    whence: Locale::from_algebraic("e7".to_owned()),
-                    whither: Locale::from_algebraic("e5".to_owned()) },
+                    whence: Locale::from_algebraic("e7"),
+                    whither: Locale::from_algebraic("e5") },
             Patch { star: Agent::new(Team::Orange, JobDescription::Servant),
-                    whence: Locale::from_algebraic("g2".to_owned()),
-                    whither: Locale::from_algebraic("g4".to_owned()) },
+                    whence: Locale::from_algebraic("g2"),
+                    whither: Locale::from_algebraic("g4") },
         ];
         for patch in fools_patchset {
             world = world.careful_apply(patch).unwrap().tree;
@@ -1477,8 +1477,8 @@ mod tests {
                        team: Team::Blue,
                        job_description: JobDescription::Princess,
                    },
-                   whence: Locale::from_algebraic("d8".to_owned()),
-                   whither: Locale::from_algebraic("h4".to_owned()),
+                   whence: Locale::from_algebraic("d8"),
+                   whither: Locale::from_algebraic("h4"),
                })
                .tree
     }
@@ -1512,14 +1512,14 @@ mod tests {
 
         let patchset = vec![
             Patch { star: Agent::new(Team::Orange, JobDescription::Servant),
-                    whence: Locale::from_algebraic("e2".to_owned()),
-                    whither: Locale::from_algebraic("e4".to_owned()) },
+                    whence: Locale::from_algebraic("e2"),
+                    whither: Locale::from_algebraic("e4") },
             Patch { star: Agent::new(Team::Blue, JobDescription::Servant),
-                    whence: Locale::from_algebraic("c7".to_owned()),
-                    whither: Locale::from_algebraic("c5".to_owned()) },
+                    whence: Locale::from_algebraic("c7"),
+                    whither: Locale::from_algebraic("c5") },
             Patch { star: Agent::new(Team::Orange, JobDescription::Pony),
-                    whence: Locale::from_algebraic("g1".to_owned()),
-                    whither: Locale::from_algebraic("f3".to_owned()) },
+                    whence: Locale::from_algebraic("g1"),
+                    whither: Locale::from_algebraic("f3") },
         ];
 
         let book_of_patches = vec![
@@ -1550,13 +1550,13 @@ mod tests {
         let mut world = WorldState::new();
         world = world.careful_apply(
             Patch { star: Agent::new(Team::Orange, JobDescription::Servant),
-                    whence: Locale::from_algebraic("e2".to_owned()),
-                    whither: Locale::from_algebraic("e4".to_owned()) }).unwrap().tree;
-        assert_eq!(Some(Locale::from_algebraic("e3".to_owned())), world.passing_by_locale);
+                    whence: Locale::from_algebraic("e2"),
+                    whither: Locale::from_algebraic("e4") }).unwrap().tree;
+        assert_eq!(Some(Locale::from_algebraic("e3")), world.passing_by_locale);
         world = world.careful_apply(
             Patch { star: Agent::new(Team::Blue, JobDescription::Servant),
-                    whence: Locale::from_algebraic("c7".to_owned()),
-                    whither: Locale::from_algebraic("c6".to_owned()) }).unwrap().tree;
+                    whence: Locale::from_algebraic("c7"),
+                    whither: Locale::from_algebraic("c6") }).unwrap().tree;
         assert_eq!(None, world.passing_by_locale);
     }
 
@@ -1566,15 +1566,15 @@ mod tests {
         let premonitions = world.servant_lookahead(Team::Orange, false)
                                 .into_iter()
                                 .filter(|p| {
-                                    p.patch.whence == Locale::from_algebraic("e5".to_owned())
+                                    p.patch.whence == Locale::from_algebraic("e5")
                                 })
                                 .collect::<Vec<_>>();
         assert_eq!(1, premonitions.len());
         let best = premonitions[0];
         assert_eq!(Patch {
             star: Agent::new(Team::Orange, JobDescription::Servant),
-            whence: Locale::from_algebraic("e5".to_owned()),
-            whither: Locale::from_algebraic("d6".to_owned())},
+            whence: Locale::from_algebraic("e5"),
+            whither: Locale::from_algebraic("d6")},
             best.patch);
         assert_eq!(Some(Agent::new(Team::Blue, JobDescription::Servant)),
                    best.hospitalization);
