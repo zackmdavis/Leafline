@@ -53,7 +53,7 @@ pub fn dæmon() {
                 let whence = Locale::from_algebraic(&diff[0..2]);
                 let whither = Locale::from_algebraic(&diff[2..4]);
                 let premonitions = world.lookahead();
-                for premonition in premonitions.iter() {
+                for premonition in &premonitions {
                     if premonition.patch.whence == whence &&
                         premonition.patch.whither == whither {
                             world = premonition.tree;
@@ -97,7 +97,7 @@ pub fn dæmon() {
                          movement.patch.whither.to_algebraic());
                 world = movement.tree;
             }
-            s @ _ => { moral_panic!(format!("got unrecognized UCI command {:?}", s)) }
+            s => { moral_panic!(format!("got unrecognized UCI command {:?}", s)) }
         }
 
     }

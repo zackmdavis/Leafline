@@ -30,7 +30,7 @@ impl Locale {
     }
 
     pub fn pindex(&self) -> u32 {
-        (8u32 * self.rank as u32) + self.file as u32
+        (8u32 * u32::from(self.rank)) + u32::from(self.file)
     }
 
     pub fn pinpoint(&self) -> Pinfield {
@@ -160,7 +160,7 @@ impl Pinfield {
                     print!("_ ");
                 }
             }
-            println!("");
+            println!();
         }
     }
 }

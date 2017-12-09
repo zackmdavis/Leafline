@@ -54,9 +54,9 @@ pub fn score(world: WorldState) -> f32 {
 
     for team in Team::league() {
         for agent in Agent::dramatis_personæ(team) {
-            valuation += world.agent_to_pinfield_ref(agent)
-                              .pincount() as f32 *
-                         figurine_valuation(agent);
+            valuation += f32::from(world.agent_to_pinfield_ref(agent)
+                                   .pincount()) *
+                figurine_valuation(agent);
         }
         // breadth of scholarship bonus
         if world.agent_to_pinfield_ref(Agent {
@@ -78,15 +78,15 @@ pub fn score(world: WorldState) -> f32 {
                                   .union(world.blue_ponies)
                                   .intersection(center)
                                   .pincount() as i8;
-    valuation += 0.1 * (orange_centerism - blue_centerism) as f32;
+    valuation += 0.1 * f32::from(orange_centerism - blue_centerism);
 
     // a cop's favorite beat is the seventh rank
     let high_seventh = Pinfield(HIGH_SEVENTH_HEAVEN);
     let orange_beat = world.orange_cops.intersection(high_seventh).pincount();
-    valuation += 0.5 * orange_beat as f32;
+    valuation += 0.5 * f32::from(orange_beat);
     let low_seventh = Pinfield(LOW_SEVENTH_HEAVEN);
     let blue_beat = world.blue_cops.intersection(low_seventh).pincount();
-    valuation -= 0.5 * blue_beat as f32;
+    valuation -= 0.5 * f32::from(blue_beat);
 
     // servants who walk behind other servants to hide must be punished
     for raw_file in &FILES {
@@ -96,17 +96,17 @@ pub fn score(world: WorldState) -> f32 {
                                            .pincount();
         // Putting a precise number on how bad extra servants on a file are
         // seems to be quite hard, and a smarter engine might choose more
-        // dynamically, but half-a-point is OK i think.
+        // dynamically, but half-a-point is OK, I think.
         // Wikipedia has examples where a doubled servant is worth anywhere
         // from .3 to .75 points.
         if orange_servants_in_line > 1 {
-            valuation -= 0.5 * (orange_servants_in_line - 1) as f32;
+            valuation -= 0.5 * f32::from(orange_servants_in_line - 1);
         }
         let blue_servants_in_line = world.blue_servants
                                            .intersection(file)
                                            .pincount();
         if blue_servants_in_line > 1 {
-            valuation += 0.5 * (blue_servants_in_line - 1) as f32;
+            valuation += 0.5 * f32::from(blue_servants_in_line - 1);
         }
     }
 
@@ -114,21 +114,21 @@ pub fn score(world: WorldState) -> f32 {
     let orange_subascendants = world.orange_servants
                                     .intersection(high_seventh)
                                     .pincount();
-    valuation += 1.8 * orange_subascendants as f32;
+    valuation += 1.8 * f32::from(orange_subascendants);
     let high_colonelcy = Pinfield(HIGH_COLONELCY);
     let orange_subsubascendants = world.orange_servants
                                        .intersection(high_colonelcy)
                                        .pincount();
-    valuation += 0.6 * orange_subsubascendants as f32;
+    valuation += 0.6 * f32::from(orange_subsubascendants);
     let blue_subascendants = world.blue_servants
                                   .intersection(low_seventh)
                                   .pincount();
-    valuation -= 1.8 * blue_subascendants as f32;
+    valuation -= 1.8 * f32::from(blue_subascendants);
     let low_colonelcy = Pinfield(LOW_COLONELCY);
     let blue_subsubascendants = world.blue_servants
                                      .intersection(low_colonelcy)
                                      .pincount();
-    valuation -= 0.6 * blue_subsubascendants as f32;
+    valuation -= 0.6 * f32::from(blue_subsubascendants);
 
     // secret service eligbility has option value
     if world.orange_west_service_eligibility() ||
@@ -494,7 +494,7 @@ mod tests {
     #[test]
     #[ignore]  // more research is needed
     fn concerning_short_circuiting_upon_finding_critical_endangerment() {
-        let ws = WorldState::reconstruct("7K/r7/1r6/8/8/8/8/7k b -".to_owned());
+        let ws = WorldState::reconstruct("7K/r7/1r6/8/8/8/8/7k b -");
         let start = time::get_time();
         kickoff(&ws, 30, None, true, MOCK_DÉJÀ_VU_BOUND);
         let duration = time::get_time() - start;
@@ -511,7 +511,7 @@ mod tests {
 
     #[test]
     fn concerning_servant_ascension_choices() {
-        let ws = WorldState::reconstruct("8/q1P1k/8/8/8/8/6PP/7K w - -".to_owned());
+        let ws = WorldState::reconstruct("8/q1P1k/8/8/8/8/6PP/7K w - -");
         // looking ahead 3 movements allows the Leafline AI to catch the
         // split, whereby transforming into a pony (rather than
         // transitioning into a princess, as would usually be
@@ -611,7 +611,7 @@ mod tests {
         ];
         let mut tempo_lurches: Vec<f32> = Vec::new();
         for world_runeset in world_runesets {
-            let world = WorldState::reconstruct(world_runeset.to_owned());
+            let world = WorldState::reconstruct(world_runeset);
             let mut previously = None;
             for &depth in &[2, 3, 4] {
                 let premonitions = kickoff(&world, depth, None, true, 1.0);
@@ -638,8 +638,8 @@ mod tests {
 
     #[test]
     fn concerning_lazy_servants() {
-        let orange_doubled = WorldState::reconstruct("k7/pp6/8/8/8/P7/P7/K7 w - -".to_owned());
-        let orange_not_doubled = WorldState::reconstruct("k7/pp6/8/8/8/8/PP6/K7 w - -".to_owned());
+        let orange_doubled = WorldState::reconstruct("k7/pp6/8/8/8/P7/P7/K7 w - -");
+        let orange_not_doubled = WorldState::reconstruct("k7/pp6/8/8/8/8/PP6/K7 w - -");
         assert!(score(orange_doubled) < score(orange_not_doubled));
     }
 }

@@ -407,7 +407,7 @@ impl WorldState {
         self.set_service_eligibility(Team::Blue, true);
     }
 
-    pub fn reconstruct(scan: String) -> Self {
+    pub fn reconstruct(scan: &str) -> Self {
         let mut rank = 7;
         let mut file = 0;
         let mut world = WorldState::new_except_empty();
@@ -482,7 +482,7 @@ impl WorldState {
         if passing_by_locale == "-" {
             world.passing_by_locale = None;
         } else {
-            world.passing_by_locale = Some(Locale::from_algebraic(&passing_by_locale));
+            world.passing_by_locale = Some(Locale::from_algebraic(passing_by_locale));
         }
         world
     }
@@ -1115,25 +1115,25 @@ mod tests {
 
     #[bench]
     fn benchmark_servant_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_owned());
+        let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.servant_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_pony_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_owned());
+        let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.pony_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_scholar_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_owned());
+        let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.scholar_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_cop_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_owned());
+        let ws = WorldState::reconstruct(VISION);
         ws.cop_lookahead(Team::Orange, false);
         ws.cop_lookahead(Team::Orange, false);
         ws.cop_lookahead(Team::Orange, false);
@@ -1143,13 +1143,13 @@ mod tests {
 
     #[bench]
     fn benchmark_princess_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_owned());
+        let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.princess_lookahead(Team::Orange, false));
     }
 
     #[bench]
     fn benchmark_figurehead_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_owned());
+        let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.figurehead_lookahead(Team::Orange, false));
     }
 
@@ -1161,13 +1161,13 @@ mod tests {
 
     #[bench]
     fn benchmark_non_new_lookahead(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_owned());
+        let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.lookahead());
     }
 
     #[bench]
     fn benchmark_ultimate_endangerment(b: &mut Bencher) {
-        let ws = WorldState::reconstruct(VISION.to_owned());
+        let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.in_critical_endangerment(Team::Orange));
     }
 
@@ -1189,7 +1189,7 @@ mod tests {
     fn concerning_castling_restrictions() {
         let ws = WorldState::reconstruct(
             "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPBPPP/RNBQK2R w KQkq -"
-                .to_owned());
+                );
         let mut service_patch = Patch {
             star: Agent {
                 team: Team::Orange,
@@ -1220,24 +1220,24 @@ mod tests {
 
     #[test]
     fn concerning_castling_availability() {
-        let mut ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K -".to_owned());
+        let mut ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K -");
         let mut prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
-        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3K2R w KQ -".to_owned());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3K2R w KQ -");
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(2, prems.len());
 
-        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3KN1R w Q -".to_owned());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3KN1R w Q -");
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
 
-        ws = WorldState::reconstruct("8/8/4k3/8/8/4b3/8/R3KN1R w Q -".to_owned());
+        ws = WorldState::reconstruct("8/8/4k3/8/8/4b3/8/R3KN1R w Q -");
         // can't move into endangerment
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
 
-        ws = WorldState::reconstruct("8/8/4k3/8/b7/8/8/R3KN1R w Q - 0 1".to_owned());
+        ws = WorldState::reconstruct("8/8/4k3/8/b7/8/8/R3KN1R w Q - 0 1");
         // can't move through endangerment, either!
         prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
@@ -1245,7 +1245,7 @@ mod tests {
 
     #[test]
     fn concerning_castling_actually_working() {
-        let ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K -".to_owned());
+        let ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K -");
         assert!(ws.orange_east_service_eligibility());
         let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(1, prems.len());
@@ -1255,7 +1255,7 @@ mod tests {
 
     #[test]
     fn concerning_castling_out_of_check() {
-        let ws = WorldState::reconstruct("8/8/4k3/8/4r3/8/8/4K2R w K -".to_owned());
+        let ws = WorldState::reconstruct("8/8/4k3/8/4r3/8/8/4K2R w K -");
         assert!(ws.orange_east_service_eligibility());
         let prems = ws.service_lookahead(Team::Orange, false);
         assert_eq!(0, prems.len());
@@ -1505,8 +1505,7 @@ mod tests {
     fn concerning_preservation_and_reconstruction_of_historical_worlds() {
         // en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation#Examples
         let eden = WorldState::new();
-        let book_of_eden = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -"
-                               .to_owned();
+        let book_of_eden = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
         assert_eq!(book_of_eden, eden.preserve());
         assert_eq!(eden, WorldState::reconstruct(book_of_eden));
 
@@ -1523,12 +1522,9 @@ mod tests {
         ];
 
         let book_of_patches = vec![
-            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3" // 0 1
-                .to_owned(),
-            "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6" // 0 2
-                .to_owned(),
-            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -" // 1 2
-                .to_owned(),
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3", // 0 1
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6", // 0 2
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -", // 1 2
         ];
 
         let mut world = eden;
@@ -1562,7 +1558,7 @@ mod tests {
 
     #[test]
     fn concerning_passing_by_in_action() {
-        let world = WorldState::reconstruct("rnbqkbnr/ppp2ppp/4p3/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3".to_owned());
+        let world = WorldState::reconstruct("rnbqkbnr/ppp2ppp/4p3/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3");
         let premonitions = world.servant_lookahead(Team::Orange, false)
                                 .into_iter()
                                 .filter(|p| {

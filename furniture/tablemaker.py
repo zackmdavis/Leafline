@@ -71,6 +71,7 @@ def where_the_heart_is(whose_heart, strikepoint):
 
 def main():
     with open(os.path.join('src', "motion.rs"), 'w') as motion_rs:
+        motion_rs.write("#[allow(unreadable_literal)]\n\n")
         motion_rs.write(
             '\n\n'.join(
                 map(
@@ -96,6 +97,7 @@ def main():
     #all_args.extend([("file_{}".format(f), sideways_contour(f)) for f in range(8)])
 
     with open(os.path.join('src', "landmark.rs"), 'w') as landmark_rs:
+        landmark_rs.write("#[allow(unreadable_literal)]\n\n")
         landmark_rs.write(
             '\n'.join(
                 ["pub static CENTER_OF_THE_WORLD: u64 = {};\n".format(

@@ -2,7 +2,7 @@
 
 #![allow(unknown_lints)]
 
-#![allow(if_not_else, unused_features)]
+#![allow(if_not_else, unused_features, clone_on_ref_ptr, unreadable_literal)]
 #![warn(missing_debug_implementations, missing_copy_implementations,
         trivial_casts, trivial_numeric_casts,
         unused_import_braces, unused_qualifications)]
@@ -94,7 +94,7 @@ enum LookaheadBound {
 impl LookaheadBound {
     pub fn duration(&self) -> Duration {
         match *self {
-            LookaheadBound::Seconds(secs) => Duration::seconds(secs as i64),
+            LookaheadBound::Seconds(secs) => Duration::seconds(i64::from(secs)),
             _ => {
                 moral_panic!("`duration()` called on non-Seconds LookaheadBound \
                               variant")
@@ -102,7 +102,7 @@ impl LookaheadBound {
         }
     }
 
-    pub fn new_from_sequence_depiction(depiction: String) -> Self {
+    pub fn new_from_sequence_depiction(depiction: &str) -> Self {
         let depth_runes = depiction.split(',');
         let depth_sequence = depth_runes.map(|dd| {
                                             dd.parse::<u8>()
@@ -136,7 +136,7 @@ impl LookaheadBound {
         if let Some(sequence_depiction) = lookahead_depth_sequence {
             confirm_bound_is_none(&bound)?;
             bound = Some(LookaheadBound::new_from_sequence_depiction(
-                sequence_depiction));
+                &sequence_depiction));
         }
         if let Some(seconds) = lookahead_seconds {
             confirm_bound_is_none(&bound)?;
@@ -192,7 +192,7 @@ struct LastMissive {
 }
 
 #[allow(collapsible_if)]
-fn correspondence(reminder: String, bound: LookaheadBound, déjà_vu_bound: f32)
+fn correspondence(reminder: &str, bound: LookaheadBound, déjà_vu_bound: f32)
                   -> String {
     let in_medias_res = WorldState::reconstruct(reminder);
     let (mut forecasts, depth, sidereal) = forecast(in_medias_res,
@@ -324,16 +324,16 @@ fn main() {
                     None => {
                         moral_panic!("`--correspond` passed without exactly one \
                                       of `--depth`, `--depth-sequence`, or \
-                                      `--seconds`");
+                                      `--seconds`")
                     }
                 }
             }
             Err(error) => {
-                moral_panic!(error);
+                moral_panic!(error)
             }
         };
         let from = from_runes.expect("`--correspond` requires `--from`");
-        println!("{}", correspondence(from, bound, déjà_vu_bound));
+        println!("{}", correspondence(&from, bound, déjà_vu_bound));
         process::exit(0);
     }
 
@@ -360,7 +360,7 @@ fn main() {
     }
 
     let mut world = match from_runes {
-        Some(runes) => WorldState::reconstruct(runes),
+        Some(runes) => WorldState::reconstruct(&runes),
         None => WorldState::new(),
     };
     let mut premonitions: Vec<Commit>;
@@ -456,7 +456,7 @@ mod tests {
 
     #[test]
     fn concerning_correspondence_victory_conditions() {
-        let blue_concession = correspondence("R6k/6pp/8/8/8/8/8/8 b - -".to_owned(),
+        let blue_concession = correspondence("R6k/6pp/8/8/8/8/8/8 b - -",
                                              LookaheadBound::Depth(2, None),
                                              1.0);
         assert_eq!("{\"the_triumphant\":\"Orange\"}".to_owned(),
