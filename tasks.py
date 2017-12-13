@@ -67,53 +67,40 @@ def unpack_chessboard_js():
             boardzip.extract(name, path=os.path.join('web_client', 'resources', 'public'))
 
 @task
-def install_chessboard_js():
+def install_chessboard_js(ctx):
     download_chessboard_js()
     unpack_chessboard_js()
 
 
-@not_if_files_exist(UNDERSCORE_PATH)
-def download_underscore():
+@task
+def download_underscore(ctx):
     urlretrieve("http://underscorejs.org/underscore-min.js", UNDERSCORE_PATH)
+    ctx.run("mv {0} {0}.gz".format(UNDERSCORE_PATH))
+    ctx.run("gunzip {}.gz".format(UNDERSCORE_PATH))
 
 
 @task
-def download_statics():
-    install_chessboard_js()
-    download_underscore()
-
-
-BABEL_COMMAND = [
-    "babel", "web_client/resources/public/js/client.js",
-    "--watch",
-    "--out-file", "web_client/resources/public/js/client-built.js"
-]
-
-@task
-def compile_client():
-    subprocess_runner = (subprocess.run if sys.version_info >= (3, 5)
-                         else subprocess.call)
-    subprocess_runner(BABEL_COMMAND)
+def download_statics(ctx):
+    install_chessboard_js(ctx)
+    download_underscore(ctx)
 
 
 @task
-@not_if_files_exist(*[os.path.join('src', f)
-                      for f in ("motion.rs", "landmark.rs")])
-def build_furniture():
+def build_furniture(ctx):
+
     tablemaker.main()
 
 
 @task
-def build_release():
-    run("cargo build --release")
-    run(' '.join(segment for segment in BABEL_COMMAND if segment != "--watch"))
-    run("cd web_client && lein uberjar")
-    run("cp target/release/leafline provisioning/leafline")
-    run("cp web_client/target/leafline-web-client.jar "
+def build_release(ctx):
+    ctx.run("cargo build --release")
+    ctx.run("cd web_client && lein uberjar")
+    ctx.run("cp target/release/leafline provisioning/leafline")
+    ctx.run("cp web_client/target/leafline-web-client.jar "
         "provisioning/leafline-web-client.jar")
 
 @task
-def sed(pattern, replacement):
+def sed(ctx, pattern, replacement):
     for subtree in ('src', "web_client"):
         for fortress, _subsubtrees, deëdgers in os.walk(subtree):
             for deëdger in deëdgers:
@@ -131,7 +118,7 @@ def sed(pattern, replacement):
 
 
 @task
-def new_methodize(struct_name, src_file=None):
+def new_methodize(ctx, struct_name, src_file=None):
     field_subliteral_pattern = "(\w+): ([^\s,]+),?\s+"
     field_subliteral_regex = re.compile(field_subliteral_pattern)
     literal_pattern = r"{} ?{{ ({})+}}".format(
