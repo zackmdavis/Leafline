@@ -1,8 +1,9 @@
 ---
 - hosts: all
+  remote_user: root
   tasks:
     - name: firewall allow SSH
-      sudo: yes
+      become: yes
       ufw: >
         rule=allow
         name=OpenSSH
@@ -10,7 +11,7 @@
         - firewall
 
     - name: firewall allow 2882
-      sudo: yes
+      become: yes
       ufw: >
         rule=allow
         proto=tcp
@@ -19,7 +20,7 @@
         - firewall
 
     - name: firewall up
-      sudo: yes
+      become: yes
       ufw: >
         state=enabled
         policy=deny
@@ -27,19 +28,19 @@
         - firewall
 
     - name: give www-data a shell
-      sudo: yes
+      become: yes
       user: >
         name=www-data
         shell=/bin/bash
 
     - name: install Java
-      sudo: yes
+      become: yes
       apt: name=default-jre-headless state=present
       tags:
         - jvm
 
     - name: make /srv/leafline directory
-      sudo: yes
+      become: yes
       file: path=/srv/leafline state=directory owner=www-data group=www-data
       tags:
         - application
@@ -48,7 +49,7 @@
     # provisioning/ directory of our local repository
 
     - name: copy Leafline binary
-      sudo: yes
+      become: yes
       copy: >
         src=leafline
         dest=/srv/leafline/leafline
@@ -60,7 +61,7 @@
         - application
 
     - name: copy Leafline Web jar
-      sudo: yes
+      become: yes
       copy: >
         src=leafline-web-client.jar
         dest=/srv/leafline/leafline-web-client.jar
@@ -71,8 +72,9 @@
       tags:
         - application
 
+    # XXX: this doesn't work in the new Systemd world
     - name: install Upstart job
-      sudo: yes
+      become: yes
       template: >
         src=leafline.conf.j2
         dest=/etc/init/leafline.conf
@@ -81,7 +83,7 @@
         - application
 
     - name: run Leafline service
-      sudo: yes
+      become: yes
       service: >
         name=leafline
         state=restarted
