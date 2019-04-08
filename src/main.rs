@@ -184,6 +184,7 @@ struct Postcard {
     thinking_time: u64,
     depth: u8,
     counterreplies: Vec<Patch>,
+    rosetta_stone: String,
 }
 
 #[derive(RustcEncodable, RustcDecodable)]
@@ -226,6 +227,7 @@ fn correspondence(reminder: &str, bound: LookaheadBound, déjà_vu_bound: f32)
             thinking_time: sidereal.num_milliseconds() as u64,
             depth,
             counterreplies,
+            rosetta_stone: determination.patch.abbreviated_pagan_movement_rune(),
         };
         json::encode(&postcard).unwrap()
     } else {

@@ -36,8 +36,8 @@ pub fn meminfo(field: &str) -> Result<Bytes, Error> {
         let label = &format!("{}:", field);
         if entry.starts_with(label) {
             // like "MemFree:  3274928 kB"
-            let mut figure = entry.trim_left_matches(label);
-            figure = figure.trim_left();
+            let mut figure = entry.trim_start_matches(label);
+            figure = figure.trim_start();
             figure = &figure[0..figure.len() - 3]; // chop off " kB"
             let value: u64 = figure.parse()
                                    .expect("couldn't parse memory inventory \
