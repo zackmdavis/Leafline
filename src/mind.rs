@@ -204,25 +204,24 @@ impl fmt::Debug for Lodestar {
     }
 }
 
-
-#[derive(Clone)]
-pub struct Souvenir {
-    soundness: u8,
-    lodestar: Lodestar,
+#[derive(Eq,PartialEq,Hash)]
+pub struct SpaceTime {
+    world_state: WorldState,
+    instant: i8,
 }
 
-impl Souvenir {
-    fn new(lodestar: Lodestar, field_depth: u8) -> Self {
-        let soundness = lodestar.variation.len() as u8 - field_depth;
-        Self { soundness, lodestar }
+
+impl SpaceTime {
+    fn new(world_state: WorldState, instant: i8) -> Self {
+        Self { world_state, instant }
     }
 }
 
 
 #[allow(too_many_arguments)]
 pub fn α_β_negamax_search(
-    world: WorldState, depth: i8, mut α: f32, β: f32, variation: Variation,
-    memory_bank: Arc<parking_lot::Mutex<LruCache<WorldState, Souvenir,
+    world: WorldState, depth: i8, mut α: f32, β: f32, 
+    memory_bank: Arc<parking_lot::Mutex<LruCache<SpaceTime, Lodestar,
                                     BuildHasherDefault<XxHash>>>>,
     intuition_bank: Arc<parking_lot::Mutex<HashMap<Patch, u32>>>,
     quiet: Option<u8>)
@@ -230,22 +229,22 @@ pub fn α_β_negamax_search(
 
     let mut premonitions = world.reckless_lookahead();
     let mut optimum = NEG_INFINITY;
-    let mut optimand = variation.clone();
+    let mut optimand = vec![];
     if depth <= 0 || premonitions.is_empty() {
         let potential_score = orientation(world.initiative) * score(world);
         match quiet {
             None => {
-                return Lodestar::new(potential_score, variation);
+                return Lodestar::new(potential_score, vec![]);
             },
             Some(extension) => {
                 if depth.abs() >= extension as i8 {
-                    return Lodestar::new(potential_score, variation);
+                    return Lodestar::new(potential_score, vec![]);
                 }
                 premonitions = premonitions.into_iter()
                     .filter(|c| c.hospitalization.is_some())
                     .collect::<Vec<_>>();
                 if premonitions.is_empty() {
-                    return Lodestar::new(potential_score, variation)
+                    return Lodestar::new(potential_score, vec![])
                 } else {
                     optimum = potential_score;
                 }
@@ -260,21 +259,17 @@ pub fn α_β_negamax_search(
     }
     for premonition in premonitions {
         let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
-        let mut extended_variation = variation.clone();
-        extended_variation.push(premonition.patch);
+        let mut variation: Variation = vec![premonition.patch];
         let cached: bool;
+        let space_time = SpaceTime::new(premonition.tree, depth);
         {
             let mut open_vault = memory_bank.lock();
-            let souvenir_maybe = open_vault.get_mut(&premonition.tree);
-            match souvenir_maybe {
-                Some(souvenir) => {
-                    if souvenir.soundness as i8 >= depth {
-                        cached = true;
-                        value = souvenir.lodestar.score;
-                        extended_variation = souvenir.lodestar.variation.clone();
-                    } else {
-                        cached = false;
-                    }
+            let remembered_lodestar_maybe = open_vault.get_mut(&space_time);
+            match remembered_lodestar_maybe {
+                Some(remembered_lodestar) => {
+                    cached = true;
+                    value = remembered_lodestar.score;
+                    variation.extend(remembered_lodestar.variation.clone());
                 }
                 None => { cached = false; }
             };
@@ -283,22 +278,22 @@ pub fn α_β_negamax_search(
         if !cached {
             let mut lodestar = α_β_negamax_search(
                 premonition.tree, depth - 1,
-                -β, -α, extended_variation.clone(),
+                -β, -α,
                 memory_bank.clone(), intuition_bank.clone(),
                 quiet
             );
             lodestar.score *= -1.;  // nega-
             value = lodestar.score;
-            extended_variation = lodestar.variation.clone();
+            variation.extend(lodestar.variation.clone());
             memory_bank.lock().insert(
-                premonition.tree,
-                Souvenir::new(lodestar, extended_variation.len() as u8)
+                space_time,
+                lodestar,
             );
         }
 
         if value > optimum {
             optimum = value;
-            optimand = extended_variation;
+            optimand = variation;
         }
         if value > α {
             α = value;
@@ -331,7 +326,7 @@ pub fn potentially_timebound_kickoff(
     intuition_bank: Arc<parking_lot::Mutex<HashMap<Patch, u32>>>,
     déjà_vu_bound: f32)
         -> Option<Vec<(Commit, f32, Variation)>> {
-    let déjà_vu_table: LruCache<WorldState, Souvenir,
+    let déjà_vu_table: LruCache<SpaceTime, Lodestar,
                                 BuildHasherDefault<XxHash>> =
         LruCache::with_hash_state(déjà_vu_table_size_bound(déjà_vu_bound),
                                   Default::default());
@@ -357,7 +352,7 @@ pub fn potentially_timebound_kickoff(
         thread::spawn(move || {
             let search_hit: Lodestar = α_β_negamax_search(
                 premonition.tree, (depth - 1) as i8,
-                NEG_INFINITY, INFINITY, vec![premonition.patch],
+                NEG_INFINITY, INFINITY,
                 travel_memory_bank, travel_intuition_bank,
                 extension_maybe
             );
@@ -375,7 +370,9 @@ pub fn potentially_timebound_kickoff(
             let premonition = time_radios[i].0;
             if let Ok(search_hit) = time_radios[i].1.try_recv() {
                 let value = -search_hit.score;
-                forecasts.push((premonition, value, search_hit.variation));
+                let mut full_variation = vec![premonition.patch];
+                full_variation.extend(search_hit.variation);
+                forecasts.push((premonition, value, full_variation));
                 time_radios.swap_remove(i);
             }
         }
