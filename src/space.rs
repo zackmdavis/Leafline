@@ -129,7 +129,7 @@ impl Pinfield {
     }
 
     pub fn to_locales(&self) -> Vec<Locale> {
-        let mut locales = Vec::new();
+        let mut locales = Vec::with_capacity(8);
         let Pinfield(bits) = *self;
         let mut bitfield = 1u64;
         for rank in 0..8 {
