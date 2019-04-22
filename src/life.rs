@@ -1033,28 +1033,6 @@ impl WorldState {
         self.princess_lookahead(moving_team, nihilistically, &mut premonitions);
         self.figurehead_lookahead(moving_team, nihilistically, &mut premonitions);
 
-        /*
-        let servant_premonitions = self.servant_lookahead(moving_team, nihilistically);
-        let pony_premonitions = self.pony_lookahead(moving_team, nihilistically);
-        let scholar_premonitions = self.scholar_lookahead(moving_team, nihilistically);
-        let cop_premonitions = self.cop_lookahead(moving_team, nihilistically);
-        let princess_premonitions = self.princess_lookahead(moving_team, nihilistically);
-        let figurehead_premonitions = self.figurehead_lookahead(moving_team, nihilistically);
-        let mut premonitions = Vec::with_capacity(
-            servant_premonitions.len() +
-            pony_premonitions.len() +
-            scholar_premonitions.len() +
-            cop_premonitions.len() +
-            princess_premonitions.len() +
-            figurehead_premonitions.len()
-        );
-        premonitions.extend(servant_premonitions);
-        premonitions.extend(pony_premonitions);
-        premonitions.extend(scholar_premonitions);
-        premonitions.extend(cop_premonitions);
-        premonitions.extend(princess_premonitions);
-        premonitions.extend(figurehead_premonitions);
-        */
         premonitions
     }
 
@@ -1128,6 +1106,7 @@ mod tests {
     // an arbitrarily chosen "complicated" looking position from a Kasparov
     // game
     static VISION: &'static str = "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b - -";
+
 
     #[bench]
     fn benchmark_servant_lookahead(b: &mut Bencher) {

@@ -8,6 +8,7 @@ static INDEX_TO_FILE_NAME: [char; 8] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
 ];
 
+
 impl Locale {
     pub fn new(rank: u8, file: u8) -> Self {
         Self { rank, file }

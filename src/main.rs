@@ -17,6 +17,7 @@ extern crate parking_lot;
 extern crate rustc_serialize;
 extern crate time;
 extern crate twox_hash;
+extern crate fnv;
 
 
 #[macro_use] mod sorceries;
