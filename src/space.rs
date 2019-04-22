@@ -119,6 +119,8 @@ impl Pinfield {
     }
 
     pub fn transit(&self, departure: Locale, destination: Locale) -> Pinfield {
+        // empirically, pulling function calls out of this and replacing
+        // them with bit manipulation directly doesnt help.
         self.quench(departure).alight(destination)
     }
 
@@ -169,7 +171,7 @@ impl Pinfield {
 #[cfg(test)]
 mod tests {
     extern crate test;
-    use self::test::Bencher;
+    use self::test::{Bencher, black_box};
     use super::{Locale, Pinfield};
 
     static ALGEBRAICS: [&'static str; 64] = [
@@ -192,6 +194,20 @@ mod tests {
         }
 
         b.iter(|| stage.to_locales());
+    }
+
+    #[bench]
+    fn benchmark_transit(b: &mut Bencher) {
+        let mut stage = Pinfield(0);
+        let from = Locale::new(1, 3);
+        let to = Locale::new(2, 5);
+        stage = stage.alight(from);
+
+        b.iter(|| {
+            for _ in 0..10000 {
+                black_box(stage.transit(from, to));
+            }
+        });
     }
 
     #[test]
