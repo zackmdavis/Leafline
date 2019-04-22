@@ -53,10 +53,10 @@ pub fn score(world: WorldState) -> f32 {
     valuation += REWARD_FOR_INITIATIVE * orientation(world.initiative);
 
     for team in Team::league() {
-        for agent in Agent::dramatis_personæ(team) {
-            valuation += f32::from(world.agent_to_pinfield_ref(agent)
+        for agent in &Agent::dramatis_personæ(team) {
+            valuation += f32::from(world.agent_to_pinfield_ref(*agent)
                                    .pincount()) *
-                figurine_valuation(agent);
+                figurine_valuation(*agent);
         }
         // breadth of scholarship bonus
         if world.agent_to_pinfield_ref(Agent {

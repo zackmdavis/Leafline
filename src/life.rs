@@ -525,9 +525,9 @@ impl WorldState {
     }
 
     pub fn occupying_affiliated_agent(&self, at: Locale, team: Team) -> Option<Agent> {
-        for agent in Agent::dramatis_personæ(team) {
-            if self.agent_to_pinfield_ref(agent).query(at) {
-                return Some(agent);
+        for agent in &Agent::dramatis_personæ(team) {
+            if self.agent_to_pinfield_ref(*agent).query(at) {
+                return Some(*agent);
             }
         }
         None
@@ -677,26 +677,26 @@ impl WorldState {
 
     fn subpredict(&self, premonitions: &mut Vec<Commit>, premonition: Commit) {
         if premonition.patch.concerns_servant_ascension() {
-            for ascended in Agent::dramatis_personæ(premonition.patch.star.team) {
+            for ascended in &Agent::dramatis_personæ(premonition.patch.star.team) {
                 if ascended.job_description == JobDescription::Servant ||
                    ascended.job_description == JobDescription::Figurehead {
                     continue;
                 }
                 let mut ascendency = premonition;
-                ascendency.ascension = Some(ascended);
+                ascendency.ascension = Some(*ascended);
                 let vessel_pinfield =
                     premonition.tree
                                .agent_to_pinfield_ref(premonition.patch.star)
                                .quench(premonition.patch.whither);
                 let ascended_pinfield = premonition.tree
-                                                   .agent_to_pinfield_ref(ascended)
+                                                   .agent_to_pinfield_ref(*ascended)
                                                    .alight(premonition.patch
                                                                       .whither);
                 ascendency.tree =
                     ascendency.tree
                               .except_replaced_subboard(premonition.patch.star,
                                                         vessel_pinfield)
-                              .except_replaced_subboard(ascended, ascended_pinfield);
+                              .except_replaced_subboard(*ascended, ascended_pinfield);
                 premonitions.push(ascendency);
             }
         } else {
