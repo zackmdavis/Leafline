@@ -411,7 +411,8 @@ impl WorldState {
         let mut rank = 7;
         let mut file = 0;
         let mut world = WorldState::new_except_empty();
-        let mut volumes = scan.split(' ');
+        let replaced = scan.replace("X", " ");
+        let mut volumes = replaced.split(' ');
         let positional_scan = volumes.next();
         for rune in positional_scan.unwrap().chars() {
             match rune {

@@ -153,16 +153,16 @@ fn mmv_lva_heuristic(commit: &Commit) -> f32 {
 }
 
 fn order_movements_heuristically(commits: &mut Vec<Commit>) {
-    commits.sort_by(|a, b| {
+    commits.sort_unstable_by(|a, b| {
         mmv_lva_heuristic(b)
             .partial_cmp(&mmv_lva_heuristic(a))
             .unwrap_or(Ordering::Equal)
     });
 }
 
-fn order_movements_intuitively(experience: &HashMap<Patch, u32>,
-    commits: &mut Vec<Commit>) {
-    commits.sort_by(|a, b| {
+fn order_movements_intuitively(
+        experience: &HashMap<Patch, u32>, commits: &mut Vec<Commit>) {
+    commits.sort_unstable_by(|a, b| {
         let a_feels = experience.get(&a.patch);
         let b_feels = experience.get(&b.patch);
         b_feels.cmp(&a_feels)
@@ -380,7 +380,7 @@ pub fn potentially_timebound_kickoff(
         debug!("waiting for {} of {} first-movement search threads",
                time_radios.len(), premonitions.len())
     }
-    forecasts.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
+    forecasts.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     Some(forecasts)
 }
 
