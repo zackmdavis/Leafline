@@ -19,6 +19,8 @@ extern crate time;
 extern crate twox_hash;
 extern crate fnv;
 
+#[macro_use] extern crate lazy_static;
+
 
 #[macro_use] mod sorceries;
 mod space;

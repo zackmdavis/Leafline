@@ -8,10 +8,22 @@ static INDEX_TO_FILE_NAME: [char; 8] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
 ];
 
+lazy_static! {
+    static ref LOCALE_STASH: fnv::FnvHashMap<(u8, u8), Locale> = {
+        let mut m: fnv::FnvHashMap<(u8, u8), Locale> = fnv::FnvHashMap::default();
+        for rank in 0..8 {
+            for file in 0..8 {
+                m.insert((rank, file), Locale { rank, file });
+            }
+        }
+        m
+    };
+}
+
 
 impl Locale {
     pub fn new(rank: u8, file: u8) -> Self {
-        Self { rank, file }
+        *LOCALE_STASH.get(&(rank, file)).unwrap()
     }
 
     pub fn to_algebraic(&self) -> String {
@@ -174,6 +186,10 @@ mod tests {
     extern crate test;
     use self::test::{Bencher, black_box};
     use super::{Locale, Pinfield};
+    use fnv;
+    use twox_hash::XxHash;
+    use std::hash::Hash;
+    use std::collections::hash_map;
 
     static ALGEBRAICS: [&'static str; 64] = [
         "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
@@ -185,6 +201,45 @@ mod tests {
         "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
         "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"
     ];
+
+    #[bench]
+    fn benchmark_hashing_tuple_fnv(b: &mut Bencher) {
+        let mut hasher = fnv::FnvHasher::default();
+        let t: (u8, u8) = (1, 4);
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                t.hash(&mut hasher);
+            }
+        });
+    }
+
+
+    #[bench]
+    fn benchmark_hashing_tuple_xx(b: &mut Bencher) {
+        let mut hasher = XxHash::default();
+        let t: (u8, u8) = (1, 4);
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                t.hash(&mut hasher);
+            }
+        });
+    }
+
+
+    #[bench]
+    fn benchmark_hashing_tuple_sip(b: &mut Bencher) {
+        let mut hasher = hash_map::DefaultHasher::new();
+        let t: (u8, u8) = (1, 4);
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                t.hash(&mut hasher);
+            }
+        });
+    }
+
 
     #[bench]
     fn benchmark_to_locales(b: &mut Bencher) {
