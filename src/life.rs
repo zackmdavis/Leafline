@@ -1132,41 +1132,55 @@ mod tests {
     #[bench]
     fn benchmark_servant_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        b.iter(|| ws.servant_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.servant_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
     fn benchmark_pony_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        b.iter(|| ws.pony_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.pony_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
     fn benchmark_scholar_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        b.iter(|| ws.scholar_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.scholar_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
     fn benchmark_cop_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        ws.cop_lookahead(Team::Orange, false);
-        ws.cop_lookahead(Team::Orange, false);
-        ws.cop_lookahead(Team::Orange, false);
-        ws.cop_lookahead(Team::Orange, false);
-        b.iter(|| ws.cop_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.cop_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
     fn benchmark_princess_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        b.iter(|| ws.princess_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.princess_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
     fn benchmark_figurehead_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        b.iter(|| ws.figurehead_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.figurehead_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
@@ -1237,25 +1251,30 @@ mod tests {
     #[test]
     fn concerning_castling_availability() {
         let mut ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K -");
-        let mut prems = ws.service_lookahead(Team::Orange, false);
+        let mut prems = Vec::new();
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(1, prems.len());
 
+        prems.clear();
         ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3K2R w KQ -");
-        prems = ws.service_lookahead(Team::Orange, false);
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(2, prems.len());
 
+        prems.clear();
         ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3KN1R w Q -");
-        prems = ws.service_lookahead(Team::Orange, false);
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(1, prems.len());
 
+        prems.clear();
         ws = WorldState::reconstruct("8/8/4k3/8/8/4b3/8/R3KN1R w Q -");
         // can't move into endangerment
-        prems = ws.service_lookahead(Team::Orange, false);
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(0, prems.len());
 
+        prems.clear();
         ws = WorldState::reconstruct("8/8/4k3/8/b7/8/8/R3KN1R w Q - 0 1");
         // can't move through endangerment, either!
-        prems = ws.service_lookahead(Team::Orange, false);
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(0, prems.len());
     }
 
@@ -1263,7 +1282,8 @@ mod tests {
     fn concerning_castling_actually_working() {
         let ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K -");
         assert!(ws.orange_east_service_eligibility());
-        let prems = ws.service_lookahead(Team::Orange, false);
+        let mut prems = Vec::new();
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(1, prems.len());
         assert_eq!(false, prems[0].tree.orange_east_service_eligibility());
         assert_eq!("8/8/4k3/8/8/8/8/5RK1 b - -", prems[0].tree.preserve());
@@ -1273,7 +1293,8 @@ mod tests {
     fn concerning_castling_out_of_check() {
         let ws = WorldState::reconstruct("8/8/4k3/8/4r3/8/8/4K2R w K -");
         assert!(ws.orange_east_service_eligibility());
-        let prems = ws.service_lookahead(Team::Orange, false);
+        let mut prems = Vec::new();
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(0, prems.len());
     }
 
@@ -1288,7 +1309,8 @@ mod tests {
             worldstate.except_replaced_subboard(Agent::new(Team::Orange,
                                                            JobDescription::Servant),
                                                 derived_subfield);
-        let premonitions = worldstate.servant_lookahead(Team::Orange, true);
+        let mut premonitions = Vec::new();
+        worldstate.servant_lookahead(Team::Orange, true, &mut premonitions);
         assert!(premonitions.iter().all(|p| {
             p.patch.whither == Locale::from_algebraic("a8")
         }));
@@ -1326,7 +1348,8 @@ mod tests {
     #[test]
     fn test_orange_servant_lookahead_from_original_position() {
         let state = WorldState::new();
-        let premonitions = state.servant_lookahead(Team::Orange, false);
+        let mut premonitions = Vec::new();
+        state.servant_lookahead(Team::Orange, false, &mut premonitions);
         assert_eq!(16, premonitions.len());
         // although granted that a more thorough test would actually
         // say something about the nature of the positions, rather than
@@ -1336,7 +1359,8 @@ mod tests {
     #[test]
     fn test_orange_pony_lookahead_from_original_position() {
         let state = WorldState::new();
-        let premonitions = state.pony_lookahead(Team::Orange, false);
+        let mut premonitions = Vec::new();
+        state.pony_lookahead(Team::Orange, false, &mut premonitions);
         assert_eq!(4, premonitions.len());
         let collected = premonitions.iter()
                                     .map(|p| p.tree.orange_ponies.to_locales())
@@ -1360,7 +1384,8 @@ mod tests {
         world.blue_princesses =
             world.blue_princesses
                  .alight(Locale::from_algebraic("g3"));
-        let premonitions = world.scholar_lookahead(Team::Orange, false);
+        let mut premonitions = Vec::new();
+        world.scholar_lookahead(Team::Orange, false, &mut premonitions);
         let expected = vec!["d2", "f2", "g3"]
                            .iter()
                            .map(|a| Locale::from_algebraic(*a))
@@ -1444,13 +1469,13 @@ mod tests {
         assert_eq!(None, second_commit.hospitalization);
 
         let precrucial_state = second_commit.tree;
-        let available_stunnings = precrucial_state.servant_lookahead(Team::Orange,
-                                                                     false)
-                                                  .into_iter()
-                                                  .filter(|p| {
-                                                      p.hospitalization.is_some()
-                                                  })
-                                                  .collect::<Vec<_>>();
+        let mut premonitions = Vec::new();
+        precrucial_state.servant_lookahead(Team::Orange, false, &mut premonitions);
+        let available_stunnings = premonitions.into_iter()
+                                              .filter(|p| {
+                                                  p.hospitalization.is_some()
+                                              })
+                                              .collect::<Vec<_>>();
         assert_eq!(1, available_stunnings.len());
         assert_eq!(blue_servant_agent,
                    available_stunnings[0].hospitalization.unwrap());
@@ -1575,8 +1600,9 @@ mod tests {
     #[test]
     fn concerning_passing_by_in_action() {
         let world = WorldState::reconstruct("rnbqkbnr/ppp2ppp/4p3/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3");
-        let premonitions = world.servant_lookahead(Team::Orange, false)
-                                .into_iter()
+        let mut premonitions = Vec::new();
+        world.servant_lookahead(Team::Orange, false, &mut premonitions);
+        premonitions = premonitions.into_iter()
                                 .filter(|p| {
                                     p.patch.whence == Locale::from_algebraic("e5")
                                 })
