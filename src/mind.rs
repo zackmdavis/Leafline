@@ -142,7 +142,7 @@ pub fn score(world: WorldState) -> f32 {
     valuation
 }
 
-fn mmv_lva_heuristic(commit: &Commit) -> f32 {
+fn mvv_lva_heuristic(commit: &Commit) -> f32 {
     // https://chessprogramming.wikispaces.com/MVV-LVA
     match commit.hospitalization {
         Some(patient) => {
@@ -152,21 +152,19 @@ fn mmv_lva_heuristic(commit: &Commit) -> f32 {
     }
 }
 
-fn order_movements_heuristically(commits: &mut Vec<Commit>) {
-    commits.sort_unstable_by(|a, b| {
-        mmv_lva_heuristic(b)
-            .partial_cmp(&mmv_lva_heuristic(a))
-            .unwrap_or(Ordering::Equal)
-    });
-}
-
 fn order_movements_intuitively(
-        experience: &HashMap<Patch, u32>, commits: &mut Vec<Commit>) {
-    commits.sort_unstable_by(|a, b| {
-        let a_feels = experience.get(&a.patch);
-        let b_feels = experience.get(&b.patch);
-        b_feels.cmp(&a_feels)
+        experience: &HashMap<Patch, u32>, commits: &mut Vec<Commit>) -> Vec<Commit> {
+    let mut sorted: Vec<(Commit, Option<&u32>, f32)> = Vec::with_capacity(commits.len());
+    for c in commits {
+        sorted.push((*c, experience.get(&c.patch), mvv_lva_heuristic(&c)));
+    }
+    sorted.sort_unstable_by(|a, b| {
+        match b.1.cmp(&a.1) {
+            Ordering::Equal => b.2.partial_cmp(&a.2).unwrap_or(Ordering::Equal),
+            other => other,
+        }
     });
+    sorted.iter().map(|c| { c.0 }).collect()
 }
 
 pub type Variation = Vec<Patch>;
@@ -252,10 +250,9 @@ pub fn α_β_negamax_search(
         }
     };
 
-    order_movements_heuristically(&mut premonitions);
     {
         let experience = intuition_bank.lock();
-        order_movements_intuitively(&experience, &mut premonitions)
+        premonitions = order_movements_intuitively(&experience, &mut premonitions)
     }
     for premonition in premonitions {
         let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
@@ -336,10 +333,9 @@ pub fn potentially_timebound_kickoff(
     } else {
         world.lookahead()
     };
-    order_movements_heuristically(&mut premonitions);
     {
         let experience = intuition_bank.lock();
-        order_movements_intuitively(&experience, &mut premonitions)
+        premonitions = order_movements_intuitively(&experience, &mut premonitions)
     }
     let mut forecasts = Vec::with_capacity(40);
     let mut time_radios: Vec<(Commit, mpsc::Receiver<Lodestar>)> = Vec::new();
