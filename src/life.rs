@@ -165,8 +165,8 @@ const BLUE_EAST_ELIGIBILITY: u8 = 0b1000;
 
 impl Default for WorldState {
     fn default() -> Self {
-        let mut orange_servant_locales = Vec::new();
-        let mut blue_servant_locales = Vec::new();
+        let mut orange_servant_locales = Vec::with_capacity(8);
+        let mut blue_servant_locales = Vec::with_capacity(8);
         for f in 0..8 {
             orange_servant_locales.push(Locale::new(1, f));
             blue_servant_locales.push(Locale::new(6, f));
@@ -725,7 +725,7 @@ impl WorldState {
     /// where you stand, then you know where to land, and if you fall,
     /// it won't matter, because you'll know that you're right."
     ///                                   —Fiona Apple
-    pub fn servant_lookahead(&self, team: Team, nihilistically: bool) -> Vec<Commit> {
+    pub fn servant_lookahead(&self, team: Team, nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
         let initial_rank;
         let standard_offset;
         let boost_offset;
@@ -746,7 +746,6 @@ impl WorldState {
         }
         let servant_agent = Agent::new(team, JobDescription::Servant);
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(servant_agent);
-        let mut premonitions = Vec::new();
         for start_locale in positional_chart.to_locales() {
             // can move one locale if he's not blocked
             let std_destination_maybe = start_locale.displace(standard_offset);
@@ -807,11 +806,9 @@ impl WorldState {
                 }
             }
         }
-        premonitions
     }
 
-    fn ponylike_lookahead(&self, agent: Agent, nihilistically: bool) -> Vec<Commit> {
-        let mut premonitions = Vec::new();
+    fn ponylike_lookahead(&self, agent: Agent, nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
         let movement_table = match agent.job_description {
             JobDescription::Pony => PONY_MOVEMENT_TABLE,
@@ -834,13 +831,11 @@ impl WorldState {
                              nihilistically);
             }
         }
-        premonitions
     }
 
-    fn princesslike_lookahead(&self, agent: Agent, nihilistically: bool)
-                              -> Vec<Commit> {
+    fn princesslike_lookahead(&self, agent: Agent, nihilistically: bool, mut premonitions: &mut Vec<Commit>)
+                              {
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
-        let mut premonitions = Vec::new();
         let offsets = match agent.job_description {
             // XXX: I wanted to reference static arrays in motion.rs,
             // but that doesn't work in the obvious way because array
@@ -900,27 +895,27 @@ impl WorldState {
                 }
             }
         }
-        premonitions
     }
 
     /// "Morning in Ponyville shimmers; morning in Ponyville shines!
     /// And I know for absolute certain, that everything is certainly
     /// fine."
     pub fn pony_lookahead(&self, team: Team,
-                          nihilistically: bool) -> Vec<Commit> {
+                          nihilistically: bool,
+                          premonitions: &mut Vec<Commit>) {
         self.ponylike_lookahead(
             Agent::new(team, JobDescription::Pony),
-            nihilistically)
+            nihilistically, premonitions)
     }
 
     /// "Doesn't seem right, to take information given at close range,
     /// for the gag, and the bind, and the ammunition round."
     ///                            —Fiona Apple, "Not About Love"
     pub fn scholar_lookahead(&self, team: Team,
-                             nihilistically: bool) -> Vec<Commit> {
+                             nihilistically: bool, premonitions: &mut Vec<Commit>) {
         self.princesslike_lookahead(
             Agent::new(team, JobDescription::Scholar),
-            nihilistically)
+            nihilistically, premonitions)
     }
 
     /// "'What is this posture I have to stare at,' that's what he
@@ -928,32 +923,31 @@ impl WorldState {
     /// game 'cause he lost and he knew he was wrong but he knew it
     /// too late."                 —Fiona Apple, "Not About Love"
     pub fn cop_lookahead(&self, team: Team,
-                         nihilistically: bool) -> Vec<Commit> {
+                         nihilistically: bool, premonitions: &mut Vec<Commit>) {
         self.princesslike_lookahead(
             Agent::new(team, JobDescription::Cop),
-            nihilistically)
+            nihilistically, premonitions)
     }
 
     /// "A princess here before us; behold, behold ..."
     pub fn princess_lookahead(&self, team: Team,
-                              nihilistically: bool) -> Vec<Commit> {
+                              nihilistically: bool, premonitions: &mut Vec<Commit>) {
         self.princesslike_lookahead(
             Agent::new(team, JobDescription::Princess),
-            nihilistically)
+            nihilistically, premonitions)
     }
 
     /// "It doesn't make sense I should fall for the kingcraft of a
     /// meritless crown."           —Fiona Apple, "Not About Love"
     pub fn figurehead_lookahead(&self, team: Team,
-                                nihilistically: bool) -> Vec<Commit> {
+                                nihilistically: bool, premonitions: &mut Vec<Commit>) {
         self.ponylike_lookahead(
             Agent::new(team, JobDescription::Figurehead),
-            nihilistically)
+            nihilistically, premonitions)
     }
 
     pub fn service_lookahead(&self, team: Team,
-                             nihilistically: bool) -> Vec<Commit> {
-        let mut premonitions = Vec::<Commit>::new();
+                             nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
 
         let (east_service, west_service) = match team {
             Team::Orange => (self.orange_east_service_eligibility(),
@@ -978,10 +972,10 @@ impl WorldState {
                         self.agent_to_pinfield_ref(agent).0 == 0
             );
         } else {
-            return premonitions;
+            return;
         }
 
-        let mut locales_to_query = Vec::new();
+        let mut locales_to_query = Vec::with_capacity(5);
         if west_service {
             locales_to_query.push(
                 (vec![Locale::new(home_rank, 1),
@@ -1014,7 +1008,7 @@ impl WorldState {
                         )
                 }
                 if being_leered_at.unwrap() {
-                    return premonitions;
+                    return;
                 }
                 if !locales.iter().any(
                     |l| self.is_being_leered_at_by(*l, team.opposition())) {
@@ -1022,8 +1016,6 @@ impl WorldState {
                 }
             }
         }
-
-        premonitions
     }
 
     fn lookahead_without_secret_service(&self,
@@ -1032,20 +1024,43 @@ impl WorldState {
         // that you could break without generating all the premonitions
         // if something overwhelmingly important came up, like ultimate
         // endangerment)?
-        let mut premonitions = Vec::new();
         let moving_team = self.initiative;
-        premonitions.extend(self.servant_lookahead(moving_team, nihilistically));
-        premonitions.extend(self.pony_lookahead(moving_team, nihilistically));
-        premonitions.extend(self.scholar_lookahead(moving_team, nihilistically));
-        premonitions.extend(self.cop_lookahead(moving_team, nihilistically));
-        premonitions.extend(self.princess_lookahead(moving_team, nihilistically));
-        premonitions.extend(self.figurehead_lookahead(moving_team, nihilistically));
+        let mut premonitions = Vec::with_capacity(50);
+        self.servant_lookahead(moving_team, nihilistically, &mut premonitions);
+        self.pony_lookahead(moving_team, nihilistically, &mut premonitions);
+        self.scholar_lookahead(moving_team, nihilistically, &mut premonitions);
+        self.cop_lookahead(moving_team, nihilistically, &mut premonitions);
+        self.princess_lookahead(moving_team, nihilistically, &mut premonitions);
+        self.figurehead_lookahead(moving_team, nihilistically, &mut premonitions);
+
+        /*
+        let servant_premonitions = self.servant_lookahead(moving_team, nihilistically);
+        let pony_premonitions = self.pony_lookahead(moving_team, nihilistically);
+        let scholar_premonitions = self.scholar_lookahead(moving_team, nihilistically);
+        let cop_premonitions = self.cop_lookahead(moving_team, nihilistically);
+        let princess_premonitions = self.princess_lookahead(moving_team, nihilistically);
+        let figurehead_premonitions = self.figurehead_lookahead(moving_team, nihilistically);
+        let mut premonitions = Vec::with_capacity(
+            servant_premonitions.len() +
+            pony_premonitions.len() +
+            scholar_premonitions.len() +
+            cop_premonitions.len() +
+            princess_premonitions.len() +
+            figurehead_premonitions.len()
+        );
+        premonitions.extend(servant_premonitions);
+        premonitions.extend(pony_premonitions);
+        premonitions.extend(scholar_premonitions);
+        premonitions.extend(cop_premonitions);
+        premonitions.extend(princess_premonitions);
+        premonitions.extend(figurehead_premonitions);
+        */
         premonitions
     }
 
     fn underlookahead(&self, nihilistically: bool) -> Vec<Commit> {
         let mut premonitions = self.lookahead_without_secret_service(nihilistically);
-        premonitions.extend(self.service_lookahead(self.initiative, nihilistically));
+        self.service_lookahead(self.initiative, nihilistically, &mut premonitions);
         premonitions
     }
 

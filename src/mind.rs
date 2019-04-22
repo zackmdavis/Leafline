@@ -341,7 +341,7 @@ pub fn potentially_timebound_kickoff(
         let experience = intuition_bank.lock();
         order_movements_intuitively(&experience, &mut premonitions)
     }
-    let mut forecasts = Vec::new();
+    let mut forecasts = Vec::with_capacity(40);
     let mut time_radios: Vec<(Commit, mpsc::Receiver<Lodestar>)> = Vec::new();
     for &premonition in &premonitions {
         let travel_memory_bank = memory_bank.clone();
