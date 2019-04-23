@@ -498,6 +498,11 @@ impl WorldState {
         resultant_state
     }
 
+    fn replace_subboard(&mut self, for_whom: Agent, subboard: Pinfield) {
+        // note: this mutates in place, which is a bit dangerous. be careful out there!
+        self.agent_to_pinfield_mutref(for_whom).0 = subboard.0;
+    }
+
     pub fn occupied_by(&self, team: Team) -> Pinfield {
         match team {
             Team::Orange => {
@@ -605,7 +610,7 @@ impl WorldState {
                                                        Locale::new(patch.whither
                                                                         .rank,
                                                                    end_file));
-            tree = tree.except_replaced_subboard(cop_agent, secret_derived_subboard);
+            tree.replace_subboard(cop_agent, secret_derived_subboard);
         }
 
         // was anyone stunned?
@@ -633,7 +638,7 @@ impl WorldState {
             // if someone was stunned, put her or him in the hospital
             let further_derived_subboard = tree.agent_to_pinfield_ref(stunned)
                                                .quench(ambulance_target);
-            tree = tree.except_replaced_subboard(stunned, further_derived_subboard);
+            tree.replace_subboard(stunned, further_derived_subboard);
         }
 
         tree.initiative = opposition;
@@ -695,11 +700,9 @@ impl WorldState {
                                                    .agent_to_pinfield_ref(*ascended)
                                                    .alight(premonition.patch
                                                                       .whither);
-                ascendency.tree =
-                    ascendency.tree
-                              .except_replaced_subboard(premonition.patch.star,
-                                                        vessel_pinfield)
-                              .except_replaced_subboard(*ascended, ascended_pinfield);
+                ascendency.tree = ascendency.tree.except_replaced_subboard(premonition.patch.star,
+                                                                            vessel_pinfield);
+                ascendency.tree.replace_subboard(*ascended, ascended_pinfield);
                 premonitions.push(ascendency);
             }
         } else {
@@ -1221,6 +1224,16 @@ mod tests {
                 whence: Locale::from_algebraic("h6"),
                 whither: Locale::from_algebraic("f5"),
             }, // just a regular move
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Cop),
+                whence: Locale::from_algebraic("h8"),
+                whither: Locale::from_algebraic("h7"),
+            }, // lose castling kingside
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Figurehead),
+                whence: Locale::from_algebraic("e8"),
+                whither: Locale::from_algebraic("f8"),
+            }, // lose all castling
         ];
         b.iter(|| { 
             for _ in 0..50 {
