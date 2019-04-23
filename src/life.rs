@@ -1113,7 +1113,7 @@ impl fmt::Display for WorldState {
 mod tests {
     extern crate test;
     use std::mem;
-    use self::test::Bencher;
+    use self::test::{Bencher, black_box};
     use super::{WorldState, Patch, Commit};
     use space::Locale;
     use identity::{Team, JobDescription, Agent};
@@ -1193,6 +1193,42 @@ mod tests {
     fn benchmark_ultimate_endangerment(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.in_critical_endangerment(Team::Orange));
+    }
+
+    #[bench]
+    fn benchmark_apply(b: &mut Bencher) {
+        let ws = WorldState::reconstruct(
+            "rnbqk2r/p1pp1ppp/1p5n/8/1bPPpP2/6PP/PP1BP3/RN1QKBNR b KQkq f3 0 6",
+        );
+        let patches = vec![
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Servant),
+                whence: Locale::from_algebraic("e4"),
+                whither: Locale::from_algebraic("f3"),
+            }, // en passant
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Figurehead),
+                whence: Locale::from_algebraic("e8"),
+                whither: Locale::from_algebraic("g8"),
+            }, // castling
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Scholar),
+                whence: Locale::from_algebraic("b4"),
+                whither: Locale::from_algebraic("d2"),
+            }, // capture
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Pony),
+                whence: Locale::from_algebraic("h6"),
+                whither: Locale::from_algebraic("f5"),
+            }, // just a regular move
+        ];
+        b.iter(|| { 
+            for _ in 0..50 {
+                for patch in &patches {
+                    black_box(ws.apply(*patch));
+                }
+            }
+        });
     }
 
     #[test]
