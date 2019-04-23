@@ -184,12 +184,14 @@ impl Pinfield {
 #[cfg(test)]
 mod tests {
     extern crate test;
+    extern crate rand;
     use self::test::{Bencher, black_box};
     use super::{Locale, Pinfield};
     use fnv;
     use twox_hash::XxHash;
     use std::hash::Hash;
     use std::collections::hash_map;
+    use space::tests::rand::prelude::*;
 
     static ALGEBRAICS: [&'static str; 64] = [
         "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
@@ -238,6 +240,25 @@ mod tests {
                 t.hash(&mut hasher);
             }
         });
+    }
+
+
+    #[bench]
+    fn benchmark_locale_lookup(b: &mut Bencher) {
+        let mut args = Vec::with_capacity(64);
+        for rank in 0..8 {
+            for file in 0..8 {
+                args.push((rank, file));
+            }
+        }
+        let mut rng = thread_rng();
+        args.shuffle(&mut rng);
+        b.iter(|| {
+            for (r, f) in &args {
+                black_box(Locale::new(*r, *f));
+            }
+        });
+
     }
 
 
