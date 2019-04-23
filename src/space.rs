@@ -9,11 +9,13 @@ static INDEX_TO_FILE_NAME: [char; 8] = [
 ];
 
 lazy_static! {
-    static ref LOCALE_STASH: fnv::FnvHashMap<(u8, u8), Locale> = {
-        let mut m: fnv::FnvHashMap<(u8, u8), Locale> = fnv::FnvHashMap::default();
+    static ref LOCALE_STASH: [Locale; 64] = {
+        let mut m: [Locale; 64] = [Locale {rank: 0, file: 0}; 64];
         for rank in 0..8 {
             for file in 0..8 {
-                m.insert((rank, file), Locale { rank, file });
+                let idx = (rank*8 + file) as usize;
+
+                m[idx] = Locale { rank, file };
             }
         }
         m
@@ -23,7 +25,8 @@ lazy_static! {
 
 impl Locale {
     pub fn new(rank: u8, file: u8) -> Self {
-        *LOCALE_STASH.get(&(rank, file)).unwrap()
+        let idx = (rank*8 + file) as usize;
+        LOCALE_STASH[idx]
     }
 
     pub fn to_algebraic(&self) -> String {
