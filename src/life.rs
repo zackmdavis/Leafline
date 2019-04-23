@@ -1025,7 +1025,9 @@ impl WorldState {
         // if something overwhelmingly important came up, like ultimate
         // endangerment)?
         let moving_team = self.initiative;
-        let mut premonitions = Vec::with_capacity(50);
+
+        // empirically, 90% of positions have < 41 moves available
+        let mut premonitions = Vec::with_capacity(41);
         self.servant_lookahead(moving_team, nihilistically, &mut premonitions);
         self.pony_lookahead(moving_team, nihilistically, &mut premonitions);
         self.scholar_lookahead(moving_team, nihilistically, &mut premonitions);
