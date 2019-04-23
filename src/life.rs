@@ -836,16 +836,21 @@ impl WorldState {
         }
     }
 
-    fn princesslike_lookahead(&self, agent: Agent, job_description: JobDescription, nihilistically: bool, mut premonitions: &mut Vec<Commit>)
+    fn princesslike_lookahead(
+        &self,
+        agent: Agent,
+        job_description: JobDescription,
+        start_locales: &Vec<Locale>,
+        nihilistically: bool,
+        mut premonitions: &mut Vec<Commit>)
                               {
-        let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
         let offsets = match job_description {
             JobDescription::Scholar => SCHOLAR_OFFSETS,
             JobDescription::Cop => COP_OFFSETS,
             _ => moral_panic!("non-princesslike job description assed to \
                                `princesslike_lookahead`"),
         };
-        for start_locale in positional_chart.to_locales() {
+        for start_locale in start_locales {
             for &offset in &offsets {
                 let mut venture = 1;
                 loop {
@@ -871,7 +876,7 @@ impl WorldState {
                                 self.predict(&mut premonitions,
                                              Patch {
                                                  star: agent,
-                                                 whence: start_locale,
+                                                 whence: *start_locale,
                                                  whither: destination,
                                              },
                                              nihilistically);
@@ -906,9 +911,11 @@ impl WorldState {
     ///                            —Fiona Apple, "Not About Love"
     pub fn scholar_lookahead(&self, team: Team,
                              nihilistically: bool, premonitions: &mut Vec<Commit>) {
+        let agent = Agent::new(team, JobDescription::Scholar);
         self.princesslike_lookahead(
-            Agent::new(team, JobDescription::Scholar),
+            agent,
             JobDescription::Scholar,
+            &self.agent_to_pinfield_ref(agent).to_locales(),
             nihilistically, premonitions)
     }
 
@@ -918,22 +925,28 @@ impl WorldState {
     /// too late."                 —Fiona Apple, "Not About Love"
     pub fn cop_lookahead(&self, team: Team,
                          nihilistically: bool, premonitions: &mut Vec<Commit>) {
+        let agent = Agent::new(team, JobDescription::Cop);
         self.princesslike_lookahead(
-            Agent::new(team, JobDescription::Cop),
+            agent,
             JobDescription::Cop,
+            &self.agent_to_pinfield_ref(agent).to_locales(),
             nihilistically, premonitions)
     }
 
     /// "A princess here before us; behold, behold ..."
     pub fn princess_lookahead(&self, team: Team,
                               nihilistically: bool, premonitions: &mut Vec<Commit>) {
+        let agent = Agent::new(team, JobDescription::Princess);
+        let locales = self.agent_to_pinfield_ref(agent).to_locales();
         self.princesslike_lookahead(
-            Agent::new(team, JobDescription::Princess),
+            agent,
             JobDescription::Scholar,
+            &locales,
             nihilistically, premonitions);
         self.princesslike_lookahead(
-            Agent::new(team, JobDescription::Princess),
+            agent,
             JobDescription::Cop,
+            &locales,
             nihilistically, premonitions);
     }
 
