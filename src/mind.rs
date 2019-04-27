@@ -251,6 +251,10 @@ pub fn α_β_negamax_search(
         }
     };
 
+    // Note: if sorting by heuristic were sufficiently expensive, it would, on balance, be better
+    // to do so only at the higher levels of the tree. From some minor empiric testing, though,
+    // sorting only at depth >= 1 has no performance impact, and at depth >=2 has a negative
+    // performance impact. So that's not the way to go.
     {
         let experience = intuition_bank.lock();
         premonitions = order_movements_intuitively(&experience, &mut premonitions)
