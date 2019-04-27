@@ -498,6 +498,11 @@ impl WorldState {
         resultant_state
     }
 
+    fn replace_subboard(&mut self, for_whom: Agent, subboard: Pinfield) {
+        // note: this mutates in place, which is a bit dangerous. be careful out there!
+        self.agent_to_pinfield_mutref(for_whom).0 = subboard.0;
+    }
+
     pub fn occupied_by(&self, team: Team) -> Pinfield {
         match team {
             Team::Orange => {
@@ -605,7 +610,7 @@ impl WorldState {
                                                        Locale::new(patch.whither
                                                                         .rank,
                                                                    end_file));
-            tree = tree.except_replaced_subboard(cop_agent, secret_derived_subboard);
+            tree.replace_subboard(cop_agent, secret_derived_subboard);
         }
 
         // was anyone stunned?
@@ -633,7 +638,7 @@ impl WorldState {
             // if someone was stunned, put her or him in the hospital
             let further_derived_subboard = tree.agent_to_pinfield_ref(stunned)
                                                .quench(ambulance_target);
-            tree = tree.except_replaced_subboard(stunned, further_derived_subboard);
+            tree.replace_subboard(stunned, further_derived_subboard);
         }
 
         tree.initiative = opposition;
@@ -695,11 +700,9 @@ impl WorldState {
                                                    .agent_to_pinfield_ref(*ascended)
                                                    .alight(premonition.patch
                                                                       .whither);
-                ascendency.tree =
-                    ascendency.tree
-                              .except_replaced_subboard(premonition.patch.star,
-                                                        vessel_pinfield)
-                              .except_replaced_subboard(*ascended, ascended_pinfield);
+                ascendency.tree = ascendency.tree.except_replaced_subboard(premonition.patch.star,
+                                                                            vessel_pinfield);
+                ascendency.tree.replace_subboard(*ascended, ascended_pinfield);
                 premonitions.push(ascendency);
             }
         } else {
@@ -836,16 +839,21 @@ impl WorldState {
         }
     }
 
-    fn princesslike_lookahead(&self, agent: Agent, job_description: JobDescription, nihilistically: bool, mut premonitions: &mut Vec<Commit>)
+    fn princesslike_lookahead(
+        &self,
+        agent: Agent,
+        job_description: JobDescription,
+        start_locales: &Vec<Locale>,
+        nihilistically: bool,
+        mut premonitions: &mut Vec<Commit>)
                               {
-        let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
         let offsets = match job_description {
             JobDescription::Scholar => SCHOLAR_OFFSETS,
             JobDescription::Cop => COP_OFFSETS,
             _ => moral_panic!("non-princesslike job description assed to \
                                `princesslike_lookahead`"),
         };
-        for start_locale in positional_chart.to_locales() {
+        for start_locale in start_locales {
             for &offset in &offsets {
                 let mut venture = 1;
                 loop {
@@ -871,7 +879,7 @@ impl WorldState {
                                 self.predict(&mut premonitions,
                                              Patch {
                                                  star: agent,
-                                                 whence: start_locale,
+                                                 whence: *start_locale,
                                                  whither: destination,
                                              },
                                              nihilistically);
@@ -906,9 +914,11 @@ impl WorldState {
     ///                            —Fiona Apple, "Not About Love"
     pub fn scholar_lookahead(&self, team: Team,
                              nihilistically: bool, premonitions: &mut Vec<Commit>) {
+        let agent = Agent::new(team, JobDescription::Scholar);
         self.princesslike_lookahead(
-            Agent::new(team, JobDescription::Scholar),
+            agent,
             JobDescription::Scholar,
+            &self.agent_to_pinfield_ref(agent).to_locales(),
             nihilistically, premonitions)
     }
 
@@ -918,22 +928,28 @@ impl WorldState {
     /// too late."                 —Fiona Apple, "Not About Love"
     pub fn cop_lookahead(&self, team: Team,
                          nihilistically: bool, premonitions: &mut Vec<Commit>) {
+        let agent = Agent::new(team, JobDescription::Cop);
         self.princesslike_lookahead(
-            Agent::new(team, JobDescription::Cop),
+            agent,
             JobDescription::Cop,
+            &self.agent_to_pinfield_ref(agent).to_locales(),
             nihilistically, premonitions)
     }
 
     /// "A princess here before us; behold, behold ..."
     pub fn princess_lookahead(&self, team: Team,
                               nihilistically: bool, premonitions: &mut Vec<Commit>) {
+        let agent = Agent::new(team, JobDescription::Princess);
+        let locales = self.agent_to_pinfield_ref(agent).to_locales();
         self.princesslike_lookahead(
-            Agent::new(team, JobDescription::Princess),
+            agent,
             JobDescription::Scholar,
+            &locales,
             nihilistically, premonitions);
         self.princesslike_lookahead(
-            Agent::new(team, JobDescription::Princess),
+            agent,
             JobDescription::Cop,
+            &locales,
             nihilistically, premonitions);
     }
 
@@ -1100,7 +1116,7 @@ impl fmt::Display for WorldState {
 mod tests {
     extern crate test;
     use std::mem;
-    use self::test::Bencher;
+    use self::test::{Bencher, black_box};
     use super::{WorldState, Patch, Commit};
     use space::Locale;
     use identity::{Team, JobDescription, Agent};
@@ -1180,6 +1196,52 @@ mod tests {
     fn benchmark_ultimate_endangerment(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.in_critical_endangerment(Team::Orange));
+    }
+
+    #[bench]
+    fn benchmark_apply(b: &mut Bencher) {
+        let ws = WorldState::reconstruct(
+            "rnbqk2r/p1pp1ppp/1p5n/8/1bPPpP2/6PP/PP1BP3/RN1QKBNR b KQkq f3 0 6",
+        );
+        let patches = vec![
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Servant),
+                whence: Locale::from_algebraic("e4"),
+                whither: Locale::from_algebraic("f3"),
+            }, // en passant
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Figurehead),
+                whence: Locale::from_algebraic("e8"),
+                whither: Locale::from_algebraic("g8"),
+            }, // castling
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Scholar),
+                whence: Locale::from_algebraic("b4"),
+                whither: Locale::from_algebraic("d2"),
+            }, // capture
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Pony),
+                whence: Locale::from_algebraic("h6"),
+                whither: Locale::from_algebraic("f5"),
+            }, // just a regular move
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Cop),
+                whence: Locale::from_algebraic("h8"),
+                whither: Locale::from_algebraic("h7"),
+            }, // lose castling kingside
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Figurehead),
+                whence: Locale::from_algebraic("e8"),
+                whither: Locale::from_algebraic("f8"),
+            }, // lose all castling
+        ];
+        b.iter(|| { 
+            for _ in 0..50 {
+                for patch in &patches {
+                    black_box(ws.apply(*patch));
+                }
+            }
+        });
     }
 
     #[test]

@@ -266,14 +266,31 @@ mod tests {
 
 
     #[bench]
-    fn benchmark_to_locales(b: &mut Bencher) {
+    fn benchmark_to_locales_servantlike(b: &mut Bencher) {
+
         let mut stage = Pinfield(0);
         for r in 0..8 {
             stage = stage.alight(Locale::new(1, r));
-            stage = stage.alight(Locale::new(7, r));
         }
 
-        b.iter(|| stage.to_locales());
+        b.iter(|| {
+            for _ in 0..100 {
+                black_box(stage.to_locales());
+            }
+        });
+    }
+
+    #[bench]
+    fn benchmark_to_locales_scholarlike(b: &mut Bencher) {
+        let mut stage = Pinfield(0);
+        stage = stage.alight(Locale::new(0, 2));
+        stage = stage.alight(Locale::new(0, 5));
+
+        b.iter(|| {
+            for _ in 0..100 {
+                black_box(stage.to_locales());
+            }
+        });
     }
 
     #[bench]
