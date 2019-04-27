@@ -7,6 +7,9 @@ use identity::{Agent, JobDescription, Team};
 use motion::{FIGUREHEAD_MOVEMENT_TABLE, PONY_MOVEMENT_TABLE};
 use ansi_term::Colour as Color;
 
+static SCHOLAR_OFFSETS: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
+static COP_OFFSETS: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+
 
 /// represents the movement of a figurine
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
@@ -833,23 +836,13 @@ impl WorldState {
         }
     }
 
-    fn princesslike_lookahead(&self, agent: Agent, nihilistically: bool, mut premonitions: &mut Vec<Commit>)
+    fn princesslike_lookahead(&self, agent: Agent, job_description: JobDescription, nihilistically: bool, mut premonitions: &mut Vec<Commit>)
                               {
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
-        let offsets = match agent.job_description {
-            // XXX: I wanted to reference static arrays in motion.rs,
-            // but that doesn't work in the obvious way because array
-            // lengths are part of the type. For now, let's just use
-            // these vector literals.  #YOLO
-            JobDescription::Scholar => vec![
-                (-1, -1), (-1, 1), (1, -1), (1, 1)],
-            JobDescription::Cop => vec![
-                (-1, 0), (1, 0), (0, -1), (0, 1)],
-            JobDescription::Princess => vec![
-                (-1, -1), (-1, 0), (-1, 1), (0, -1),
-                (0, 1), (1, -1), (1, 0), (1, 1)
-            ],
-            _ => moral_panic!("non-princesslike agent passed to \
+        let offsets = match job_description {
+            JobDescription::Scholar => SCHOLAR_OFFSETS,
+            JobDescription::Cop => COP_OFFSETS,
+            _ => moral_panic!("non-princesslike job description assed to \
                                `princesslike_lookahead`"),
         };
         for start_locale in positional_chart.to_locales() {
@@ -915,6 +908,7 @@ impl WorldState {
                              nihilistically: bool, premonitions: &mut Vec<Commit>) {
         self.princesslike_lookahead(
             Agent::new(team, JobDescription::Scholar),
+            JobDescription::Scholar,
             nihilistically, premonitions)
     }
 
@@ -926,6 +920,7 @@ impl WorldState {
                          nihilistically: bool, premonitions: &mut Vec<Commit>) {
         self.princesslike_lookahead(
             Agent::new(team, JobDescription::Cop),
+            JobDescription::Cop,
             nihilistically, premonitions)
     }
 
@@ -934,7 +929,12 @@ impl WorldState {
                               nihilistically: bool, premonitions: &mut Vec<Commit>) {
         self.princesslike_lookahead(
             Agent::new(team, JobDescription::Princess),
-            nihilistically, premonitions)
+            JobDescription::Scholar,
+            nihilistically, premonitions);
+        self.princesslike_lookahead(
+            Agent::new(team, JobDescription::Princess),
+            JobDescription::Cop,
+            nihilistically, premonitions);
     }
 
     /// "It doesn't make sense I should fall for the kingcraft of a
@@ -1273,10 +1273,11 @@ mod tests {
     #[test]
     fn concerning_castling_out_of_check() {
         let ws = WorldState::reconstruct("8/8/4k3/8/4r3/8/8/4K2R w K -");
+        println!("{}", ws);
         assert!(ws.orange_east_service_eligibility());
         let mut prems = Vec::new();
         ws.service_lookahead(Team::Orange, false, &mut prems);
-        assert_eq!(0, prems.len());
+        assert_eq!(Vec::<Commit>::new(), prems);
     }
 
     #[test]
