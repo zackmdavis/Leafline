@@ -19,7 +19,7 @@ use identity::{Agent, JobDescription, Team};
 use life::{Commit, Patch, WorldState};
 use landmark::{CENTER_OF_THE_WORLD, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN,
                LOW_COLONELCY, LOW_SEVENTH_HEAVEN, FILES};
-use space::Pinfield;
+use space::{Pinfield, Locale};
 use substrate::Bytes;
 
 
@@ -184,6 +184,32 @@ pub trait Memory: Clone + Send {
     fn flash(patch: Patch) -> Self;
     fn blank() -> Self;
     fn readable(&self) -> String;
+}
+
+impl Memory for Patch {
+    fn recombine(&mut self, other: Self) {
+        self.star = other.star;
+        self.whence = other.whence;
+        self.whither = other.whither;
+    }
+
+    fn flash(patch: Patch) -> Self {
+        patch
+    }
+    fn blank() -> Self {
+        // deliberately illegal hyperspace warp from the Figurehead; possibly useful for debugging.
+        // a "blank" commit isn't really a thing.
+        Patch {
+            star: Agent::new(Team::Orange, JobDescription::Figurehead),
+            whence: Locale::new(0, 0),
+            whither: Locale::new(7, 7),
+        }
+    }
+
+    fn readable(&self) -> String {
+        self.abbreviated_pagan_movement_rune()
+    }
+
 }
 
 impl Memory for Variation {
@@ -407,19 +433,19 @@ pub fn potentially_timebound_kickoff<T: 'static + Memory>(
 }
 
 
-pub fn kickoff(world: &WorldState, depth: u8, extension: Option<u8>,
+pub fn kickoff<T: 'static + Memory>(world: &WorldState, depth: u8, extension: Option<u8>,
                nihilistically: bool, déjà_vu_bound: f32)
-                   -> Vec<(Commit, f32, Variation)> {
+                   -> Vec<(Commit, f32, T)> {
     let experience_table: fnv::FnvHashMap<Patch, u32> = fnv::FnvHashMap::default();
     let intuition_bank = Arc::new(parking_lot::Mutex::new(experience_table));
-    potentially_timebound_kickoff(world, depth, extension, nihilistically, None,
+    potentially_timebound_kickoff::<T>(world, depth, extension, nihilistically, None,
                                   intuition_bank, déjà_vu_bound).unwrap()
 }
 
 
-pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
+pub fn iterative_deepening_kickoff<T: 'static + Memory>(world: &WorldState, timeout: time::Duration,
                                    nihilistically: bool, déjà_vu_bound: f32)
-                                   -> (Vec<(Commit, f32, Variation)>, u8) {
+                                   -> (Vec<(Commit, f32, T)>, u8) {
     let deadline = time::get_time() + timeout;
     let mut depth = 1;
     let experience_table = fnv::FnvHashMap::default();
@@ -428,7 +454,7 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
         world, depth, None, nihilistically, None,
         intuition_bank.clone(),
         déjà_vu_bound).unwrap();
-    while let Some(prophecy) = potentially_timebound_kickoff(
+    while let Some(prophecy) = potentially_timebound_kickoff::<T>(
             world, depth, None, nihilistically, Some(deadline),
             intuition_bank.clone(), déjà_vu_bound) {
         forecasts = prophecy;
@@ -439,19 +465,19 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
 
 
 #[allow(needless_pass_by_value)] // `depth_sequence`
-pub fn fixed_depth_sequence_kickoff(world: &WorldState, depth_sequence: Vec<u8>,
+pub fn fixed_depth_sequence_kickoff<T: 'static + Memory>(world: &WorldState, depth_sequence: Vec<u8>,
                                     nihilistically: bool, déjà_vu_bound: f32)
-                                    -> Vec<(Commit, f32, Variation)> {
+                                    -> Vec<(Commit, f32, T)> {
     let mut depths = depth_sequence.iter();
     let experience_table = fnv::FnvHashMap::default();
     let intuition_bank = Arc::new(parking_lot::Mutex::new(experience_table));
-    let mut forecasts = potentially_timebound_kickoff(
+    let mut forecasts = potentially_timebound_kickoff::<T>(
         world, *depths.next().expect("`depth_sequence` should be nonempty"),
         None, nihilistically, None, intuition_bank.clone(),
         déjà_vu_bound
     ).unwrap();
     for &depth in depths {
-        forecasts = potentially_timebound_kickoff(
+        forecasts = potentially_timebound_kickoff::<T>(
             world, depth, None, nihilistically, None,
             intuition_bank.clone(), déjà_vu_bound).unwrap();
     }
