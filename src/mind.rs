@@ -170,6 +170,7 @@ fn order_movements_intuitively(
 
 pub type Variation = Vec<Patch>;
 
+
 #[allow(ptr_arg)]
 pub fn pagan_variation_format(variation: &Variation) -> String {
     variation.iter()
@@ -178,28 +179,52 @@ pub fn pagan_variation_format(variation: &Variation) -> String {
              .join(" ")
 }
 
-
-#[derive(Clone)]
-pub struct Lodestar {
-    pub score: f32,
-    pub variation: Variation,
+pub trait Memory: Clone + Send {
+    fn recombine(&mut self, other: Self);
+    fn flash(patch: Patch) -> Self;
+    fn blank() -> Self;
+    fn readable(&self) -> String;
 }
 
-impl Lodestar {
-    fn new(score: f32, variation: Variation) -> Self {
+impl Memory for Variation {
+    fn recombine(&mut self, other: Self) {
+        self.extend(other);
+    }
+
+    fn flash(patch: Patch) -> Self {
+        vec![patch]
+    }
+    fn blank() -> Self {
+        vec![]
+    }
+
+    fn readable(&self) -> String {
+        pagan_variation_format(&self)
+    }
+}
+
+#[derive(Clone)]
+pub struct Lodestar<T: Memory> {
+    pub score: f32,
+    pub memory: T,
+    //pub variation: Variation,
+}
+
+impl<T: Memory> Lodestar<T> {
+    fn new(score: f32, memory: T) -> Self {
         Self {
             score,
-            variation,
+            memory,
         }
     }
 }
 
-impl fmt::Debug for Lodestar {
+impl<T: Memory> fmt::Debug for Lodestar<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f,
                "Lodestar {{ score: {}, variation: {} }}",
                self.score,
-               pagan_variation_format(&self.variation))
+               self.memory.readable())
     }
 }
 
@@ -218,32 +243,32 @@ impl SpaceTime {
 
 
 #[allow(too_many_arguments)]
-pub fn α_β_negamax_search(
+pub fn α_β_negamax_search<T: Memory>(
     world: WorldState, depth: i8, mut α: f32, β: f32, 
-    memory_bank: Arc<parking_lot::Mutex<LruCache<SpaceTime, Lodestar,
+    memory_bank: Arc<parking_lot::Mutex<LruCache<SpaceTime, Lodestar<T>,
                                     BuildHasherDefault<XxHash>>>>,
     intuition_bank: Arc<parking_lot::Mutex<fnv::FnvHashMap<Patch, u32>>>,
     quiet: Option<u8>)
-        -> Lodestar {
+        -> Lodestar<T> {
 
     let mut premonitions = world.reckless_lookahead();
     let mut optimum = NEG_INFINITY;
-    let mut optimand = vec![];
+    let mut optimand = T::blank();
     if depth <= 0 || premonitions.is_empty() {
         let potential_score = orientation(world.initiative) * score(world);
         match quiet {
             None => {
-                return Lodestar::new(potential_score, vec![]);
+                return Lodestar::new(potential_score, T::blank());
             },
             Some(extension) => {
                 if depth.abs() >= extension as i8 {
-                    return Lodestar::new(potential_score, vec![]);
+                    return Lodestar::new(potential_score, T::blank());
                 }
                 premonitions = premonitions.into_iter()
                     .filter(|c| c.hospitalization.is_some())
                     .collect::<Vec<_>>();
                 if premonitions.is_empty() {
-                    return Lodestar::new(potential_score, vec![])
+                    return Lodestar::new(potential_score, T::blank())
                 } else {
                     optimum = potential_score;
                 }
@@ -257,7 +282,7 @@ pub fn α_β_negamax_search(
     }
     for premonition in premonitions {
         let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
-        let mut variation: Variation = vec![premonition.patch];
+        let mut memory: T = T::flash(premonition.patch);
         let cached: bool;
         let space_time = SpaceTime::new(premonition.tree, depth);
         {
@@ -267,7 +292,7 @@ pub fn α_β_negamax_search(
                 Some(remembered_lodestar) => {
                     cached = true;
                     value = remembered_lodestar.score;
-                    variation.extend(remembered_lodestar.variation.clone());
+                    memory.recombine(remembered_lodestar.memory.clone());
                 }
                 None => { cached = false; }
             };
@@ -282,7 +307,7 @@ pub fn α_β_negamax_search(
             );
             lodestar.score *= -1.;  // nega-
             value = lodestar.score;
-            variation.extend(lodestar.variation.clone());
+            memory.recombine(lodestar.memory.clone());
             memory_bank.lock().insert(
                 space_time,
                 lodestar,
@@ -291,7 +316,7 @@ pub fn α_β_negamax_search(
 
         if value > optimum {
             optimum = value;
-            optimand = variation;
+            optimand = memory;
         }
         if value > α {
             α = value;
@@ -310,23 +335,23 @@ pub fn α_β_negamax_search(
 }
 
 
-pub fn déjà_vu_table_size_bound(gib: f32) -> usize {
+pub fn déjà_vu_table_size_bound<T: Memory>(gib: f32) -> usize {
     usize::from(Bytes::gibi(gib)) /
-        (mem::size_of::<WorldState>() + mem::size_of::<Lodestar>())
+        (mem::size_of::<WorldState>() + mem::size_of::<Lodestar<T>>())
 }
 
 
-pub fn potentially_timebound_kickoff(
+pub fn potentially_timebound_kickoff<T: 'static + Memory>(
     world: &WorldState, depth: u8,
     extension_maybe: Option<u8>,
     nihilistically: bool,
     deadline_maybe: Option<time::Timespec>,
     intuition_bank: Arc<parking_lot::Mutex<fnv::FnvHashMap<Patch, u32>>>,
     déjà_vu_bound: f32)
-        -> Option<Vec<(Commit, f32, Variation)>> {
-    let déjà_vu_table: LruCache<SpaceTime, Lodestar,
+        -> Option<Vec<(Commit, f32, T)>> {
+    let déjà_vu_table: LruCache<SpaceTime, Lodestar<T>,
                                 BuildHasherDefault<XxHash>> =
-        LruCache::with_hash_state(déjà_vu_table_size_bound(déjà_vu_bound),
+        LruCache::with_hash_state(déjà_vu_table_size_bound::<T>(déjà_vu_bound),
                                   Default::default());
     let memory_bank = Arc::new(parking_lot::Mutex::new(déjà_vu_table));
     let mut premonitions = if nihilistically {
@@ -339,7 +364,7 @@ pub fn potentially_timebound_kickoff(
         premonitions = order_movements_intuitively(&experience, &mut premonitions)
     }
     let mut forecasts = Vec::with_capacity(40);
-    let mut time_radios: Vec<(Commit, mpsc::Receiver<Lodestar>)> = Vec::new();
+    let mut time_radios: Vec<(Commit, mpsc::Receiver<Lodestar<T>>)> = Vec::new();
     for &premonition in &premonitions {
         let travel_memory_bank = memory_bank.clone();
         let travel_intuition_bank = intuition_bank.clone();
@@ -347,7 +372,7 @@ pub fn potentially_timebound_kickoff(
         let explorer_radio = tx.clone();
         time_radios.push((premonition, rx));
         thread::spawn(move || {
-            let search_hit: Lodestar = α_β_negamax_search(
+            let search_hit: Lodestar<T> = α_β_negamax_search(
                 premonition.tree, (depth - 1) as i8,
                 NEG_INFINITY, INFINITY,
                 travel_memory_bank, travel_intuition_bank,
@@ -367,8 +392,8 @@ pub fn potentially_timebound_kickoff(
             let premonition = time_radios[i].0;
             if let Ok(search_hit) = time_radios[i].1.try_recv() {
                 let value = -search_hit.score;
-                let mut full_variation = vec![premonition.patch];
-                full_variation.extend(search_hit.variation);
+                let mut full_variation = T::flash(premonition.patch);
+                full_variation.recombine(search_hit.memory);
                 forecasts.push((premonition, value, full_variation));
                 time_radios.swap_remove(i);
             }
