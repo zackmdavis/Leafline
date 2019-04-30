@@ -233,7 +233,6 @@ impl Memory for Variation {
 pub struct Lodestar<T: Memory> {
     pub score: f32,
     pub memory: T,
-    //pub variation: Variation,
 }
 
 impl<T: Memory> Lodestar<T> {
@@ -248,7 +247,7 @@ impl<T: Memory> Lodestar<T> {
 impl<T: Memory> fmt::Debug for Lodestar<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f,
-               "Lodestar {{ score: {}, variation: {} }}",
+               "Lodestar {{ score: {}, memory: {} }}",
                self.score,
                self.memory.readable())
     }
@@ -362,8 +361,9 @@ pub fn α_β_negamax_search<T: Memory>(
 
 
 pub fn déjà_vu_table_size_bound<T: Memory>(gib: f32) -> usize {
+
     usize::from(Bytes::gibi(gib)) /
-        (mem::size_of::<WorldState>() + mem::size_of::<Lodestar<T>>())
+        (mem::size_of::<SpaceTime>() + mem::size_of::<Lodestar<T>>())
 }
 
 
@@ -491,7 +491,7 @@ mod tests {
     use self::test::Bencher;
 
     use time;
-    use super::{REWARD_FOR_INITIATIVE, kickoff, score, SpaceTime};
+    use super::{REWARD_FOR_INITIATIVE, kickoff, score, SpaceTime, Variation};
     use space::Locale;
     use life::{WorldState, Patch};
     use fnv;
@@ -615,25 +615,25 @@ mod tests {
     #[bench]
     fn benchmark_kickoff_depth_1(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 1, None, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 1, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_2_arbys(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 2, None, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 2, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_2_carefully(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 2, None, false, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 2, None, false, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_3(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[test]
@@ -641,7 +641,7 @@ mod tests {
     fn concerning_short_circuiting_upon_finding_critical_endangerment() {
         let ws = WorldState::reconstruct("7K/r7/1r6/8/8/8/8/7k b -");
         let start = time::get_time();
-        kickoff(&ws, 30, None, true, MOCK_DÉJÀ_VU_BOUND);
+        kickoff::<Variation>(&ws, 30, None, true, MOCK_DÉJÀ_VU_BOUND);
         let duration = time::get_time() - start;
         assert!(duration.num_seconds() < 20);
     }
@@ -661,7 +661,7 @@ mod tests {
         // split, whereby transforming into a pony (rather than
         // transitioning into a princess, as would usually be
         // expected) endangers both the blue princess and figurehead
-        let tops = kickoff(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND);
+        let tops = kickoff::<Variation>(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND);
         let best_move = tops[0].0;
         let score = tops[0].1;
         println!("{:?}", best_move);
@@ -690,7 +690,7 @@ mod tests {
         world.no_castling_at_all();
 
         let depth = 2;
-        let advisory = kickoff(&world, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
+        let advisory = kickoff::<Variation>(&world, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
 
         // taking the pony is the right thing to do
         assert_eq!(Locale::new(0, 0), advisory[0].0.patch.whither);
@@ -721,7 +721,7 @@ mod tests {
 
         negaworld.no_castling_at_all();
 
-        let negadvisory = kickoff(&negaworld, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
+        let negadvisory = kickoff::<Variation>(&negaworld, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
 
         // taking the pony is still the right thing to do, even in the
         // negaworld
@@ -759,7 +759,7 @@ mod tests {
             let world = WorldState::reconstruct(world_runeset);
             let mut previously = None;
             for &depth in &[2, 3, 4] {
-                let premonitions = kickoff(&world, depth, None, true, 1.0);
+                let premonitions = kickoff::<Variation>(&world, depth, None, true, 1.0);
                 let mut top_showings = 0.;
                 for showing in &premonitions[0..10] {
                     top_showings += showing.1; // (_commit, score, _variation)
