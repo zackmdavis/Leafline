@@ -19,7 +19,7 @@ use identity::{Agent, JobDescription, Team};
 use life::{Commit, Patch, WorldState};
 use landmark::{CENTER_OF_THE_WORLD, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN,
                LOW_COLONELCY, LOW_SEVENTH_HEAVEN, FILES};
-use space::Pinfield;
+use space::{Pinfield, Locale};
 use substrate::Bytes;
 
 
@@ -170,6 +170,7 @@ fn order_movements_intuitively(
 
 pub type Variation = Vec<Patch>;
 
+
 #[allow(ptr_arg)]
 pub fn pagan_variation_format(variation: &Variation) -> String {
     variation.iter()
@@ -178,28 +179,77 @@ pub fn pagan_variation_format(variation: &Variation) -> String {
              .join(" ")
 }
 
-
-#[derive(Clone)]
-pub struct Lodestar {
-    pub score: f32,
-    pub variation: Variation,
+pub trait Memory: Clone + Send {
+    fn recombine(&mut self, other: Self);
+    fn flash(patch: Patch) -> Self;
+    fn blank() -> Self;
+    fn readable(&self) -> String;
 }
 
-impl Lodestar {
-    fn new(score: f32, variation: Variation) -> Self {
+impl Memory for Patch {
+    fn recombine(&mut self, other: Self) {
+        self.star = other.star;
+        self.whence = other.whence;
+        self.whither = other.whither;
+    }
+
+    fn flash(patch: Patch) -> Self {
+        patch
+    }
+    fn blank() -> Self {
+        // deliberately illegal hyperspace warp from the Figurehead; possibly useful for debugging.
+        // a "blank" commit isn't really a thing.
+        Patch {
+            star: Agent::new(Team::Orange, JobDescription::Figurehead),
+            whence: Locale::new(0, 0),
+            whither: Locale::new(7, 7),
+        }
+    }
+
+    fn readable(&self) -> String {
+        self.abbreviated_pagan_movement_rune()
+    }
+
+}
+
+impl Memory for Variation {
+    fn recombine(&mut self, other: Self) {
+        self.extend(other);
+    }
+
+    fn flash(patch: Patch) -> Self {
+        vec![patch]
+    }
+    fn blank() -> Self {
+        vec![]
+    }
+
+    fn readable(&self) -> String {
+        pagan_variation_format(&self)
+    }
+}
+
+#[derive(Clone)]
+pub struct Lodestar<T: Memory> {
+    pub score: f32,
+    pub memory: T,
+}
+
+impl<T: Memory> Lodestar<T> {
+    fn new(score: f32, memory: T) -> Self {
         Self {
             score,
-            variation,
+            memory,
         }
     }
 }
 
-impl fmt::Debug for Lodestar {
+impl<T: Memory> fmt::Debug for Lodestar<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f,
-               "Lodestar {{ score: {}, variation: {} }}",
+               "Lodestar {{ score: {}, memory: {} }}",
                self.score,
-               pagan_variation_format(&self.variation))
+               self.memory.readable())
     }
 }
 
@@ -218,32 +268,32 @@ impl SpaceTime {
 
 
 #[allow(too_many_arguments)]
-pub fn α_β_negamax_search(
+pub fn α_β_negamax_search<T: Memory>(
     world: WorldState, depth: i8, mut α: f32, β: f32, 
-    memory_bank: Arc<parking_lot::Mutex<LruCache<SpaceTime, Lodestar,
+    memory_bank: Arc<parking_lot::Mutex<LruCache<SpaceTime, Lodestar<T>,
                                     BuildHasherDefault<XxHash>>>>,
     intuition_bank: Arc<parking_lot::Mutex<fnv::FnvHashMap<Patch, u32>>>,
     quiet: Option<u8>)
-        -> Lodestar {
+        -> Lodestar<T> {
 
     let mut premonitions = world.reckless_lookahead();
     let mut optimum = NEG_INFINITY;
-    let mut optimand = vec![];
+    let mut optimand = T::blank();
     if depth <= 0 || premonitions.is_empty() {
         let potential_score = orientation(world.initiative) * score(world);
         match quiet {
             None => {
-                return Lodestar::new(potential_score, vec![]);
+                return Lodestar::new(potential_score, T::blank());
             },
             Some(extension) => {
                 if depth.abs() >= extension as i8 {
-                    return Lodestar::new(potential_score, vec![]);
+                    return Lodestar::new(potential_score, T::blank());
                 }
                 premonitions = premonitions.into_iter()
                     .filter(|c| c.hospitalization.is_some())
                     .collect::<Vec<_>>();
                 if premonitions.is_empty() {
-                    return Lodestar::new(potential_score, vec![])
+                    return Lodestar::new(potential_score, T::blank())
                 } else {
                     optimum = potential_score;
                 }
@@ -261,7 +311,7 @@ pub fn α_β_negamax_search(
     }
     for premonition in premonitions {
         let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
-        let mut variation: Variation = vec![premonition.patch];
+        let mut memory: T = T::flash(premonition.patch);
         let cached: bool;
         let space_time = SpaceTime::new(premonition.tree, depth);
         {
@@ -271,7 +321,7 @@ pub fn α_β_negamax_search(
                 Some(remembered_lodestar) => {
                     cached = true;
                     value = remembered_lodestar.score;
-                    variation.extend(remembered_lodestar.variation.clone());
+                    memory.recombine(remembered_lodestar.memory.clone());
                 }
                 None => { cached = false; }
             };
@@ -286,7 +336,7 @@ pub fn α_β_negamax_search(
             );
             lodestar.score *= -1.;  // nega-
             value = lodestar.score;
-            variation.extend(lodestar.variation.clone());
+            memory.recombine(lodestar.memory.clone());
             memory_bank.lock().insert(
                 space_time,
                 lodestar,
@@ -295,7 +345,7 @@ pub fn α_β_negamax_search(
 
         if value > optimum {
             optimum = value;
-            optimand = variation;
+            optimand = memory;
         }
         if value > α {
             α = value;
@@ -314,23 +364,24 @@ pub fn α_β_negamax_search(
 }
 
 
-pub fn déjà_vu_table_size_bound(gib: f32) -> usize {
+pub fn déjà_vu_table_size_bound<T: Memory>(gib: f32) -> usize {
+
     usize::from(Bytes::gibi(gib)) /
-        (mem::size_of::<WorldState>() + mem::size_of::<Lodestar>())
+        (mem::size_of::<SpaceTime>() + mem::size_of::<Lodestar<T>>())
 }
 
 
-pub fn potentially_timebound_kickoff(
+pub fn potentially_timebound_kickoff<T: 'static + Memory>(
     world: &WorldState, depth: u8,
     extension_maybe: Option<u8>,
     nihilistically: bool,
     deadline_maybe: Option<time::Timespec>,
     intuition_bank: Arc<parking_lot::Mutex<fnv::FnvHashMap<Patch, u32>>>,
     déjà_vu_bound: f32)
-        -> Option<Vec<(Commit, f32, Variation)>> {
-    let déjà_vu_table: LruCache<SpaceTime, Lodestar,
+        -> Option<Vec<(Commit, f32, T)>> {
+    let déjà_vu_table: LruCache<SpaceTime, Lodestar<T>,
                                 BuildHasherDefault<XxHash>> =
-        LruCache::with_hash_state(déjà_vu_table_size_bound(déjà_vu_bound),
+        LruCache::with_hash_state(déjà_vu_table_size_bound::<T>(déjà_vu_bound),
                                   Default::default());
     let memory_bank = Arc::new(parking_lot::Mutex::new(déjà_vu_table));
     let mut premonitions = if nihilistically {
@@ -343,7 +394,7 @@ pub fn potentially_timebound_kickoff(
         premonitions = order_movements_intuitively(&experience, &mut premonitions)
     }
     let mut forecasts = Vec::with_capacity(40);
-    let mut time_radios: Vec<(Commit, mpsc::Receiver<Lodestar>)> = Vec::new();
+    let mut time_radios: Vec<(Commit, mpsc::Receiver<Lodestar<T>>)> = Vec::new();
     for &premonition in &premonitions {
         let travel_memory_bank = memory_bank.clone();
         let travel_intuition_bank = intuition_bank.clone();
@@ -351,7 +402,7 @@ pub fn potentially_timebound_kickoff(
         let explorer_radio = tx.clone();
         time_radios.push((premonition, rx));
         thread::spawn(move || {
-            let search_hit: Lodestar = α_β_negamax_search(
+            let search_hit: Lodestar<T> = α_β_negamax_search(
                 premonition.tree, (depth - 1) as i8,
                 NEG_INFINITY, INFINITY,
                 travel_memory_bank, travel_intuition_bank,
@@ -371,8 +422,8 @@ pub fn potentially_timebound_kickoff(
             let premonition = time_radios[i].0;
             if let Ok(search_hit) = time_radios[i].1.try_recv() {
                 let value = -search_hit.score;
-                let mut full_variation = vec![premonition.patch];
-                full_variation.extend(search_hit.variation);
+                let mut full_variation = T::flash(premonition.patch);
+                full_variation.recombine(search_hit.memory);
                 forecasts.push((premonition, value, full_variation));
                 time_radios.swap_remove(i);
             }
@@ -386,19 +437,19 @@ pub fn potentially_timebound_kickoff(
 }
 
 
-pub fn kickoff(world: &WorldState, depth: u8, extension: Option<u8>,
+pub fn kickoff<T: 'static + Memory>(world: &WorldState, depth: u8, extension: Option<u8>,
                nihilistically: bool, déjà_vu_bound: f32)
-                   -> Vec<(Commit, f32, Variation)> {
+                   -> Vec<(Commit, f32, T)> {
     let experience_table: fnv::FnvHashMap<Patch, u32> = fnv::FnvHashMap::default();
     let intuition_bank = Arc::new(parking_lot::Mutex::new(experience_table));
-    potentially_timebound_kickoff(world, depth, extension, nihilistically, None,
+    potentially_timebound_kickoff::<T>(world, depth, extension, nihilistically, None,
                                   intuition_bank, déjà_vu_bound).unwrap()
 }
 
 
-pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
+pub fn iterative_deepening_kickoff<T: 'static + Memory>(world: &WorldState, timeout: time::Duration,
                                    nihilistically: bool, déjà_vu_bound: f32)
-                                   -> (Vec<(Commit, f32, Variation)>, u8) {
+                                   -> (Vec<(Commit, f32, T)>, u8) {
     let deadline = time::get_time() + timeout;
     let mut depth = 1;
     let experience_table = fnv::FnvHashMap::default();
@@ -407,7 +458,7 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
         world, depth, None, nihilistically, None,
         intuition_bank.clone(),
         déjà_vu_bound).unwrap();
-    while let Some(prophecy) = potentially_timebound_kickoff(
+    while let Some(prophecy) = potentially_timebound_kickoff::<T>(
             world, depth, None, nihilistically, Some(deadline),
             intuition_bank.clone(), déjà_vu_bound) {
         forecasts = prophecy;
@@ -418,19 +469,19 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
 
 
 #[allow(needless_pass_by_value)] // `depth_sequence`
-pub fn fixed_depth_sequence_kickoff(world: &WorldState, depth_sequence: Vec<u8>,
+pub fn fixed_depth_sequence_kickoff<T: 'static + Memory>(world: &WorldState, depth_sequence: Vec<u8>,
                                     nihilistically: bool, déjà_vu_bound: f32)
-                                    -> Vec<(Commit, f32, Variation)> {
+                                    -> Vec<(Commit, f32, T)> {
     let mut depths = depth_sequence.iter();
     let experience_table = fnv::FnvHashMap::default();
     let intuition_bank = Arc::new(parking_lot::Mutex::new(experience_table));
-    let mut forecasts = potentially_timebound_kickoff(
+    let mut forecasts = potentially_timebound_kickoff::<T>(
         world, *depths.next().expect("`depth_sequence` should be nonempty"),
         None, nihilistically, None, intuition_bank.clone(),
         déjà_vu_bound
     ).unwrap();
     for &depth in depths {
-        forecasts = potentially_timebound_kickoff(
+        forecasts = potentially_timebound_kickoff::<T>(
             world, depth, None, nihilistically, None,
             intuition_bank.clone(), déjà_vu_bound).unwrap();
     }
@@ -444,7 +495,7 @@ mod tests {
     use self::test::Bencher;
 
     use time;
-    use super::{REWARD_FOR_INITIATIVE, kickoff, score, SpaceTime};
+    use super::{REWARD_FOR_INITIATIVE, kickoff, score, SpaceTime, Variation};
     use space::Locale;
     use life::{WorldState, Patch};
     use fnv;
@@ -568,25 +619,25 @@ mod tests {
     #[bench]
     fn benchmark_kickoff_depth_1(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 1, None, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 1, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_2_arbys(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 2, None, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 2, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_2_carefully(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 2, None, false, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 2, None, false, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_3(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[test]
@@ -594,7 +645,7 @@ mod tests {
     fn concerning_short_circuiting_upon_finding_critical_endangerment() {
         let ws = WorldState::reconstruct("7K/r7/1r6/8/8/8/8/7k b -");
         let start = time::get_time();
-        kickoff(&ws, 30, None, true, MOCK_DÉJÀ_VU_BOUND);
+        kickoff::<Variation>(&ws, 30, None, true, MOCK_DÉJÀ_VU_BOUND);
         let duration = time::get_time() - start;
         assert!(duration.num_seconds() < 20);
     }
@@ -614,7 +665,7 @@ mod tests {
         // split, whereby transforming into a pony (rather than
         // transitioning into a princess, as would usually be
         // expected) endangers both the blue princess and figurehead
-        let tops = kickoff(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND);
+        let tops = kickoff::<Variation>(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND);
         let best_move = tops[0].0;
         let score = tops[0].1;
         println!("{:?}", best_move);
@@ -643,7 +694,7 @@ mod tests {
         world.no_castling_at_all();
 
         let depth = 2;
-        let advisory = kickoff(&world, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
+        let advisory = kickoff::<Variation>(&world, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
 
         // taking the pony is the right thing to do
         assert_eq!(Locale::new(0, 0), advisory[0].0.patch.whither);
@@ -674,7 +725,7 @@ mod tests {
 
         negaworld.no_castling_at_all();
 
-        let negadvisory = kickoff(&negaworld, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
+        let negadvisory = kickoff::<Variation>(&negaworld, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
 
         // taking the pony is still the right thing to do, even in the
         // negaworld
@@ -712,7 +763,7 @@ mod tests {
             let world = WorldState::reconstruct(world_runeset);
             let mut previously = None;
             for &depth in &[2, 3, 4] {
-                let premonitions = kickoff(&world, depth, None, true, 1.0);
+                let premonitions = kickoff::<Variation>(&world, depth, None, true, 1.0);
                 let mut top_showings = 0.;
                 for showing in &premonitions[0..10] {
                     top_showings += showing.1; // (_commit, score, _variation)
