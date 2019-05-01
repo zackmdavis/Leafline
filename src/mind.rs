@@ -368,7 +368,7 @@ pub fn déjà_vu_table_size_bound<T: Memory>(gib: f32) -> usize {
 
     let bound = usize::from(Bytes::gibi(gib)) /
         (mem::size_of::<SpaceTime>() + mem::size_of::<Lodestar<T>>());
-    println!("{}", bound);
+    println!("deja vu bound size: {}", bound);
     bound
 }
 
@@ -435,6 +435,7 @@ pub fn potentially_timebound_kickoff<T: 'static + Memory>(
                time_radios.len(), premonitions.len())
     }
     forecasts.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
+    println!("deja vu entries at end: {}", memory_bank.lock().len());
     Some(forecasts)
 }
 
