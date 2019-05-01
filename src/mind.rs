@@ -366,8 +366,10 @@ pub fn α_β_negamax_search<T: Memory>(
 
 pub fn déjà_vu_table_size_bound<T: Memory>(gib: f32) -> usize {
 
-    usize::from(Bytes::gibi(gib)) /
-        (mem::size_of::<SpaceTime>() + mem::size_of::<Lodestar<T>>())
+    let bound = usize::from(Bytes::gibi(gib)) /
+        (mem::size_of::<SpaceTime>() + mem::size_of::<Lodestar<T>>());
+    println!("{}", bound);
+    bound
 }
 
 

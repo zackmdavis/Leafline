@@ -2,7 +2,7 @@
 use std::default::Default;
 use std::fmt;
 
-use space::{Locale, Pinfield};
+use space::{Locale, Pinfield, ORANGE_FIGUREHEAD_START, BLUE_FIGUREHEAD_START};
 use identity::{Agent, JobDescription, Team};
 use motion::{FIGUREHEAD_MOVEMENT_TABLE, PONY_MOVEMENT_TABLE};
 use ansi_term::Colour as Color;
@@ -22,7 +22,7 @@ pub struct Patch {
 impl Patch {
     pub fn concerns_secret_service(&self) -> bool {
         self.star.job_description == JobDescription::Figurehead &&
-        (self.whence.file as i8 - self.whither.file as i8).abs() == 2
+        (self.whence.file() as i8 - self.whither.file() as i8).abs() == 2
     }
 
     pub fn concerns_servant_ascension(&self) -> bool {
@@ -31,12 +31,12 @@ impl Patch {
             Team::Blue => 0,
         };
         self.star.job_description == JobDescription::Servant &&
-            self.whither.rank == admirality
+            self.whither.rank() == admirality
     }
 
     pub fn abbreviated_pagan_movement_rune(&self) -> String {
         if self.concerns_secret_service() {
-            match self.whither.file {
+            match self.whither.file() {
                 6 => "O–O".to_owned(),
                 2 => "O–O–O".to_owned(),
                 _ => {
@@ -158,8 +158,6 @@ pub struct WorldState {
     pub passing_by_locale: Option<Locale>,
 }
 
-const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
-const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 };
 const ORANGE_WEST_ELIGIBILITY: u8 = 0b1;
 const ORANGE_EAST_ELIGIBILITY: u8 = 0b10;
 const BLUE_WEST_ELIGIBILITY: u8 = 0b100;
@@ -572,7 +570,7 @@ impl WorldState {
                 }
             }
             JobDescription::Cop => {
-                match (patch.whence.file, patch.star.team) {
+                match (patch.whence.file(), patch.star.team) {
                     (0, Team::Orange) => {
                         tree.clear_orange_west_service_eligibility();
                     }
@@ -594,7 +592,7 @@ impl WorldState {
 
         if patch.concerns_secret_service() {
             let cop_agent = Agent::new(patch.star.team, JobDescription::Cop);
-            let (start_file, end_file) = match patch.whither.file {
+            let (start_file, end_file) = match patch.whither.file() {
                 6 => (7, 5),
                 2 => (0, 3),
                 _ => {
@@ -605,10 +603,10 @@ impl WorldState {
 
             let secret_derived_subboard = tree.agent_to_pinfield_ref(cop_agent)
                                               .transit(Locale::new(patch.whither
-                                                                        .rank,
+                                                                        .rank(),
                                                                    start_file),
                                                        Locale::new(patch.whither
-                                                                        .rank,
+                                                                        .rank(),
                                                                    end_file));
             tree.replace_subboard(cop_agent, secret_derived_subboard);
         }
@@ -643,7 +641,7 @@ impl WorldState {
 
         tree.initiative = opposition;
         if patch.star.job_description == JobDescription::Servant &&
-           (patch.whither.rank as i8 - patch.whence.rank as i8).abs() == 2 {
+           (patch.whither.rank() as i8 - patch.whence.rank() as i8).abs() == 2 {
                 let direction = match patch.star.team {
                     Team::Orange => (1, 0),
                     Team::Blue => (-1, 0)
@@ -768,7 +766,7 @@ impl WorldState {
             }
 
             // can move two locales if he hasn't previously moved
-            if start_locale.rank == initial_rank {
+            if start_locale.rank() == initial_rank {
                 // safe to unwrap because we know that we're at the
                 // initial rank
                 let boost_destination = start_locale.displace(boost_offset)

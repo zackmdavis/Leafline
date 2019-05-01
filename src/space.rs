@@ -1,8 +1,11 @@
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub struct Locale {
-    pub rank: u8,
-    pub file: u8,
+    rank: u8,
+    file: u8,
 }
+
+pub const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
+pub const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 };
 
 static INDEX_TO_FILE_NAME: [char; 8] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
@@ -30,7 +33,7 @@ impl Locale {
     }
 
     pub fn to_algebraic(&self) -> String {
-        format!("{}{}", INDEX_TO_FILE_NAME[self.file as usize], self.rank + 1)
+        format!("{}{}", INDEX_TO_FILE_NAME[self.file as usize], self.rank() + 1)
     }
 
     pub fn from_algebraic(notation: &str) -> Self {
@@ -39,14 +42,14 @@ impl Locale {
             .expect("expected a first character");
         let rank_note = notation_pieces.next()
             .expect("expected a second character");
-        Locale {
-            rank: (rank_note as u8) - 49, // 49 == '1'
-            file: (file_note as u8) - 97, // 97 == 'a'
-        }
+        Locale::new(
+            (rank_note as u8) - 49, // 49 == '1'
+            (file_note as u8) - 97, // 97 == 'a'
+        )
     }
 
     pub fn pindex(&self) -> u32 {
-        (8u32 * u32::from(self.rank)) + u32::from(self.file)
+        (8u32 * u32::from(self.rank())) + u32::from(self.file)
     }
 
     pub fn pinpoint(&self) -> Pinfield {
@@ -54,17 +57,18 @@ impl Locale {
     }
 
     pub fn is_legal(&self) -> bool {
-        self.rank < 8 && self.file < 8
+        self.rank() < 8 && self.file < 8
     }
 
     pub fn displace(&self, offset: (i8, i8)) -> Option<Self> {
         let (rank_offset, file_offset) = offset;
+        // note: when constructing possibly-illegal Locales, do not use ::new
         let potential_locale = Locale {
             // XXX: it won't happen with the arguments we expect to
             // give it in this program, but in the interests of Safety,
             // this is an overflow bug (-1i8 as u8 == 255u8)
-            rank: (self.rank as i8 + rank_offset) as u8,
-            file: (self.file as i8 + file_offset) as u8,
+            rank: (self.rank() as i8 + rank_offset) as u8,
+            file: (self.file() as i8 + file_offset) as u8,
         };
         if potential_locale.is_legal() {
             Some(potential_locale)
@@ -78,16 +82,25 @@ impl Locale {
         let (real_rank, real_file) = (factor * rank_offset,
                                       factor * file_offset);
 
+        // note: when constructing possibly-illegal Locales, do not use ::new
         let potential_locale = Locale {
             // XXX: could overflow given unrealistic arguments
-            rank: (self.rank as i8 + real_rank) as u8,
-            file: (self.file as i8 + real_file) as u8,
+            rank: (self.rank() as i8 + real_rank) as u8,
+            file: (self.file() as i8 + real_file) as u8,
         };
         if potential_locale.is_legal() {
             Some(potential_locale)
         } else {
             None
         }
+    }
+
+    pub fn rank(&self) -> u8 {
+        self.rank
+    }
+
+    pub fn file(&self) -> u8 {
+        self.file
     }
 }
 
@@ -355,7 +368,7 @@ mod tests {
     fn concerning_multidisplacement() {
         for i in 0..8 {
             assert_eq!(
-                Some(Locale { rank: i as u8, file: i as u8 }),
+                Some(Locale::new(i as u8, i as u8 )),
                 Locale::new(0, 0).multidisplace((1, 1), i)
             )
         }
