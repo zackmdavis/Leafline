@@ -436,6 +436,7 @@ pub fn potentially_timebound_kickoff<T: 'static + Memory>(
     }
     forecasts.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     println!("deja vu entries at end: {}", memory_bank.lock().len());
+    println!("intuition bank entries at end: {}", intuition_bank.lock().len());
     Some(forecasts)
 }
 
