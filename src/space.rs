@@ -1,11 +1,10 @@
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub struct Locale {
-    rank: u8,
-    file: u8,
+    rank_and_file: u8,
 }
 
-pub const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
-pub const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 };
+pub const ORANGE_FIGUREHEAD_START: Locale = Locale { rank_and_file: (0 << 4) | 4 };
+pub const BLUE_FIGUREHEAD_START: Locale = Locale { rank_and_file: (7 << 4) | 4 };
 
 static INDEX_TO_FILE_NAME: [char; 8] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
@@ -13,12 +12,13 @@ static INDEX_TO_FILE_NAME: [char; 8] = [
 
 lazy_static! {
     static ref LOCALE_STASH: [Locale; 64] = {
-        let mut m: [Locale; 64] = [Locale {rank: 0, file: 0}; 64];
+        let mut m: [Locale; 64] = [Locale {rank_and_file: 0}; 64];
         for rank in 0..8 {
             for file in 0..8 {
                 let idx = (rank*8 + file) as usize;
 
-                m[idx] = Locale { rank, file };
+                let rank_and_file = (rank << 4) | file;
+                m[idx] = Locale { rank_and_file }
             }
         }
         m
@@ -33,7 +33,7 @@ impl Locale {
     }
 
     pub fn to_algebraic(&self) -> String {
-        format!("{}{}", INDEX_TO_FILE_NAME[self.file as usize], self.rank() + 1)
+        format!("{}{}", INDEX_TO_FILE_NAME[self.file() as usize], self.rank() + 1)
     }
 
     pub fn from_algebraic(notation: &str) -> Self {
@@ -49,7 +49,7 @@ impl Locale {
     }
 
     pub fn pindex(&self) -> u32 {
-        (8u32 * u32::from(self.rank())) + u32::from(self.file)
+        (8u32 * u32::from(self.rank())) + u32::from(self.file())
     }
 
     pub fn pinpoint(&self) -> Pinfield {
@@ -57,19 +57,24 @@ impl Locale {
     }
 
     pub fn is_legal(&self) -> bool {
-        self.rank() < 8 && self.file < 8
+        self.rank() < 8 && self.file() < 8
+    }
+
+    fn build_possibly_illegal(rank: u8, file: u8) -> Self {
+        let rank_and_file = (rank << 4) | file;
+        Locale { rank_and_file }
     }
 
     pub fn displace(&self, offset: (i8, i8)) -> Option<Self> {
         let (rank_offset, file_offset) = offset;
         // note: when constructing possibly-illegal Locales, do not use ::new
-        let potential_locale = Locale {
+        let potential_locale = Locale::build_possibly_illegal(
             // XXX: it won't happen with the arguments we expect to
             // give it in this program, but in the interests of Safety,
             // this is an overflow bug (-1i8 as u8 == 255u8)
-            rank: (self.rank() as i8 + rank_offset) as u8,
-            file: (self.file() as i8 + file_offset) as u8,
-        };
+            (self.rank() as i8 + rank_offset) as u8,
+            (self.file() as i8 + file_offset) as u8,
+        );
         if potential_locale.is_legal() {
             Some(potential_locale)
         } else {
@@ -83,11 +88,11 @@ impl Locale {
                                       factor * file_offset);
 
         // note: when constructing possibly-illegal Locales, do not use ::new
-        let potential_locale = Locale {
+        let potential_locale = Locale::build_possibly_illegal(
             // XXX: could overflow given unrealistic arguments
-            rank: (self.rank() as i8 + real_rank) as u8,
-            file: (self.file() as i8 + real_file) as u8,
-        };
+            (self.rank() as i8 + real_rank) as u8,
+            (self.file() as i8 + real_file) as u8,
+        );
         if potential_locale.is_legal() {
             Some(potential_locale)
         } else {
@@ -96,11 +101,11 @@ impl Locale {
     }
 
     pub fn rank(&self) -> u8 {
-        self.rank
+        self.rank_and_file >> 4
     }
 
     pub fn file(&self) -> u8 {
-        self.file
+        self.rank_and_file & (0b1111)
     }
 }
 
@@ -341,6 +346,20 @@ mod tests {
                        // TODO: again, conversion in iterator
                        Locale::from_algebraic(*actuality));
         }
+    }
+
+    #[test]
+    fn concerning_all_locales() {
+        for rank in 0..8 {
+            for file in 0..8 {
+                let l = Locale {
+                    rank_and_file: (rank << 4) | file
+                };
+                assert_eq!(rank, l.rank());
+                assert_eq!(file, l.file());
+            }
+        }
+
     }
 
     #[test]
