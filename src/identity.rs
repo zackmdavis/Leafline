@@ -48,72 +48,19 @@ pub struct Agent {
     pub job_description: JobDescription,
 }
 
-static ORANGE_AGENTS: [Agent; 6] = [
-    Agent {
-        team: Team::Orange,
-        job_description: JobDescription::Servant
-    },
-    Agent {
-        team: Team::Orange,
-        job_description: JobDescription::Pony
-    },
-    Agent {
-        team: Team::Orange,
-        job_description: JobDescription::Scholar
-    },
-    Agent {
-        team: Team::Orange,
-        job_description: JobDescription::Cop
-    },
-    Agent {
-        team: Team::Orange,
-        job_description: JobDescription::Princess
-    },
-    Agent {
-        team: Team::Orange,
-        job_description: JobDescription::Figurehead
-    },
-];
-
-
-static BLUE_AGENTS: [Agent; 6] = [
-    Agent {
-        team: Team::Blue,
-        job_description: JobDescription::Servant
-    },
-    Agent {
-        team: Team::Blue,
-        job_description: JobDescription::Pony
-    },
-    Agent {
-        team: Team::Blue,
-        job_description: JobDescription::Scholar
-    },
-    Agent {
-        team: Team::Blue,
-        job_description: JobDescription::Cop
-    },
-    Agent {
-        team: Team::Blue,
-        job_description: JobDescription::Princess
-    },
-    Agent {
-        team: Team::Blue,
-        job_description: JobDescription::Figurehead
-    },
-];
-
 impl Agent {
     pub fn new(team: Team, job_description: JobDescription) -> Self {
         Self { team, job_description }
     }
 
-    pub fn dramatis_personæ(team: Team) -> [Agent; 6] {
+    pub fn dramatis_personæ(team: Team) -> Vec<Agent> {
         // TODO: return in iterator
-        match team {
-            Team::Orange => ORANGE_AGENTS,
-            Team::Blue => BLUE_AGENTS
-        }
+        vec![Agent::new(team, JobDescription::Servant),
+             Agent::new(team, JobDescription::Pony),
+             Agent::new(team, JobDescription::Scholar),
+             Agent::new(team, JobDescription::Cop),
+             Agent::new(team, JobDescription::Princess),
+             Agent::new(team, JobDescription::Figurehead)]
     }
 
     pub fn to_preservation_rune(&self) -> char {

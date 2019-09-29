@@ -3,7 +3,7 @@ use std::io;
 
 use time::Duration;
 
-use mind::{kickoff, iterative_deepening_kickoff, Variation};
+use mind::{kickoff, iterative_deepening_kickoff};
 use life::WorldState;
 use space::Locale;
 use identity::Team;
@@ -71,7 +71,7 @@ pub fn dæmon() {
 
                 let mut forecasts;
                 if let Some(depth) = options.get("depth") {
-                    forecasts = kickoff::<Variation>(&world, *depth as u8, None, false, 2.0);
+                    forecasts = kickoff(&world, *depth as u8, None, false, 2.0);
                 } else {
                     let allegiance = world.initiative;
                     let (time_key, increment_key) = match allegiance {
@@ -85,7 +85,7 @@ pub fn dæmon() {
                     let grace = options.get(increment_key).unwrap_or(&zero);
                     let deadline = ((remaining_moments /
                                      remaining_movements) + grace) / 1000;
-                    let (beforecasts, depth) = iterative_deepening_kickoff::<Variation>(
+                    let (beforecasts, depth) = iterative_deepening_kickoff(
                         &world, Duration::seconds(deadline as i64), false, 2.0);
                     forecasts = beforecasts;
                     let centis = (forecasts[0].1 * 100.) as isize;

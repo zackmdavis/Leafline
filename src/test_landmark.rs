@@ -10,7 +10,7 @@ mod tests {
             let locales = Pinfield(*pins).to_locales();
             assert_eq!(8, locales.len());
             for locale in locales {
-                assert_eq!(file as u8, locale.file());
+                assert_eq!(file as u8, locale.file);
             }
         }
     }
