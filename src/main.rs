@@ -17,6 +17,9 @@ extern crate parking_lot;
 extern crate rustc_serialize;
 extern crate time;
 extern crate twox_hash;
+extern crate fnv;
+
+#[macro_use] extern crate lazy_static;
 
 
 #[macro_use] mod sorceries;
@@ -44,7 +47,7 @@ use time::{Duration, get_time};
 use identity::{Agent, Team};
 use life::{Commit, Patch, WorldState};
 use mind::{Variation, fixed_depth_sequence_kickoff, iterative_deepening_kickoff,
-           kickoff, pagan_variation_format};
+           kickoff, pagan_variation_format, Memory};
 use substrate::memory_free;
 
 
@@ -146,25 +149,25 @@ impl LookaheadBound {
     }
 }
 
-fn forecast(world: WorldState, bound: LookaheadBound, déjà_vu_bound: f32)
-            -> (Vec<(Commit, f32, Variation)>, u8, Duration) {
+fn forecast<T: 'static + Memory>(world: WorldState, bound: LookaheadBound, déjà_vu_bound: f32)
+            -> (Vec<(Commit, f32, T)>, u8, Duration) {
     let start_thinking = get_time();
     let forecasts;
     let depth;
     match bound {
         LookaheadBound::Depth(ds, es) => {
-            forecasts = kickoff(&world, ds, es, false, déjà_vu_bound);
+            forecasts = kickoff::<T>(&world, ds, es, false, déjà_vu_bound);
             depth = ds;
         },
         LookaheadBound::DepthSequence(ds) => {
             depth = *ds.last().unwrap();
-            forecasts = fixed_depth_sequence_kickoff(
+            forecasts = fixed_depth_sequence_kickoff::<T>(
                 &world, ds, false, déjà_vu_bound);
             // XXX TODO: if we're just returning a number, it should be the
             // lowest depth, but we should really report all of them
         },
         LookaheadBound::Seconds(_) => {
-            let (fs, ds) = iterative_deepening_kickoff(
+            let (fs, ds) = iterative_deepening_kickoff::<T>(
                 &world, bound.duration(), false, déjà_vu_bound);
             forecasts = fs;
             depth = ds;
@@ -196,7 +199,7 @@ struct LastMissive {
 fn correspondence(reminder: &str, bound: LookaheadBound, déjà_vu_bound: f32)
                   -> String {
     let in_medias_res = WorldState::reconstruct(reminder);
-    let (mut forecasts, depth, sidereal) = forecast(in_medias_res,
+    let (mut forecasts, depth, sidereal) = forecast::<Patch>(in_medias_res,
                                                     bound,
                                                     déjà_vu_bound);
 
@@ -387,7 +390,7 @@ fn main() {
             }
             Some(ref bound) => {
                 let (our_forecasts, depth, thinking_time) =
-                    forecast(world, bound.clone(), déjà_vu_bound);
+                    forecast::<Variation>(world, bound.clone(), déjà_vu_bound);
                 let forecasts = our_forecasts;
                 println!("{}", world);
                 let depth_report = match *bound {

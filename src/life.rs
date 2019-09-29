@@ -2,10 +2,13 @@
 use std::default::Default;
 use std::fmt;
 
-use space::{Locale, Pinfield};
+use space::{Locale, Pinfield, ORANGE_FIGUREHEAD_START, BLUE_FIGUREHEAD_START};
 use identity::{Agent, JobDescription, Team};
 use motion::{FIGUREHEAD_MOVEMENT_TABLE, PONY_MOVEMENT_TABLE};
 use ansi_term::Colour as Color;
+
+static SCHOLAR_OFFSETS: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
+static COP_OFFSETS: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
 
 /// represents the movement of a figurine
@@ -19,7 +22,7 @@ pub struct Patch {
 impl Patch {
     pub fn concerns_secret_service(&self) -> bool {
         self.star.job_description == JobDescription::Figurehead &&
-        (self.whence.file as i8 - self.whither.file as i8).abs() == 2
+        (self.whence.file() as i8 - self.whither.file() as i8).abs() == 2
     }
 
     pub fn concerns_servant_ascension(&self) -> bool {
@@ -28,12 +31,12 @@ impl Patch {
             Team::Blue => 0,
         };
         self.star.job_description == JobDescription::Servant &&
-            self.whither.rank == admirality
+            self.whither.rank() == admirality
     }
 
     pub fn abbreviated_pagan_movement_rune(&self) -> String {
         if self.concerns_secret_service() {
-            match self.whither.file {
+            match self.whither.file() {
                 6 => "O–O".to_owned(),
                 2 => "O–O–O".to_owned(),
                 _ => {
@@ -155,8 +158,6 @@ pub struct WorldState {
     pub passing_by_locale: Option<Locale>,
 }
 
-const ORANGE_FIGUREHEAD_START: Locale = Locale { rank: 0, file: 4 };
-const BLUE_FIGUREHEAD_START: Locale = Locale { rank: 7, file: 4 };
 const ORANGE_WEST_ELIGIBILITY: u8 = 0b1;
 const ORANGE_EAST_ELIGIBILITY: u8 = 0b10;
 const BLUE_WEST_ELIGIBILITY: u8 = 0b100;
@@ -165,8 +166,8 @@ const BLUE_EAST_ELIGIBILITY: u8 = 0b1000;
 
 impl Default for WorldState {
     fn default() -> Self {
-        let mut orange_servant_locales = Vec::new();
-        let mut blue_servant_locales = Vec::new();
+        let mut orange_servant_locales = Vec::with_capacity(8);
+        let mut blue_servant_locales = Vec::with_capacity(8);
         for f in 0..8 {
             orange_servant_locales.push(Locale::new(1, f));
             blue_servant_locales.push(Locale::new(6, f));
@@ -411,7 +412,8 @@ impl WorldState {
         let mut rank = 7;
         let mut file = 0;
         let mut world = WorldState::new_except_empty();
-        let mut volumes = scan.split(' ');
+        let replaced = scan.replace("X", " ");
+        let mut volumes = replaced.split(' ');
         let positional_scan = volumes.next();
         for rune in positional_scan.unwrap().chars() {
             match rune {
@@ -494,6 +496,11 @@ impl WorldState {
         resultant_state
     }
 
+    fn replace_subboard(&mut self, for_whom: Agent, subboard: Pinfield) {
+        // note: this mutates in place, which is a bit dangerous. be careful out there!
+        self.agent_to_pinfield_mutref(for_whom).0 = subboard.0;
+    }
+
     pub fn occupied_by(&self, team: Team) -> Pinfield {
         match team {
             Team::Orange => {
@@ -524,9 +531,9 @@ impl WorldState {
     }
 
     pub fn occupying_affiliated_agent(&self, at: Locale, team: Team) -> Option<Agent> {
-        for agent in Agent::dramatis_personæ(team) {
-            if self.agent_to_pinfield_ref(agent).query(at) {
-                return Some(agent);
+        for agent in &Agent::dramatis_personæ(team) {
+            if self.agent_to_pinfield_ref(*agent).query(at) {
+                return Some(*agent);
             }
         }
         None
@@ -563,7 +570,7 @@ impl WorldState {
                 }
             }
             JobDescription::Cop => {
-                match (patch.whence.file, patch.star.team) {
+                match (patch.whence.file(), patch.star.team) {
                     (0, Team::Orange) => {
                         tree.clear_orange_west_service_eligibility();
                     }
@@ -585,7 +592,7 @@ impl WorldState {
 
         if patch.concerns_secret_service() {
             let cop_agent = Agent::new(patch.star.team, JobDescription::Cop);
-            let (start_file, end_file) = match patch.whither.file {
+            let (start_file, end_file) = match patch.whither.file() {
                 6 => (7, 5),
                 2 => (0, 3),
                 _ => {
@@ -596,12 +603,12 @@ impl WorldState {
 
             let secret_derived_subboard = tree.agent_to_pinfield_ref(cop_agent)
                                               .transit(Locale::new(patch.whither
-                                                                        .rank,
+                                                                        .rank(),
                                                                    start_file),
                                                        Locale::new(patch.whither
-                                                                        .rank,
+                                                                        .rank(),
                                                                    end_file));
-            tree = tree.except_replaced_subboard(cop_agent, secret_derived_subboard);
+            tree.replace_subboard(cop_agent, secret_derived_subboard);
         }
 
         // was anyone stunned?
@@ -629,12 +636,12 @@ impl WorldState {
             // if someone was stunned, put her or him in the hospital
             let further_derived_subboard = tree.agent_to_pinfield_ref(stunned)
                                                .quench(ambulance_target);
-            tree = tree.except_replaced_subboard(stunned, further_derived_subboard);
+            tree.replace_subboard(stunned, further_derived_subboard);
         }
 
         tree.initiative = opposition;
         if patch.star.job_description == JobDescription::Servant &&
-           (patch.whither.rank as i8 - patch.whence.rank as i8).abs() == 2 {
+           (patch.whither.rank() as i8 - patch.whence.rank() as i8).abs() == 2 {
                 let direction = match patch.star.team {
                     Team::Orange => (1, 0),
                     Team::Blue => (-1, 0)
@@ -676,26 +683,24 @@ impl WorldState {
 
     fn subpredict(&self, premonitions: &mut Vec<Commit>, premonition: Commit) {
         if premonition.patch.concerns_servant_ascension() {
-            for ascended in Agent::dramatis_personæ(premonition.patch.star.team) {
+            for ascended in &Agent::dramatis_personæ(premonition.patch.star.team) {
                 if ascended.job_description == JobDescription::Servant ||
                    ascended.job_description == JobDescription::Figurehead {
                     continue;
                 }
                 let mut ascendency = premonition;
-                ascendency.ascension = Some(ascended);
+                ascendency.ascension = Some(*ascended);
                 let vessel_pinfield =
                     premonition.tree
                                .agent_to_pinfield_ref(premonition.patch.star)
                                .quench(premonition.patch.whither);
                 let ascended_pinfield = premonition.tree
-                                                   .agent_to_pinfield_ref(ascended)
+                                                   .agent_to_pinfield_ref(*ascended)
                                                    .alight(premonition.patch
                                                                       .whither);
-                ascendency.tree =
-                    ascendency.tree
-                              .except_replaced_subboard(premonition.patch.star,
-                                                        vessel_pinfield)
-                              .except_replaced_subboard(ascended, ascended_pinfield);
+                ascendency.tree = ascendency.tree.except_replaced_subboard(premonition.patch.star,
+                                                                            vessel_pinfield);
+                ascendency.tree.replace_subboard(*ascended, ascended_pinfield);
                 premonitions.push(ascendency);
             }
         } else {
@@ -724,7 +729,7 @@ impl WorldState {
     /// where you stand, then you know where to land, and if you fall,
     /// it won't matter, because you'll know that you're right."
     ///                                   —Fiona Apple
-    pub fn servant_lookahead(&self, team: Team, nihilistically: bool) -> Vec<Commit> {
+    pub fn servant_lookahead(&self, team: Team, nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
         let initial_rank;
         let standard_offset;
         let boost_offset;
@@ -745,7 +750,6 @@ impl WorldState {
         }
         let servant_agent = Agent::new(team, JobDescription::Servant);
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(servant_agent);
-        let mut premonitions = Vec::new();
         for start_locale in positional_chart.to_locales() {
             // can move one locale if he's not blocked
             let std_destination_maybe = start_locale.displace(standard_offset);
@@ -762,7 +766,7 @@ impl WorldState {
             }
 
             // can move two locales if he hasn't previously moved
-            if start_locale.rank == initial_rank {
+            if start_locale.rank() == initial_rank {
                 // safe to unwrap because we know that we're at the
                 // initial rank
                 let boost_destination = start_locale.displace(boost_offset)
@@ -806,11 +810,9 @@ impl WorldState {
                 }
             }
         }
-        premonitions
     }
 
-    fn ponylike_lookahead(&self, agent: Agent, nihilistically: bool) -> Vec<Commit> {
-        let mut premonitions = Vec::new();
+    fn ponylike_lookahead(&self, agent: Agent, nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
         let movement_table = match agent.job_description {
             JobDescription::Pony => PONY_MOVEMENT_TABLE,
@@ -833,30 +835,23 @@ impl WorldState {
                              nihilistically);
             }
         }
-        premonitions
     }
 
-    fn princesslike_lookahead(&self, agent: Agent, nihilistically: bool)
-                              -> Vec<Commit> {
-        let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
-        let mut premonitions = Vec::new();
-        let offsets = match agent.job_description {
-            // XXX: I wanted to reference static arrays in motion.rs,
-            // but that doesn't work in the obvious way because array
-            // lengths are part of the type. For now, let's just use
-            // these vector literals.  #YOLO
-            JobDescription::Scholar => vec![
-                (-1, -1), (-1, 1), (1, -1), (1, 1)],
-            JobDescription::Cop => vec![
-                (-1, 0), (1, 0), (0, -1), (0, 1)],
-            JobDescription::Princess => vec![
-                (-1, -1), (-1, 0), (-1, 1), (0, -1),
-                (0, 1), (1, -1), (1, 0), (1, 1)
-            ],
-            _ => moral_panic!("non-princesslike agent passed to \
+    fn princesslike_lookahead(
+        &self,
+        agent: Agent,
+        job_description: JobDescription,
+        start_locales: &Vec<Locale>,
+        nihilistically: bool,
+        mut premonitions: &mut Vec<Commit>)
+                              {
+        let offsets = match job_description {
+            JobDescription::Scholar => SCHOLAR_OFFSETS,
+            JobDescription::Cop => COP_OFFSETS,
+            _ => moral_panic!("non-princesslike job description assed to \
                                `princesslike_lookahead`"),
         };
-        for start_locale in positional_chart.to_locales() {
+        for start_locale in start_locales {
             for &offset in &offsets {
                 let mut venture = 1;
                 loop {
@@ -882,7 +877,7 @@ impl WorldState {
                                 self.predict(&mut premonitions,
                                              Patch {
                                                  star: agent,
-                                                 whence: start_locale,
+                                                 whence: *start_locale,
                                                  whither: destination,
                                              },
                                              nihilistically);
@@ -899,27 +894,30 @@ impl WorldState {
                 }
             }
         }
-        premonitions
     }
 
     /// "Morning in Ponyville shimmers; morning in Ponyville shines!
     /// And I know for absolute certain, that everything is certainly
     /// fine."
     pub fn pony_lookahead(&self, team: Team,
-                          nihilistically: bool) -> Vec<Commit> {
+                          nihilistically: bool,
+                          premonitions: &mut Vec<Commit>) {
         self.ponylike_lookahead(
             Agent::new(team, JobDescription::Pony),
-            nihilistically)
+            nihilistically, premonitions)
     }
 
     /// "Doesn't seem right, to take information given at close range,
     /// for the gag, and the bind, and the ammunition round."
     ///                            —Fiona Apple, "Not About Love"
     pub fn scholar_lookahead(&self, team: Team,
-                             nihilistically: bool) -> Vec<Commit> {
+                             nihilistically: bool, premonitions: &mut Vec<Commit>) {
+        let agent = Agent::new(team, JobDescription::Scholar);
         self.princesslike_lookahead(
-            Agent::new(team, JobDescription::Scholar),
-            nihilistically)
+            agent,
+            JobDescription::Scholar,
+            &self.agent_to_pinfield_ref(agent).to_locales(),
+            nihilistically, premonitions)
     }
 
     /// "'What is this posture I have to stare at,' that's what he
@@ -927,32 +925,43 @@ impl WorldState {
     /// game 'cause he lost and he knew he was wrong but he knew it
     /// too late."                 —Fiona Apple, "Not About Love"
     pub fn cop_lookahead(&self, team: Team,
-                         nihilistically: bool) -> Vec<Commit> {
+                         nihilistically: bool, premonitions: &mut Vec<Commit>) {
+        let agent = Agent::new(team, JobDescription::Cop);
         self.princesslike_lookahead(
-            Agent::new(team, JobDescription::Cop),
-            nihilistically)
+            agent,
+            JobDescription::Cop,
+            &self.agent_to_pinfield_ref(agent).to_locales(),
+            nihilistically, premonitions)
     }
 
     /// "A princess here before us; behold, behold ..."
     pub fn princess_lookahead(&self, team: Team,
-                              nihilistically: bool) -> Vec<Commit> {
+                              nihilistically: bool, premonitions: &mut Vec<Commit>) {
+        let agent = Agent::new(team, JobDescription::Princess);
+        let locales = self.agent_to_pinfield_ref(agent).to_locales();
         self.princesslike_lookahead(
-            Agent::new(team, JobDescription::Princess),
-            nihilistically)
+            agent,
+            JobDescription::Scholar,
+            &locales,
+            nihilistically, premonitions);
+        self.princesslike_lookahead(
+            agent,
+            JobDescription::Cop,
+            &locales,
+            nihilistically, premonitions);
     }
 
     /// "It doesn't make sense I should fall for the kingcraft of a
     /// meritless crown."           —Fiona Apple, "Not About Love"
     pub fn figurehead_lookahead(&self, team: Team,
-                                nihilistically: bool) -> Vec<Commit> {
+                                nihilistically: bool, premonitions: &mut Vec<Commit>) {
         self.ponylike_lookahead(
             Agent::new(team, JobDescription::Figurehead),
-            nihilistically)
+            nihilistically, premonitions)
     }
 
     pub fn service_lookahead(&self, team: Team,
-                             nihilistically: bool) -> Vec<Commit> {
-        let mut premonitions = Vec::<Commit>::new();
+                             nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
 
         let (east_service, west_service) = match team {
             Team::Orange => (self.orange_east_service_eligibility(),
@@ -977,10 +986,10 @@ impl WorldState {
                         self.agent_to_pinfield_ref(agent).0 == 0
             );
         } else {
-            return premonitions;
+            return;
         }
 
-        let mut locales_to_query = Vec::new();
+        let mut locales_to_query = Vec::with_capacity(5);
         if west_service {
             locales_to_query.push(
                 (vec![Locale::new(home_rank, 1),
@@ -1013,7 +1022,7 @@ impl WorldState {
                         )
                 }
                 if being_leered_at.unwrap() {
-                    return premonitions;
+                    return;
                 }
                 if !locales.iter().any(
                     |l| self.is_being_leered_at_by(*l, team.opposition())) {
@@ -1021,8 +1030,6 @@ impl WorldState {
                 }
             }
         }
-
-        premonitions
     }
 
     fn lookahead_without_secret_service(&self,
@@ -1031,20 +1038,23 @@ impl WorldState {
         // that you could break without generating all the premonitions
         // if something overwhelmingly important came up, like ultimate
         // endangerment)?
-        let mut premonitions = Vec::new();
         let moving_team = self.initiative;
-        premonitions.extend(self.servant_lookahead(moving_team, nihilistically));
-        premonitions.extend(self.pony_lookahead(moving_team, nihilistically));
-        premonitions.extend(self.scholar_lookahead(moving_team, nihilistically));
-        premonitions.extend(self.cop_lookahead(moving_team, nihilistically));
-        premonitions.extend(self.princess_lookahead(moving_team, nihilistically));
-        premonitions.extend(self.figurehead_lookahead(moving_team, nihilistically));
+
+        // empirically, 90% of positions have < 41 moves available
+        let mut premonitions = Vec::with_capacity(41);
+        self.servant_lookahead(moving_team, nihilistically, &mut premonitions);
+        self.pony_lookahead(moving_team, nihilistically, &mut premonitions);
+        self.scholar_lookahead(moving_team, nihilistically, &mut premonitions);
+        self.cop_lookahead(moving_team, nihilistically, &mut premonitions);
+        self.princess_lookahead(moving_team, nihilistically, &mut premonitions);
+        self.figurehead_lookahead(moving_team, nihilistically, &mut premonitions);
+
         premonitions
     }
 
     fn underlookahead(&self, nihilistically: bool) -> Vec<Commit> {
         let mut premonitions = self.lookahead_without_secret_service(nihilistically);
-        premonitions.extend(self.service_lookahead(self.initiative, nihilistically));
+        self.service_lookahead(self.initiative, nihilistically, &mut premonitions);
         premonitions
     }
 
@@ -1104,7 +1114,7 @@ impl fmt::Display for WorldState {
 mod tests {
     extern crate test;
     use std::mem;
-    use self::test::Bencher;
+    use self::test::{Bencher, black_box};
     use super::{WorldState, Patch, Commit};
     use space::Locale;
     use identity::{Team, JobDescription, Agent};
@@ -1113,44 +1123,59 @@ mod tests {
     // game
     static VISION: &'static str = "3q1rk1/2R1bppp/pP2p3/N2b4/1r6/4BP2/1P1Q2PP/R5K1 b - -";
 
+
     #[bench]
     fn benchmark_servant_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        b.iter(|| ws.servant_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.servant_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
     fn benchmark_pony_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        b.iter(|| ws.pony_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.pony_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
     fn benchmark_scholar_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        b.iter(|| ws.scholar_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.scholar_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
     fn benchmark_cop_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        ws.cop_lookahead(Team::Orange, false);
-        ws.cop_lookahead(Team::Orange, false);
-        ws.cop_lookahead(Team::Orange, false);
-        ws.cop_lookahead(Team::Orange, false);
-        b.iter(|| ws.cop_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.cop_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
     fn benchmark_princess_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        b.iter(|| ws.princess_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.princess_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
     fn benchmark_figurehead_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
-        b.iter(|| ws.figurehead_lookahead(Team::Orange, false));
+        b.iter(|| {
+            let mut premonitions = Vec::new();
+            ws.figurehead_lookahead(Team::Orange, false, &mut premonitions)
+        });
     }
 
     #[bench]
@@ -1169,6 +1194,52 @@ mod tests {
     fn benchmark_ultimate_endangerment(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.in_critical_endangerment(Team::Orange));
+    }
+
+    #[bench]
+    fn benchmark_apply(b: &mut Bencher) {
+        let ws = WorldState::reconstruct(
+            "rnbqk2r/p1pp1ppp/1p5n/8/1bPPpP2/6PP/PP1BP3/RN1QKBNR b KQkq f3 0 6",
+        );
+        let patches = vec![
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Servant),
+                whence: Locale::from_algebraic("e4"),
+                whither: Locale::from_algebraic("f3"),
+            }, // en passant
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Figurehead),
+                whence: Locale::from_algebraic("e8"),
+                whither: Locale::from_algebraic("g8"),
+            }, // castling
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Scholar),
+                whence: Locale::from_algebraic("b4"),
+                whither: Locale::from_algebraic("d2"),
+            }, // capture
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Pony),
+                whence: Locale::from_algebraic("h6"),
+                whither: Locale::from_algebraic("f5"),
+            }, // just a regular move
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Cop),
+                whence: Locale::from_algebraic("h8"),
+                whither: Locale::from_algebraic("h7"),
+            }, // lose castling kingside
+            Patch {
+                star: Agent::new(Team::Blue, JobDescription::Figurehead),
+                whence: Locale::from_algebraic("e8"),
+                whither: Locale::from_algebraic("f8"),
+            }, // lose all castling
+        ];
+        b.iter(|| { 
+            for _ in 0..50 {
+                for patch in &patches {
+                    black_box(ws.apply(*patch));
+                }
+            }
+        });
     }
 
     #[test]
@@ -1221,25 +1292,30 @@ mod tests {
     #[test]
     fn concerning_castling_availability() {
         let mut ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K -");
-        let mut prems = ws.service_lookahead(Team::Orange, false);
+        let mut prems = Vec::new();
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(1, prems.len());
 
+        prems.clear();
         ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3K2R w KQ -");
-        prems = ws.service_lookahead(Team::Orange, false);
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(2, prems.len());
 
+        prems.clear();
         ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/R3KN1R w Q -");
-        prems = ws.service_lookahead(Team::Orange, false);
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(1, prems.len());
 
+        prems.clear();
         ws = WorldState::reconstruct("8/8/4k3/8/8/4b3/8/R3KN1R w Q -");
         // can't move into endangerment
-        prems = ws.service_lookahead(Team::Orange, false);
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(0, prems.len());
 
+        prems.clear();
         ws = WorldState::reconstruct("8/8/4k3/8/b7/8/8/R3KN1R w Q - 0 1");
         // can't move through endangerment, either!
-        prems = ws.service_lookahead(Team::Orange, false);
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(0, prems.len());
     }
 
@@ -1247,7 +1323,8 @@ mod tests {
     fn concerning_castling_actually_working() {
         let ws = WorldState::reconstruct("8/8/4k3/8/8/8/8/4K2R w K -");
         assert!(ws.orange_east_service_eligibility());
-        let prems = ws.service_lookahead(Team::Orange, false);
+        let mut prems = Vec::new();
+        ws.service_lookahead(Team::Orange, false, &mut prems);
         assert_eq!(1, prems.len());
         assert_eq!(false, prems[0].tree.orange_east_service_eligibility());
         assert_eq!("8/8/4k3/8/8/8/8/5RK1 b - -", prems[0].tree.preserve());
@@ -1256,9 +1333,11 @@ mod tests {
     #[test]
     fn concerning_castling_out_of_check() {
         let ws = WorldState::reconstruct("8/8/4k3/8/4r3/8/8/4K2R w K -");
+        println!("{}", ws);
         assert!(ws.orange_east_service_eligibility());
-        let prems = ws.service_lookahead(Team::Orange, false);
-        assert_eq!(0, prems.len());
+        let mut prems = Vec::new();
+        ws.service_lookahead(Team::Orange, false, &mut prems);
+        assert_eq!(Vec::<Commit>::new(), prems);
     }
 
     #[test]
@@ -1272,7 +1351,8 @@ mod tests {
             worldstate.except_replaced_subboard(Agent::new(Team::Orange,
                                                            JobDescription::Servant),
                                                 derived_subfield);
-        let premonitions = worldstate.servant_lookahead(Team::Orange, true);
+        let mut premonitions = Vec::new();
+        worldstate.servant_lookahead(Team::Orange, true, &mut premonitions);
         assert!(premonitions.iter().all(|p| {
             p.patch.whither == Locale::from_algebraic("a8")
         }));
@@ -1310,7 +1390,8 @@ mod tests {
     #[test]
     fn test_orange_servant_lookahead_from_original_position() {
         let state = WorldState::new();
-        let premonitions = state.servant_lookahead(Team::Orange, false);
+        let mut premonitions = Vec::new();
+        state.servant_lookahead(Team::Orange, false, &mut premonitions);
         assert_eq!(16, premonitions.len());
         // although granted that a more thorough test would actually
         // say something about the nature of the positions, rather than
@@ -1320,7 +1401,8 @@ mod tests {
     #[test]
     fn test_orange_pony_lookahead_from_original_position() {
         let state = WorldState::new();
-        let premonitions = state.pony_lookahead(Team::Orange, false);
+        let mut premonitions = Vec::new();
+        state.pony_lookahead(Team::Orange, false, &mut premonitions);
         assert_eq!(4, premonitions.len());
         let collected = premonitions.iter()
                                     .map(|p| p.tree.orange_ponies.to_locales())
@@ -1344,7 +1426,8 @@ mod tests {
         world.blue_princesses =
             world.blue_princesses
                  .alight(Locale::from_algebraic("g3"));
-        let premonitions = world.scholar_lookahead(Team::Orange, false);
+        let mut premonitions = Vec::new();
+        world.scholar_lookahead(Team::Orange, false, &mut premonitions);
         let expected = vec!["d2", "f2", "g3"]
                            .iter()
                            .map(|a| Locale::from_algebraic(*a))
@@ -1428,13 +1511,13 @@ mod tests {
         assert_eq!(None, second_commit.hospitalization);
 
         let precrucial_state = second_commit.tree;
-        let available_stunnings = precrucial_state.servant_lookahead(Team::Orange,
-                                                                     false)
-                                                  .into_iter()
-                                                  .filter(|p| {
-                                                      p.hospitalization.is_some()
-                                                  })
-                                                  .collect::<Vec<_>>();
+        let mut premonitions = Vec::new();
+        precrucial_state.servant_lookahead(Team::Orange, false, &mut premonitions);
+        let available_stunnings = premonitions.into_iter()
+                                              .filter(|p| {
+                                                  p.hospitalization.is_some()
+                                              })
+                                              .collect::<Vec<_>>();
         assert_eq!(1, available_stunnings.len());
         assert_eq!(blue_servant_agent,
                    available_stunnings[0].hospitalization.unwrap());
@@ -1559,8 +1642,9 @@ mod tests {
     #[test]
     fn concerning_passing_by_in_action() {
         let world = WorldState::reconstruct("rnbqkbnr/ppp2ppp/4p3/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3");
-        let premonitions = world.servant_lookahead(Team::Orange, false)
-                                .into_iter()
+        let mut premonitions = Vec::new();
+        world.servant_lookahead(Team::Orange, false, &mut premonitions);
+        premonitions = premonitions.into_iter()
                                 .filter(|p| {
                                     p.patch.whence == Locale::from_algebraic("e5")
                                 })

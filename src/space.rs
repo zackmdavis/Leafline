@@ -1,20 +1,39 @@
 #[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
 pub struct Locale {
-    pub rank: u8,
-    pub file: u8,
+    rank_and_file: u8,
 }
+
+pub const ORANGE_FIGUREHEAD_START: Locale = Locale { rank_and_file: (0 << 4) | 4 };
+pub const BLUE_FIGUREHEAD_START: Locale = Locale { rank_and_file: (7 << 4) | 4 };
 
 static INDEX_TO_FILE_NAME: [char; 8] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
 ];
 
+lazy_static! {
+    static ref LOCALE_STASH: [Locale; 64] = {
+        let mut m: [Locale; 64] = [Locale {rank_and_file: 0}; 64];
+        for rank in 0..8 {
+            for file in 0..8 {
+                let idx = (rank*8 + file) as usize;
+
+                let rank_and_file = (rank << 4) | file;
+                m[idx] = Locale { rank_and_file }
+            }
+        }
+        m
+    };
+}
+
+
 impl Locale {
     pub fn new(rank: u8, file: u8) -> Self {
-        Self { rank, file }
+        let idx = (rank*8 + file) as usize;
+        LOCALE_STASH[idx]
     }
 
     pub fn to_algebraic(&self) -> String {
-        format!("{}{}", INDEX_TO_FILE_NAME[self.file as usize], self.rank + 1)
+        format!("{}{}", INDEX_TO_FILE_NAME[self.file() as usize], self.rank() + 1)
     }
 
     pub fn from_algebraic(notation: &str) -> Self {
@@ -23,14 +42,14 @@ impl Locale {
             .expect("expected a first character");
         let rank_note = notation_pieces.next()
             .expect("expected a second character");
-        Locale {
-            rank: (rank_note as u8) - 49, // 49 == '1'
-            file: (file_note as u8) - 97, // 97 == 'a'
-        }
+        Locale::new(
+            (rank_note as u8) - 49, // 49 == '1'
+            (file_note as u8) - 97, // 97 == 'a'
+        )
     }
 
     pub fn pindex(&self) -> u32 {
-        (8u32 * u32::from(self.rank)) + u32::from(self.file)
+        (8u32 * u32::from(self.rank())) + u32::from(self.file())
     }
 
     pub fn pinpoint(&self) -> Pinfield {
@@ -38,18 +57,24 @@ impl Locale {
     }
 
     pub fn is_legal(&self) -> bool {
-        self.rank < 8 && self.file < 8
+        self.rank() < 8 && self.file() < 8
+    }
+
+    fn build_possibly_illegal(rank: u8, file: u8) -> Self {
+        let rank_and_file = (rank << 4) | file;
+        Locale { rank_and_file }
     }
 
     pub fn displace(&self, offset: (i8, i8)) -> Option<Self> {
         let (rank_offset, file_offset) = offset;
-        let potential_locale = Locale {
+        // note: when constructing possibly-illegal Locales, do not use ::new
+        let potential_locale = Locale::build_possibly_illegal(
             // XXX: it won't happen with the arguments we expect to
             // give it in this program, but in the interests of Safety,
             // this is an overflow bug (-1i8 as u8 == 255u8)
-            rank: (self.rank as i8 + rank_offset) as u8,
-            file: (self.file as i8 + file_offset) as u8,
-        };
+            (self.rank() as i8 + rank_offset) as u8,
+            (self.file() as i8 + file_offset) as u8,
+        );
         if potential_locale.is_legal() {
             Some(potential_locale)
         } else {
@@ -62,16 +87,25 @@ impl Locale {
         let (real_rank, real_file) = (factor * rank_offset,
                                       factor * file_offset);
 
-        let potential_locale = Locale {
+        // note: when constructing possibly-illegal Locales, do not use ::new
+        let potential_locale = Locale::build_possibly_illegal(
             // XXX: could overflow given unrealistic arguments
-            rank: (self.rank as i8 + real_rank) as u8,
-            file: (self.file as i8 + real_file) as u8,
-        };
+            (self.rank() as i8 + real_rank) as u8,
+            (self.file() as i8 + real_file) as u8,
+        );
         if potential_locale.is_legal() {
             Some(potential_locale)
         } else {
             None
         }
+    }
+
+    pub fn rank(&self) -> u8 {
+        self.rank_and_file >> 4
+    }
+
+    pub fn file(&self) -> u8 {
+        self.rank_and_file & (0b1111)
     }
 }
 
@@ -119,6 +153,8 @@ impl Pinfield {
     }
 
     pub fn transit(&self, departure: Locale, destination: Locale) -> Pinfield {
+        // empirically, pulling function calls out of this and replacing
+        // them with bit manipulation directly doesnt help.
         self.quench(departure).alight(destination)
     }
 
@@ -129,7 +165,7 @@ impl Pinfield {
     }
 
     pub fn to_locales(&self) -> Vec<Locale> {
-        let mut locales = Vec::new();
+        let mut locales = Vec::with_capacity(8);
         let Pinfield(bits) = *self;
         let mut bitfield = 1u64;
         for rank in 0..8 {
@@ -169,8 +205,14 @@ impl Pinfield {
 #[cfg(test)]
 mod tests {
     extern crate test;
-    use self::test::Bencher;
+    extern crate rand;
+    use self::test::{Bencher, black_box};
     use super::{Locale, Pinfield};
+    use fnv;
+    use twox_hash::XxHash;
+    use std::hash::Hash;
+    use std::collections::hash_map;
+    use space::tests::rand::prelude::*;
 
     static ALGEBRAICS: [&'static str; 64] = [
         "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
@@ -184,14 +226,103 @@ mod tests {
     ];
 
     #[bench]
-    fn benchmark_to_locales(b: &mut Bencher) {
+    fn benchmark_hashing_tuple_fnv(b: &mut Bencher) {
+        let mut hasher = fnv::FnvHasher::default();
+        let t: (u8, u8) = (1, 4);
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                t.hash(&mut hasher);
+            }
+        });
+    }
+
+
+    #[bench]
+    fn benchmark_hashing_tuple_xx(b: &mut Bencher) {
+        let mut hasher = XxHash::default();
+        let t: (u8, u8) = (1, 4);
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                t.hash(&mut hasher);
+            }
+        });
+    }
+
+
+    #[bench]
+    fn benchmark_hashing_tuple_sip(b: &mut Bencher) {
+        let mut hasher = hash_map::DefaultHasher::new();
+        let t: (u8, u8) = (1, 4);
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                t.hash(&mut hasher);
+            }
+        });
+    }
+
+
+    #[bench]
+    fn benchmark_locale_lookup(b: &mut Bencher) {
+        let mut args = Vec::with_capacity(64);
+        for rank in 0..8 {
+            for file in 0..8 {
+                args.push((rank, file));
+            }
+        }
+        let mut rng = thread_rng();
+        args.shuffle(&mut rng);
+        b.iter(|| {
+            for (r, f) in &args {
+                black_box(Locale::new(*r, *f));
+            }
+        });
+
+    }
+
+
+    #[bench]
+    fn benchmark_to_locales_servantlike(b: &mut Bencher) {
+
         let mut stage = Pinfield(0);
         for r in 0..8 {
             stage = stage.alight(Locale::new(1, r));
-            stage = stage.alight(Locale::new(7, r));
         }
 
-        b.iter(|| stage.to_locales());
+        b.iter(|| {
+            for _ in 0..100 {
+                black_box(stage.to_locales());
+            }
+        });
+    }
+
+    #[bench]
+    fn benchmark_to_locales_scholarlike(b: &mut Bencher) {
+        let mut stage = Pinfield(0);
+        stage = stage.alight(Locale::new(0, 2));
+        stage = stage.alight(Locale::new(0, 5));
+
+        b.iter(|| {
+            for _ in 0..100 {
+                black_box(stage.to_locales());
+            }
+        });
+    }
+
+    #[bench]
+    fn benchmark_transit(b: &mut Bencher) {
+        let mut stage = Pinfield(0);
+        let from = Locale::new(1, 3);
+        let to = Locale::new(2, 5);
+        stage = stage.alight(from);
+
+        b.iter(|| {
+            for _ in 0..10000 {
+                black_box(stage.transit(from, to));
+            }
+        });
     }
 
     #[test]
@@ -215,6 +346,20 @@ mod tests {
                        // TODO: again, conversion in iterator
                        Locale::from_algebraic(*actuality));
         }
+    }
+
+    #[test]
+    fn concerning_all_locales() {
+        for rank in 0..8 {
+            for file in 0..8 {
+                let l = Locale {
+                    rank_and_file: (rank << 4) | file
+                };
+                assert_eq!(rank, l.rank());
+                assert_eq!(file, l.file());
+            }
+        }
+
     }
 
     #[test]
@@ -242,7 +387,7 @@ mod tests {
     fn concerning_multidisplacement() {
         for i in 0..8 {
             assert_eq!(
-                Some(Locale { rank: i as u8, file: i as u8 }),
+                Some(Locale::new(i as u8, i as u8 )),
                 Locale::new(0, 0).multidisplace((1, 1), i)
             )
         }

@@ -1,6 +1,5 @@
 use std::f32::{INFINITY, NEG_INFINITY};
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::default::Default;
 use std::fmt;
 use std::hash::BuildHasherDefault;
@@ -14,12 +13,13 @@ use time;
 use lru_cache::LruCache;
 use parking_lot;
 use twox_hash::XxHash;
+use fnv;
 
 use identity::{Agent, JobDescription, Team};
 use life::{Commit, Patch, WorldState};
 use landmark::{CENTER_OF_THE_WORLD, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN,
                LOW_COLONELCY, LOW_SEVENTH_HEAVEN, FILES};
-use space::Pinfield;
+use space::{Pinfield, Locale};
 use substrate::Bytes;
 
 
@@ -53,10 +53,10 @@ pub fn score(world: WorldState) -> f32 {
     valuation += REWARD_FOR_INITIATIVE * orientation(world.initiative);
 
     for team in Team::league() {
-        for agent in Agent::dramatis_personæ(team) {
-            valuation += f32::from(world.agent_to_pinfield_ref(agent)
+        for agent in &Agent::dramatis_personæ(team) {
+            valuation += f32::from(world.agent_to_pinfield_ref(*agent)
                                    .pincount()) *
-                figurine_valuation(agent);
+                figurine_valuation(*agent);
         }
         // breadth of scholarship bonus
         if world.agent_to_pinfield_ref(Agent {
@@ -142,7 +142,7 @@ pub fn score(world: WorldState) -> f32 {
     valuation
 }
 
-fn mmv_lva_heuristic(commit: &Commit) -> f32 {
+fn mvv_lva_heuristic(commit: &Commit) -> f32 {
     // https://chessprogramming.wikispaces.com/MVV-LVA
     match commit.hospitalization {
         Some(patient) => {
@@ -152,24 +152,24 @@ fn mmv_lva_heuristic(commit: &Commit) -> f32 {
     }
 }
 
-fn order_movements_heuristically(commits: &mut Vec<Commit>) {
-    commits.sort_by(|a, b| {
-        mmv_lva_heuristic(b)
-            .partial_cmp(&mmv_lva_heuristic(a))
-            .unwrap_or(Ordering::Equal)
+fn order_movements_intuitively(
+        experience: &fnv::FnvHashMap<Patch, u32>,
+        commits: &mut Vec<Commit>) -> Vec<Commit> {
+    let mut sorted: Vec<(Commit, Option<&u32>, f32)> = Vec::with_capacity(commits.len());
+    for c in commits {
+        sorted.push((*c, experience.get(&c.patch), mvv_lva_heuristic(&c)));
+    }
+    sorted.sort_unstable_by(|a, b| {
+        match b.1.cmp(&a.1) {
+            Ordering::Equal => b.2.partial_cmp(&a.2).unwrap_or(Ordering::Equal),
+            other => other,
+        }
     });
-}
-
-fn order_movements_intuitively(experience: &HashMap<Patch, u32>,
-    commits: &mut Vec<Commit>) {
-    commits.sort_by(|a, b| {
-        let a_feels = experience.get(&a.patch);
-        let b_feels = experience.get(&b.patch);
-        b_feels.cmp(&a_feels)
-    });
+    sorted.iter().map(|c| { c.0 }).collect()
 }
 
 pub type Variation = Vec<Patch>;
+
 
 #[allow(ptr_arg)]
 pub fn pagan_variation_format(variation: &Variation) -> String {
@@ -179,73 +179,121 @@ pub fn pagan_variation_format(variation: &Variation) -> String {
              .join(" ")
 }
 
-
-#[derive(Clone)]
-pub struct Lodestar {
-    pub score: f32,
-    pub variation: Variation,
+pub trait Memory: Clone + Send {
+    fn recombine(&mut self, other: Self);
+    fn flash(patch: Patch) -> Self;
+    fn blank() -> Self;
+    fn readable(&self) -> String;
 }
 
-impl Lodestar {
-    fn new(score: f32, variation: Variation) -> Self {
+impl Memory for Patch {
+    fn recombine(&mut self, other: Self) {
+        self.star = other.star;
+        self.whence = other.whence;
+        self.whither = other.whither;
+    }
+
+    fn flash(patch: Patch) -> Self {
+        patch
+    }
+    fn blank() -> Self {
+        // deliberately illegal hyperspace warp from the Figurehead; possibly useful for debugging.
+        // a "blank" commit isn't really a thing.
+        Patch {
+            star: Agent::new(Team::Orange, JobDescription::Figurehead),
+            whence: Locale::new(0, 0),
+            whither: Locale::new(7, 7),
+        }
+    }
+
+    fn readable(&self) -> String {
+        self.abbreviated_pagan_movement_rune()
+    }
+
+}
+
+impl Memory for Variation {
+    fn recombine(&mut self, other: Self) {
+        self.extend(other);
+    }
+
+    fn flash(patch: Patch) -> Self {
+        vec![patch]
+    }
+    fn blank() -> Self {
+        vec![]
+    }
+
+    fn readable(&self) -> String {
+        pagan_variation_format(&self)
+    }
+}
+
+#[derive(Clone)]
+pub struct Lodestar<T: Memory> {
+    pub score: f32,
+    pub memory: T,
+}
+
+impl<T: Memory> Lodestar<T> {
+    fn new(score: f32, memory: T) -> Self {
         Self {
             score,
-            variation,
+            memory,
         }
     }
 }
 
-impl fmt::Debug for Lodestar {
+impl<T: Memory> fmt::Debug for Lodestar<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f,
-               "Lodestar {{ score: {}, variation: {} }}",
+               "Lodestar {{ score: {}, memory: {} }}",
                self.score,
-               pagan_variation_format(&self.variation))
+               self.memory.readable())
     }
 }
 
-
-#[derive(Clone)]
-pub struct Souvenir {
-    soundness: u8,
-    lodestar: Lodestar,
+#[derive(Eq,PartialEq,Hash)]
+pub struct SpaceTime {
+    world_state: WorldState,
+    instant: i8,
 }
 
-impl Souvenir {
-    fn new(lodestar: Lodestar, field_depth: u8) -> Self {
-        let soundness = lodestar.variation.len() as u8 - field_depth;
-        Self { soundness, lodestar }
+
+impl SpaceTime {
+    fn new(world_state: WorldState, instant: i8) -> Self {
+        Self { world_state, instant }
     }
 }
 
 
 #[allow(too_many_arguments)]
-pub fn α_β_negamax_search(
-    world: WorldState, depth: i8, mut α: f32, β: f32, variation: Variation,
-    memory_bank: Arc<parking_lot::Mutex<LruCache<WorldState, Souvenir,
+pub fn α_β_negamax_search<T: Memory>(
+    world: WorldState, depth: i8, mut α: f32, β: f32, 
+    memory_bank: Arc<parking_lot::Mutex<LruCache<SpaceTime, Lodestar<T>,
                                     BuildHasherDefault<XxHash>>>>,
-    intuition_bank: Arc<parking_lot::Mutex<HashMap<Patch, u32>>>,
+    intuition_bank: Arc<parking_lot::Mutex<fnv::FnvHashMap<Patch, u32>>>,
     quiet: Option<u8>)
-        -> Lodestar {
+        -> Lodestar<T> {
 
     let mut premonitions = world.reckless_lookahead();
     let mut optimum = NEG_INFINITY;
-    let mut optimand = variation.clone();
+    let mut optimand = T::blank();
     if depth <= 0 || premonitions.is_empty() {
         let potential_score = orientation(world.initiative) * score(world);
         match quiet {
             None => {
-                return Lodestar::new(potential_score, variation);
+                return Lodestar::new(potential_score, T::blank());
             },
             Some(extension) => {
                 if depth.abs() >= extension as i8 {
-                    return Lodestar::new(potential_score, variation);
+                    return Lodestar::new(potential_score, T::blank());
                 }
                 premonitions = premonitions.into_iter()
                     .filter(|c| c.hospitalization.is_some())
                     .collect::<Vec<_>>();
                 if premonitions.is_empty() {
-                    return Lodestar::new(potential_score, variation)
+                    return Lodestar::new(potential_score, T::blank())
                 } else {
                     optimum = potential_score;
                 }
@@ -253,28 +301,27 @@ pub fn α_β_negamax_search(
         }
     };
 
-    order_movements_heuristically(&mut premonitions);
+    // Note: if sorting by heuristic were sufficiently expensive, it would, on balance, be better
+    // to do so only at the higher levels of the tree. From some minor empiric testing, though,
+    // sorting only at depth >= 1 has no performance impact, and at depth >=2 has a negative
+    // performance impact. So that's not the way to go.
     {
         let experience = intuition_bank.lock();
-        order_movements_intuitively(&experience, &mut premonitions)
+        premonitions = order_movements_intuitively(&experience, &mut premonitions)
     }
     for premonition in premonitions {
         let mut value = NEG_INFINITY;  // can't hurt to be pessimistic
-        let mut extended_variation = variation.clone();
-        extended_variation.push(premonition.patch);
+        let mut memory: T = T::flash(premonition.patch);
         let cached: bool;
+        let space_time = SpaceTime::new(premonition.tree, depth);
         {
             let mut open_vault = memory_bank.lock();
-            let souvenir_maybe = open_vault.get_mut(&premonition.tree);
-            match souvenir_maybe {
-                Some(souvenir) => {
-                    if souvenir.soundness as i8 >= depth {
-                        cached = true;
-                        value = souvenir.lodestar.score;
-                        extended_variation = souvenir.lodestar.variation.clone();
-                    } else {
-                        cached = false;
-                    }
+            let remembered_lodestar_maybe = open_vault.get_mut(&space_time);
+            match remembered_lodestar_maybe {
+                Some(remembered_lodestar) => {
+                    cached = true;
+                    value = remembered_lodestar.score;
+                    memory.recombine(remembered_lodestar.memory.clone());
                 }
                 None => { cached = false; }
             };
@@ -283,22 +330,22 @@ pub fn α_β_negamax_search(
         if !cached {
             let mut lodestar = α_β_negamax_search(
                 premonition.tree, depth - 1,
-                -β, -α, extended_variation.clone(),
+                -β, -α,
                 memory_bank.clone(), intuition_bank.clone(),
                 quiet
             );
             lodestar.score *= -1.;  // nega-
             value = lodestar.score;
-            extended_variation = lodestar.variation.clone();
+            memory.recombine(lodestar.memory.clone());
             memory_bank.lock().insert(
-                premonition.tree,
-                Souvenir::new(lodestar, extended_variation.len() as u8)
+                space_time,
+                lodestar,
             );
         }
 
         if value > optimum {
             optimum = value;
-            optimand = extended_variation;
+            optimand = memory;
         }
         if value > α {
             α = value;
@@ -317,23 +364,26 @@ pub fn α_β_negamax_search(
 }
 
 
-pub fn déjà_vu_table_size_bound(gib: f32) -> usize {
-    usize::from(Bytes::gibi(gib)) /
-        (mem::size_of::<WorldState>() + mem::size_of::<Lodestar>())
+pub fn déjà_vu_table_size_bound<T: Memory>(gib: f32) -> usize {
+
+    let bound = usize::from(Bytes::gibi(gib)) /
+        (mem::size_of::<SpaceTime>() + mem::size_of::<Lodestar<T>>());
+    println!("deja vu bound size: {}", bound);
+    bound
 }
 
 
-pub fn potentially_timebound_kickoff(
+pub fn potentially_timebound_kickoff<T: 'static + Memory>(
     world: &WorldState, depth: u8,
     extension_maybe: Option<u8>,
     nihilistically: bool,
     deadline_maybe: Option<time::Timespec>,
-    intuition_bank: Arc<parking_lot::Mutex<HashMap<Patch, u32>>>,
+    intuition_bank: Arc<parking_lot::Mutex<fnv::FnvHashMap<Patch, u32>>>,
     déjà_vu_bound: f32)
-        -> Option<Vec<(Commit, f32, Variation)>> {
-    let déjà_vu_table: LruCache<WorldState, Souvenir,
+        -> Option<Vec<(Commit, f32, T)>> {
+    let déjà_vu_table: LruCache<SpaceTime, Lodestar<T>,
                                 BuildHasherDefault<XxHash>> =
-        LruCache::with_hash_state(déjà_vu_table_size_bound(déjà_vu_bound),
+        LruCache::with_hash_state(déjà_vu_table_size_bound::<T>(déjà_vu_bound),
                                   Default::default());
     let memory_bank = Arc::new(parking_lot::Mutex::new(déjà_vu_table));
     let mut premonitions = if nihilistically {
@@ -341,13 +391,12 @@ pub fn potentially_timebound_kickoff(
     } else {
         world.lookahead()
     };
-    order_movements_heuristically(&mut premonitions);
     {
         let experience = intuition_bank.lock();
-        order_movements_intuitively(&experience, &mut premonitions)
+        premonitions = order_movements_intuitively(&experience, &mut premonitions)
     }
-    let mut forecasts = Vec::new();
-    let mut time_radios: Vec<(Commit, mpsc::Receiver<Lodestar>)> = Vec::new();
+    let mut forecasts = Vec::with_capacity(40);
+    let mut time_radios: Vec<(Commit, mpsc::Receiver<Lodestar<T>>)> = Vec::new();
     for &premonition in &premonitions {
         let travel_memory_bank = memory_bank.clone();
         let travel_intuition_bank = intuition_bank.clone();
@@ -355,9 +404,9 @@ pub fn potentially_timebound_kickoff(
         let explorer_radio = tx.clone();
         time_radios.push((premonition, rx));
         thread::spawn(move || {
-            let search_hit: Lodestar = α_β_negamax_search(
+            let search_hit: Lodestar<T> = α_β_negamax_search(
                 premonition.tree, (depth - 1) as i8,
-                NEG_INFINITY, INFINITY, vec![premonition.patch],
+                NEG_INFINITY, INFINITY,
                 travel_memory_bank, travel_intuition_bank,
                 extension_maybe
             );
@@ -375,7 +424,9 @@ pub fn potentially_timebound_kickoff(
             let premonition = time_radios[i].0;
             if let Ok(search_hit) = time_radios[i].1.try_recv() {
                 let value = -search_hit.score;
-                forecasts.push((premonition, value, search_hit.variation));
+                let mut full_variation = T::flash(premonition.patch);
+                full_variation.recombine(search_hit.memory);
+                forecasts.push((premonition, value, full_variation));
                 time_radios.swap_remove(i);
             }
         }
@@ -383,33 +434,35 @@ pub fn potentially_timebound_kickoff(
         debug!("waiting for {} of {} first-movement search threads",
                time_radios.len(), premonitions.len())
     }
-    forecasts.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
+    forecasts.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
+    println!("deja vu entries at end: {}", memory_bank.lock().len());
+    println!("intuition bank entries at end: {}", intuition_bank.lock().len());
     Some(forecasts)
 }
 
 
-pub fn kickoff(world: &WorldState, depth: u8, extension: Option<u8>,
+pub fn kickoff<T: 'static + Memory>(world: &WorldState, depth: u8, extension: Option<u8>,
                nihilistically: bool, déjà_vu_bound: f32)
-                   -> Vec<(Commit, f32, Variation)> {
-    let experience_table: HashMap<Patch, u32> = HashMap::new();
+                   -> Vec<(Commit, f32, T)> {
+    let experience_table: fnv::FnvHashMap<Patch, u32> = fnv::FnvHashMap::default();
     let intuition_bank = Arc::new(parking_lot::Mutex::new(experience_table));
-    potentially_timebound_kickoff(world, depth, extension, nihilistically, None,
+    potentially_timebound_kickoff::<T>(world, depth, extension, nihilistically, None,
                                   intuition_bank, déjà_vu_bound).unwrap()
 }
 
 
-pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
+pub fn iterative_deepening_kickoff<T: 'static + Memory>(world: &WorldState, timeout: time::Duration,
                                    nihilistically: bool, déjà_vu_bound: f32)
-                                   -> (Vec<(Commit, f32, Variation)>, u8) {
+                                   -> (Vec<(Commit, f32, T)>, u8) {
     let deadline = time::get_time() + timeout;
     let mut depth = 1;
-    let experience_table: HashMap<Patch, u32> = HashMap::new();
+    let experience_table = fnv::FnvHashMap::default();
     let intuition_bank = Arc::new(parking_lot::Mutex::new(experience_table));
     let mut forecasts = potentially_timebound_kickoff(
         world, depth, None, nihilistically, None,
         intuition_bank.clone(),
         déjà_vu_bound).unwrap();
-    while let Some(prophecy) = potentially_timebound_kickoff(
+    while let Some(prophecy) = potentially_timebound_kickoff::<T>(
             world, depth, None, nihilistically, Some(deadline),
             intuition_bank.clone(), déjà_vu_bound) {
         forecasts = prophecy;
@@ -420,19 +473,19 @@ pub fn iterative_deepening_kickoff(world: &WorldState, timeout: time::Duration,
 
 
 #[allow(needless_pass_by_value)] // `depth_sequence`
-pub fn fixed_depth_sequence_kickoff(world: &WorldState, depth_sequence: Vec<u8>,
+pub fn fixed_depth_sequence_kickoff<T: 'static + Memory>(world: &WorldState, depth_sequence: Vec<u8>,
                                     nihilistically: bool, déjà_vu_bound: f32)
-                                    -> Vec<(Commit, f32, Variation)> {
+                                    -> Vec<(Commit, f32, T)> {
     let mut depths = depth_sequence.iter();
-    let experience_table: HashMap<Patch, u32> = HashMap::new();
+    let experience_table = fnv::FnvHashMap::default();
     let intuition_bank = Arc::new(parking_lot::Mutex::new(experience_table));
-    let mut forecasts = potentially_timebound_kickoff(
+    let mut forecasts = potentially_timebound_kickoff::<T>(
         world, *depths.next().expect("`depth_sequence` should be nonempty"),
         None, nihilistically, None, intuition_bank.clone(),
         déjà_vu_bound
     ).unwrap();
     for &depth in depths {
-        forecasts = potentially_timebound_kickoff(
+        forecasts = potentially_timebound_kickoff::<T>(
             world, depth, None, nihilistically, None,
             intuition_bank.clone(), déjà_vu_bound).unwrap();
     }
@@ -446,10 +499,14 @@ mod tests {
     use self::test::Bencher;
 
     use time;
-    use super::{REWARD_FOR_INITIATIVE, kickoff, score};
+    use super::{REWARD_FOR_INITIATIVE, kickoff, score, SpaceTime, Variation};
     use space::Locale;
-    use life::WorldState;
-    use identity::Team;
+    use life::{WorldState, Patch};
+    use fnv;
+    use twox_hash::XxHash;
+    use std::hash::Hash;
+    use std::collections::hash_map;
+    use identity::{Agent, JobDescription, Team};
 
     const MOCK_DÉJÀ_VU_BOUND: f32 = 2.0;
 
@@ -463,6 +520,102 @@ mod tests {
     }
 
     #[bench]
+    fn benchmark_hashing_spacetime_fnv(b: &mut Bencher) {
+        let w = WorldState::new();
+        let st = SpaceTime::new(w, 3);
+        let mut hasher = fnv::FnvHasher::default();
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                st.hash(&mut hasher);
+            }
+        });
+    }
+
+    #[bench]
+    fn benchmark_hashing_spacetime_xx(b: &mut Bencher) {
+        let w = WorldState::new();
+        let mut hasher = XxHash::default();
+        let st = SpaceTime::new(w, 3);
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                st.hash(&mut hasher);
+            }
+        });
+    }
+
+    #[bench]
+    fn benchmark_hashing_spacetime_sip(b: &mut Bencher) {
+        let w = WorldState::new();
+        let mut hasher = hash_map::DefaultHasher::new();
+        let st = SpaceTime::new(w, 3);
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                st.hash(&mut hasher);
+            }
+        });
+    }
+
+    #[bench]
+    fn benchmark_hashing_patch_fnv(b: &mut Bencher) {
+        let mut hasher = fnv::FnvHasher::default();
+        let p = Patch {
+            star: Agent {
+                team: Team::Orange,
+                job_description: JobDescription::Figurehead,
+            },
+            whence: Locale::new(1, 2),
+            whither: Locale::new(3, 4)
+        };
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                p.hash(&mut hasher);
+            }
+        });
+    }
+
+    #[bench]
+    fn benchmark_hashing_patch_xx(b: &mut Bencher) {
+        let mut hasher = XxHash::default();
+        let p = Patch {
+            star: Agent {
+                team: Team::Orange,
+                job_description: JobDescription::Figurehead,
+            },
+            whence: Locale::new(1, 2),
+            whither: Locale::new(3, 4)
+        };
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                p.hash(&mut hasher);
+            }
+        });
+    }
+
+    #[bench]
+    fn benchmark_hashing_patch_sip(b: &mut Bencher) {
+        let mut hasher = hash_map::DefaultHasher::new();
+        let p = Patch {
+            star: Agent {
+                team: Team::Orange,
+                job_description: JobDescription::Figurehead,
+            },
+            whence: Locale::new(1, 2),
+            whither: Locale::new(3, 4)
+        };
+
+        b.iter(|| {
+            for _ in 0..1000 {
+                p.hash(&mut hasher);
+            }
+        });
+    }
+
+    #[bench]
     fn benchmark_scoring(b: &mut Bencher) {
         b.iter(|| score(WorldState::new()));
     }
@@ -470,25 +623,25 @@ mod tests {
     #[bench]
     fn benchmark_kickoff_depth_1(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 1, None, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 1, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_2_arbys(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 2, None, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 2, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_2_carefully(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 2, None, false, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 2, None, false, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
     fn benchmark_kickoff_depth_3(b: &mut Bencher) {
         let ws = WorldState::new();
-        b.iter(|| kickoff(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND));
+        b.iter(|| kickoff::<Patch>(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[test]
@@ -496,7 +649,7 @@ mod tests {
     fn concerning_short_circuiting_upon_finding_critical_endangerment() {
         let ws = WorldState::reconstruct("7K/r7/1r6/8/8/8/8/7k b -");
         let start = time::get_time();
-        kickoff(&ws, 30, None, true, MOCK_DÉJÀ_VU_BOUND);
+        kickoff::<Variation>(&ws, 30, None, true, MOCK_DÉJÀ_VU_BOUND);
         let duration = time::get_time() - start;
         assert!(duration.num_seconds() < 20);
     }
@@ -516,7 +669,7 @@ mod tests {
         // split, whereby transforming into a pony (rather than
         // transitioning into a princess, as would usually be
         // expected) endangers both the blue princess and figurehead
-        let tops = kickoff(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND);
+        let tops = kickoff::<Variation>(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND);
         let best_move = tops[0].0;
         let score = tops[0].1;
         println!("{:?}", best_move);
@@ -545,7 +698,7 @@ mod tests {
         world.no_castling_at_all();
 
         let depth = 2;
-        let advisory = kickoff(&world, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
+        let advisory = kickoff::<Variation>(&world, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
 
         // taking the pony is the right thing to do
         assert_eq!(Locale::new(0, 0), advisory[0].0.patch.whither);
@@ -576,7 +729,7 @@ mod tests {
 
         negaworld.no_castling_at_all();
 
-        let negadvisory = kickoff(&negaworld, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
+        let negadvisory = kickoff::<Variation>(&negaworld, depth, None, true, MOCK_DÉJÀ_VU_BOUND);
 
         // taking the pony is still the right thing to do, even in the
         // negaworld
@@ -614,7 +767,7 @@ mod tests {
             let world = WorldState::reconstruct(world_runeset);
             let mut previously = None;
             for &depth in &[2, 3, 4] {
-                let premonitions = kickoff(&world, depth, None, true, 1.0);
+                let premonitions = kickoff::<Variation>(&world, depth, None, true, 1.0);
                 let mut top_showings = 0.;
                 for showing in &premonitions[0..10] {
                     top_showings += showing.1; // (_commit, score, _variation)
