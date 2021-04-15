@@ -421,7 +421,7 @@ impl WorldState {
                     file = 0;
                     rank -= 1;
                 }
-                empty_locales @ '0' ... '8' => {
+                empty_locales @ '0' ..= '8' => {
                     let file_offset: u8 = empty_locales.to_string()
                                                        .parse()
                                                        .unwrap();
@@ -1233,7 +1233,7 @@ mod tests {
                 whither: Locale::from_algebraic("f8"),
             }, // lose all castling
         ];
-        b.iter(|| { 
+        b.iter(|| {
             for _ in 0..50 {
                 for patch in &patches {
                     black_box(ws.apply(*patch));
