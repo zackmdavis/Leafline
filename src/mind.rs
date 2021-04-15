@@ -269,7 +269,7 @@ impl SpaceTime {
 
 #[allow(too_many_arguments)]
 pub fn α_β_negamax_search<T: Memory>(
-    world: WorldState, depth: i8, mut α: f32, β: f32, 
+    world: WorldState, depth: i8, mut α: f32, β: f32,
     memory_bank: Arc<parking_lot::Mutex<LruCache<SpaceTime, Lodestar<T>,
                                     BuildHasherDefault<XxHash>>>>,
     intuition_bank: Arc<parking_lot::Mutex<fnv::FnvHashMap<Patch, u32>>>,
@@ -368,7 +368,6 @@ pub fn déjà_vu_table_size_bound<T: Memory>(gib: f32) -> usize {
 
     let bound = usize::from(Bytes::gibi(gib)) /
         (mem::size_of::<SpaceTime>() + mem::size_of::<Lodestar<T>>());
-    println!("deja vu bound size: {}", bound);
     bound
 }
 
@@ -435,8 +434,6 @@ pub fn potentially_timebound_kickoff<T: 'static + Memory>(
                time_radios.len(), premonitions.len())
     }
     forecasts.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
-    println!("deja vu entries at end: {}", memory_bank.lock().len());
-    println!("intuition bank entries at end: {}", intuition_bank.lock().len());
     Some(forecasts)
 }
 
