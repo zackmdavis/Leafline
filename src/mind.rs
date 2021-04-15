@@ -353,7 +353,7 @@ pub fn α_β_negamax_search<T: Memory>(
         if α >= β {
             if depth > 0 { // not a quietness extension
                 let mut open_vault = intuition_bank.lock();
-                let mut intuition = open_vault.entry(premonition.patch)
+                let intuition = open_vault.entry(premonition.patch)
                     .or_insert(0);
                 *intuition += 2u32.pow(depth as u32);
             }
