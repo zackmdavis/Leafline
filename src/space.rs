@@ -3,6 +3,20 @@ pub struct Locale {
     rank_and_file: u8,
 }
 
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+pub struct RelaxedLocale {
+    rank: u8,
+    file: u8,
+}
+
+// A less-compressed representation of a Locale, for compatibility with the
+// legacy web client
+impl From<Locale> for RelaxedLocale {
+    fn from(locale: Locale) -> Self {
+        Self { rank: locale.rank(), file: locale.file() }
+    }
+}
+
 pub const ORANGE_FIGUREHEAD_START: Locale = Locale { rank_and_file: (0 << 4) | 4 };
 pub const BLUE_FIGUREHEAD_START: Locale = Locale { rank_and_file: (7 << 4) | 4 };
 

@@ -2,7 +2,7 @@
 use std::default::Default;
 use std::fmt;
 
-use space::{Locale, Pinfield, ORANGE_FIGUREHEAD_START, BLUE_FIGUREHEAD_START};
+use space::{Locale, RelaxedLocale, Pinfield, ORANGE_FIGUREHEAD_START, BLUE_FIGUREHEAD_START};
 use identity::{Agent, JobDescription, Team};
 use motion::{FIGUREHEAD_MOVEMENT_TABLE, PONY_MOVEMENT_TABLE};
 use ansi_term::Colour as Color;
@@ -17,6 +17,23 @@ pub struct Patch {
     pub star: Agent,
     pub whence: Locale,
     pub whither: Locale,
+}
+
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+pub struct TransitPatch {
+    pub star: Agent,
+    pub whence: RelaxedLocale,
+    pub whither: RelaxedLocale,
+}
+
+impl From<Patch> for TransitPatch {
+    fn from(patch: Patch) -> Self {
+        Self {
+            star: patch.star,
+            whence: patch.whence.into(),
+            whither: patch.whither.into(),
+        }
+    }
 }
 
 impl Patch {

@@ -45,7 +45,7 @@ use rustc_serialize::json;
 use time::{Duration, get_time};
 
 use identity::{Agent, Team};
-use life::{Commit, Patch, WorldState};
+use life::{Commit, Patch, TransitPatch, WorldState};
 use mind::{Variation, fixed_depth_sequence_kickoff, iterative_deepening_kickoff,
            kickoff, pagan_variation_format, Memory};
 use substrate::memory_free;
@@ -182,11 +182,11 @@ fn forecast<T: 'static + Memory>(world: WorldState, bound: LookaheadBound, déj�
 #[derive(RustcEncodable, RustcDecodable)]
 struct Postcard {
     world: String,
-    patch: Patch,
+    patch: TransitPatch,
     hospitalization: Option<Agent>,
     thinking_time: u64,
     depth: u8,
-    counterreplies: Vec<Patch>,
+    counterreplies: Vec<TransitPatch>,
     rosetta_stone: String,
 }
 
@@ -211,7 +211,7 @@ fn correspondence(reminder: &str, bound: LookaheadBound, déjà_vu_bound: f32)
         let counterreplies = determination.tree
                                           .lookahead()
                                           .iter()
-                                          .map(|c| c.patch)
+                                          .map(|c| TransitPatch::from(c.patch))
                                           .collect::<Vec<_>>();
         if counterreplies.is_empty() {
             if determination.tree.in_critical_endangerment(Team::Orange) {
@@ -225,7 +225,7 @@ fn correspondence(reminder: &str, bound: LookaheadBound, déjà_vu_bound: f32)
         }
         let postcard = Postcard {
             world: determination.tree.preserve(),
-            patch: determination.patch,
+            patch: TransitPatch::from(determination.patch),
             hospitalization: determination.hospitalization,
             thinking_time: sidereal.num_milliseconds() as u64,
             depth,
