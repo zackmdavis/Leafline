@@ -1142,6 +1142,7 @@ mod tests {
 
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_servant_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1151,6 +1152,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_pony_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1160,6 +1162,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_scholar_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1169,6 +1172,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_cop_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1178,6 +1182,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_princess_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1187,6 +1192,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_figurehead_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1196,24 +1202,28 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_new_lookahead(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| ws.lookahead());
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_non_new_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.lookahead());
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_ultimate_endangerment(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.in_critical_endangerment(Team::Orange));
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_apply(b: &mut Bencher) {
         let ws = WorldState::reconstruct(
             "rnbqk2r/p1pp1ppp/1p5n/8/1bPPpP2/6PP/PP1BP3/RN1QKBNR b KQkq f3 0 6",

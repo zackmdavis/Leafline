@@ -241,6 +241,7 @@ mod tests {
     ];
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_tuple_fnv(b: &mut Bencher) {
         let mut hasher = fnv::FnvHasher::default();
         let t: (u8, u8) = (1, 4);
@@ -254,6 +255,7 @@ mod tests {
 
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_tuple_xx(b: &mut Bencher) {
         let mut hasher = XxHash::default();
         let t: (u8, u8) = (1, 4);
@@ -267,6 +269,7 @@ mod tests {
 
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_tuple_sip(b: &mut Bencher) {
         let mut hasher = hash_map::DefaultHasher::new();
         let t: (u8, u8) = (1, 4);
@@ -280,6 +283,7 @@ mod tests {
 
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_locale_lookup(b: &mut Bencher) {
         let mut args = Vec::with_capacity(64);
         for rank in 0..8 {
@@ -299,6 +303,7 @@ mod tests {
 
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_to_locales_servantlike(b: &mut Bencher) {
 
         let mut stage = Pinfield(0);
@@ -314,6 +319,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_to_locales_scholarlike(b: &mut Bencher) {
         let mut stage = Pinfield(0);
         stage = stage.alight(Locale::new(0, 2));
@@ -327,6 +333,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_transit(b: &mut Bencher) {
         let mut stage = Pinfield(0);
         let from = Locale::new(1, 3);

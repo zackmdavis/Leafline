@@ -513,6 +513,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_spacetime_fnv(b: &mut Bencher) {
         let w = WorldState::new();
         let st = SpaceTime::new(w, 3);
@@ -526,6 +527,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_spacetime_xx(b: &mut Bencher) {
         let w = WorldState::new();
         let mut hasher = XxHash::default();
@@ -539,6 +541,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_spacetime_sip(b: &mut Bencher) {
         let w = WorldState::new();
         let mut hasher = hash_map::DefaultHasher::new();
@@ -552,6 +555,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_patch_fnv(b: &mut Bencher) {
         let mut hasher = fnv::FnvHasher::default();
         let p = Patch {
@@ -571,6 +575,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_patch_xx(b: &mut Bencher) {
         let mut hasher = XxHash::default();
         let p = Patch {
@@ -590,6 +595,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_patch_sip(b: &mut Bencher) {
         let mut hasher = hash_map::DefaultHasher::new();
         let p = Patch {
@@ -609,29 +615,34 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_scoring(b: &mut Bencher) {
         b.iter(|| score(WorldState::new()));
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_kickoff_depth_1(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| kickoff::<Patch>(&ws, 1, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_kickoff_depth_2_arbys(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| kickoff::<Patch>(&ws, 2, None, true, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_kickoff_depth_2_carefully(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| kickoff::<Patch>(&ws, 2, None, false, MOCK_DÉJÀ_VU_BOUND));
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_kickoff_depth_3(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| kickoff::<Patch>(&ws, 3, None, true, MOCK_DÉJÀ_VU_BOUND));
