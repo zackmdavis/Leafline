@@ -104,6 +104,7 @@ static BLUE_AGENTS: [Agent; 6] = [
 ];
 
 impl Agent {
+    #![allow(clippy::wrong_self_convention)]
     pub fn new(team: Team, job_description: JobDescription) -> Self {
         Self { team, job_description }
     }

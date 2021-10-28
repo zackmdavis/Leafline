@@ -17,6 +17,7 @@ impl From<Locale> for RelaxedLocale {
     }
 }
 
+#[allow(clippy::identity_op)]
 pub const ORANGE_FIGUREHEAD_START: Locale = Locale { rank_and_file: (0 << 4) | 4 };
 pub const BLUE_FIGUREHEAD_START: Locale = Locale { rank_and_file: (7 << 4) | 4 };
 

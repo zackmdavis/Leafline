@@ -1,17 +1,20 @@
-#![feature(non_ascii_idents, plugin, test)]
+#![feature(plugin, test)]
 
 #![allow(unknown_lints)]
 
-#![allow(if_not_else, unused_features, clone_on_ref_ptr, unreadable_literal)]
+#![allow(clippy::if_not_else, unused_features, clippy::clone_on_ref_ptr, clippy::clunreadable_literal, mixed_script_confusables, confusable_idents)]
 #![warn(missing_debug_implementations, missing_copy_implementations,
-        trivial_casts, trivial_numeric_casts,
-        unused_import_braces, unused_qualifications)]
+trivial_casts, trivial_numeric_casts,
+unused_import_braces, unused_qualifications)]
+
 
 
 extern crate argparse;
 extern crate ansi_term;
-#[cfg_attr(test, macro_use)] extern crate itertools;
-#[macro_use] extern crate log;
+#[cfg_attr(test, macro_use)]
+extern crate itertools;
+#[macro_use]
+extern crate log;
 extern crate lru_cache;
 extern crate parking_lot;
 extern crate rustc_serialize;
@@ -19,10 +22,12 @@ extern crate time;
 extern crate twox_hash;
 extern crate fnv;
 
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate lazy_static;
 
 
-#[macro_use] mod sorceries;
+#[macro_use]
+mod sorceries;
 mod space;
 mod identity;
 mod motion;
@@ -30,7 +35,8 @@ mod landmark;
 mod life;
 mod mind;
 mod substrate;
-mod uci; // Unlikely Command Integration
+mod uci;
+// Unlikely Command Integration
 mod test_landmark;
 
 use std::fs::OpenOptions;
@@ -70,18 +76,18 @@ impl log::Log for DebugLogger {
     fn log(&self, record: &LogRecord) {
         // XXX: can't the open file handle live inside the DebugLogger struct?!
         let mut log_file = OpenOptions::new()
-                               .write(true)
-                               .append(true)
-                               .create(true)
-                               .open("leafline.log")
-                               .expect("couldn't open log file?!");
+            .write(true)
+            .append(true)
+            .create(true)
+            .open("leafline.log")
+            .expect("couldn't open log file?!");
         let log_message = format!("[{}] {}\n",
                                   time::now()
                                       .strftime("%Y-%m-%d %H:%M:%S.%f")
                                       .unwrap(),
                                   record.args());
         log_file.write_all(&log_message.into_bytes())
-                .expect("couldn't write to log file?!");
+            .expect("couldn't write to log file?!");
     }
 }
 
@@ -108,18 +114,18 @@ impl LookaheadBound {
     pub fn new_from_sequence_depiction(depiction: &str) -> Self {
         let depth_runes = depiction.split(',');
         let depth_sequence = depth_runes.map(|dd| {
-                                            dd.parse::<u8>()
-                                              .expect("couldn't parse depth \
+            dd.parse::<u8>()
+                .expect("couldn't parse depth \
                                                        sequence")
-                                        })
-                                        .collect::<Vec<_>>();
+        })
+            .collect::<Vec<_>>();
         LookaheadBound::DepthSequence(depth_sequence)
     }
 
     pub fn from_args(lookahead_depth: Option<u8>,
                      lookahead_extension: Option<u8>,
-        lookahead_depth_sequence: Option<String>,
-        lookahead_seconds: Option<u8>)
+                     lookahead_depth_sequence: Option<String>,
+                     lookahead_seconds: Option<u8>)
                      -> Result<Option<Self>, String> {
         let mut bound = None;
         let confirm_bound_is_none =
@@ -127,7 +133,7 @@ impl LookaheadBound {
                 if b.is_some() {
                     Err("more than one of `--depth`, `--depth-sequence`, or \
                          `--seconds` was passed"
-                            .to_owned())
+                        .to_owned())
                 } else {
                     Ok(true)
                 }
@@ -150,7 +156,7 @@ impl LookaheadBound {
 }
 
 fn forecast<T: 'static + Memory>(world: WorldState, bound: LookaheadBound, déjà_vu_bound: f32)
-            -> (Vec<(Commit, f32, T)>, u8, Duration) {
+                                 -> (Vec<(Commit, f32, T)>, u8, Duration) {
     let start_thinking = get_time();
     let forecasts;
     let depth;
@@ -158,14 +164,14 @@ fn forecast<T: 'static + Memory>(world: WorldState, bound: LookaheadBound, déj�
         LookaheadBound::Depth(ds, es) => {
             forecasts = kickoff::<T>(&world, ds, es, false, déjà_vu_bound);
             depth = ds;
-        },
+        }
         LookaheadBound::DepthSequence(ds) => {
             depth = *ds.last().unwrap();
             forecasts = fixed_depth_sequence_kickoff::<T>(
                 &world, ds, false, déjà_vu_bound);
             // XXX TODO: if we're just returning a number, it should be the
             // lowest depth, but we should really report all of them
-        },
+        }
         LookaheadBound::Seconds(_) => {
             let (fs, ds) = iterative_deepening_kickoff::<T>(
                 &world, bound.duration(), false, déjà_vu_bound);
@@ -195,13 +201,13 @@ struct LastMissive {
     the_triumphant: Option<Team>,
 }
 
-#[allow(collapsible_if)]
+#[allow(clippy::clcollapsible_if)]
 fn correspondence(reminder: &str, bound: LookaheadBound, déjà_vu_bound: f32)
                   -> String {
     let in_medias_res = WorldState::reconstruct(reminder);
     let (mut forecasts, depth, sidereal) = forecast::<Patch>(in_medias_res,
-                                                    bound,
-                                                    déjà_vu_bound);
+                                                             bound,
+                                                             déjà_vu_bound);
 
     if !forecasts.is_empty() {
         let (determination, _karma, _variation) = forecasts.swap_remove(0);
@@ -209,16 +215,16 @@ fn correspondence(reminder: &str, bound: LookaheadBound, déjà_vu_bound: f32)
         // (and we can imagine somewhat contrived situations where only
         // some of them are admissible movements)
         let counterreplies = determination.tree
-                                          .lookahead()
-                                          .iter()
-                                          .map(|c| TransitPatch::from(c.patch))
-                                          .collect::<Vec<_>>();
+            .lookahead()
+            .iter()
+            .map(|c| TransitPatch::from(c.patch))
+            .collect::<Vec<_>>();
         if counterreplies.is_empty() {
             if determination.tree.in_critical_endangerment(Team::Orange) {
                 return json::encode(&LastMissive {
-                           the_triumphant: Some(Team::Blue),
-                       })
-                           .unwrap();
+                    the_triumphant: Some(Team::Blue),
+                })
+                    .unwrap();
             } else {
                 return json::encode(&LastMissive { the_triumphant: None }).unwrap();
             }
@@ -233,13 +239,11 @@ fn correspondence(reminder: &str, bound: LookaheadBound, déjà_vu_bound: f32)
             rosetta_stone: determination.patch.abbreviated_pagan_movement_rune(),
         };
         json::encode(&postcard).unwrap()
+    } else if in_medias_res.in_critical_endangerment(Team::Blue) {
+        json::encode(&LastMissive { the_triumphant: Some(Team::Orange) })
+            .unwrap()
     } else {
-        if in_medias_res.in_critical_endangerment(Team::Blue) {
-            json::encode(&LastMissive { the_triumphant: Some(Team::Orange) })
-                .unwrap()
-        } else {
-            json::encode(&LastMissive { the_triumphant: None }).unwrap()
-        }
+        json::encode(&LastMissive { the_triumphant: None }).unwrap()
     }
 }
 
@@ -301,15 +305,15 @@ fn main() {
             &["--déjà-vu-bound", "--deja-vu-bound"],
             Store,
             "try to not store more entries in the déjà vu table than fit in \
-             this many GiB of memory"
+             this many GiB of memory",
         );
         parser.refer(&mut debug_logging).add_option(
             &["--debug"],
             StoreTrue,
-            "run with debug logging to file"
+            "run with debug logging to file",
         );
         parser.add_option(&["--version", "-v"],
-            Print(env!("CARGO_PKG_VERSION").to_owned()), "diplay the version");
+                          Print(env!("CARGO_PKG_VERSION").to_owned()), "diplay the version");
         parser.parse_args_or_exit();
     }
 
@@ -354,7 +358,7 @@ fn main() {
             println!("Leafline substrate accountant detected {:.3} \
                      GiB of free memory.",
                      bytes.in_gib());
-        },
+        }
         None => {
             println!("Could not detect amount of free memory! \
                       It is possible \
@@ -373,7 +377,7 @@ fn main() {
                                                 lookahead_extension,
                                                 lookahead_depth_sequence,
                                                 lookahead_seconds)
-                          .unwrap();
+        .unwrap();
     loop {
         match bound_maybe {
             None => {
@@ -394,14 +398,11 @@ fn main() {
                 let forecasts = our_forecasts;
                 println!("{}", world);
                 let depth_report = match *bound {
-                    LookaheadBound::Depth(standard, extension) => {
-                        match extension {
-                            Some(quietening) => format!(
-                                "at least {} and up to {}",
-                                standard,
-                                standard + quietening),
-                            None => format!("{}", depth)
-                        }
+                    LookaheadBound::Depth(standard, Some(quietening)) => {
+                        format!(
+                            "at least {} and up to {}",
+                            standard,
+                            standard + quietening)
                     }
                     _ => format!("{}", depth),
                 };
@@ -415,7 +416,7 @@ fn main() {
                              index,
                              commit,
                              Color::Purple.bold()
-                                          .paint(&format!("{:.1}", score)),
+                                 .paint(&format!("{:.1}", score)),
                              pagan_variation_format(&variation));
                     premonitions.push(commit);
                 }
@@ -467,5 +468,4 @@ mod tests {
         assert_eq!("{\"the_triumphant\":\"Orange\"}".to_owned(),
                    blue_concession);
     }
-
 }

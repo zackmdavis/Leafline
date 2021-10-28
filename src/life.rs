@@ -746,7 +746,7 @@ impl WorldState {
     /// where you stand, then you know where to land, and if you fall,
     /// it won't matter, because you'll know that you're right."
     ///                                   —Fiona Apple
-    pub fn servant_lookahead(&self, team: Team, nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
+    pub fn servant_lookahead(&self, team: Team, nihilistically: bool, premonitions: &mut Vec<Commit>) {
         let initial_rank;
         let standard_offset;
         let boost_offset;
@@ -772,7 +772,7 @@ impl WorldState {
             let std_destination_maybe = start_locale.displace(standard_offset);
             if let Some(destination_locale) = std_destination_maybe {
                 if self.unoccupied().query(destination_locale) {
-                    self.predict(&mut premonitions,
+                    self.predict(premonitions,
                                  Patch {
                                      star: servant_agent,
                                      whence: start_locale,
@@ -792,7 +792,7 @@ impl WorldState {
                                                        .unwrap();
                 if self.unoccupied().query(boost_destination) &&
                    self.unoccupied().query(standard_destination) {
-                    self.predict(&mut premonitions,
+                    self.predict(premonitions,
                                  Patch {
                                      star: servant_agent,
                                      whence: start_locale,
@@ -806,7 +806,7 @@ impl WorldState {
                 let stun_destination_maybe = start_locale.displace(stun_offset);
                 if let Some(stun_destination) = stun_destination_maybe {
                     if self.occupied_by(team.opposition()).query(stun_destination) {
-                        self.predict(&mut premonitions,
+                        self.predict(premonitions,
                                      Patch {
                                          star: servant_agent,
                                          whence: start_locale,
@@ -815,7 +815,7 @@ impl WorldState {
                                      nihilistically)
                     } else if let Some(passing_by_target) = self.passing_by_locale {
                         if passing_by_target == stun_destination {
-                            self.predict(&mut premonitions,
+                            self.predict(premonitions,
                                          Patch {
                                              star: servant_agent,
                                              whence: start_locale,
@@ -829,7 +829,7 @@ impl WorldState {
         }
     }
 
-    fn ponylike_lookahead(&self, agent: Agent, nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
+    fn ponylike_lookahead(&self, agent: Agent, nihilistically: bool, premonitions: &mut Vec<Commit>) {
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
         let movement_table = match agent.job_description {
             JobDescription::Pony => PONY_MOVEMENT_TABLE,
@@ -843,7 +843,7 @@ impl WorldState {
                         start_locale.pindex() as usize]))
                                    .to_locales();
             for destination in destinations {
-                self.predict(&mut premonitions,
+                self.predict(premonitions,
                              Patch {
                                  star: agent,
                                  whence: start_locale,
@@ -860,7 +860,7 @@ impl WorldState {
         job_description: JobDescription,
         start_locales: &Vec<Locale>,
         nihilistically: bool,
-        mut premonitions: &mut Vec<Commit>)
+        premonitions: &mut Vec<Commit>)
                               {
         let offsets = match job_description {
             JobDescription::Scholar => SCHOLAR_OFFSETS,
@@ -891,7 +891,7 @@ impl WorldState {
                             let friend = self.occupied_by(agent.team)
                                              .query(destination);
                             if empty || !friend {
-                                self.predict(&mut premonitions,
+                                self.predict(premonitions,
                                              Patch {
                                                  star: agent,
                                                  whence: *start_locale,
@@ -978,7 +978,7 @@ impl WorldState {
     }
 
     pub fn service_lookahead(&self, team: Team,
-                             nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
+                             nihilistically: bool, premonitions: &mut Vec<Commit>) {
 
         let (east_service, west_service) = match team {
             Team::Orange => (self.orange_east_service_eligibility(),
@@ -1043,7 +1043,7 @@ impl WorldState {
                 }
                 if !locales.iter().any(
                     |l| self.is_being_leered_at_by(*l, team.opposition())) {
-                    self.predict(&mut premonitions, patch, nihilistically);
+                    self.predict(premonitions, patch, nihilistically);
                 }
             }
         }
@@ -1466,7 +1466,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(similar_names)]
+    #[allow(clippy::similar_names)]
     fn concerning_taking_turns() {
         let state1 = WorldState::new();
         let state2 = state1.lookahead()[0].tree;

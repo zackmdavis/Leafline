@@ -1,9 +1,7 @@
-#[macro_use]
 macro_rules! moral_panic {
     ($y:expr) => (panic!("{}, which is contrary to the operation of the moral law!", $y))
 }
 
-#[macro_use]
 macro_rules! match_agent {
     ($agent:expr, $($team:ident, $job:ident => $val:expr),*) => {
         match $agent {
@@ -14,7 +12,6 @@ macro_rules! match_agent {
 }
 
 #[allow(unused_macros)] // it is too used, in tests—hrmph
-#[macro_use]
 macro_rules! assert_eq_within_ε {
     // crude edit of the canonical `assert_eq!`
     ($left:expr, $right:expr, $ε:expr) => ({

@@ -146,7 +146,7 @@ fn mvv_lva_heuristic(commit: &Commit) -> f32 {
     // https://chessprogramming.wikispaces.com/MVV-LVA
     match commit.hospitalization {
         Some(patient) => {
-            (figurine_valuation(patient) - figurine_valuation(commit.patch.star))
+            figurine_valuation(patient) - figurine_valuation(commit.patch.star)
         }
         None => 0.0,
     }
@@ -157,7 +157,7 @@ fn order_movements_intuitively(
         commits: &mut Vec<Commit>) -> Vec<Commit> {
     let mut sorted: Vec<(Commit, Option<&u32>, f32)> = Vec::with_capacity(commits.len());
     for c in commits {
-        sorted.push((*c, experience.get(&c.patch), mvv_lva_heuristic(&c)));
+        sorted.push((*c, experience.get(&c.patch), mvv_lva_heuristic(c)));
     }
     sorted.sort_unstable_by(|a, b| {
         match b.1.cmp(&a.1) {
@@ -171,7 +171,7 @@ fn order_movements_intuitively(
 pub type Variation = Vec<Patch>;
 
 
-#[allow(ptr_arg)]
+#[allow(clippy::ptr_arg)]
 pub fn pagan_variation_format(variation: &Variation) -> String {
     variation.iter()
              .map(|p| p.abbreviated_pagan_movement_rune())
@@ -225,7 +225,7 @@ impl Memory for Variation {
     }
 
     fn readable(&self) -> String {
-        pagan_variation_format(&self)
+        pagan_variation_format(self)
     }
 }
 
@@ -266,8 +266,8 @@ impl SpaceTime {
     }
 }
 
-
-#[allow(too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity)]
 pub fn α_β_negamax_search<T: Memory>(
     world: WorldState, depth: i8, mut α: f32, β: f32,
     memory_bank: Arc<parking_lot::Mutex<LruCache<SpaceTime, Lodestar<T>,
@@ -365,10 +365,8 @@ pub fn α_β_negamax_search<T: Memory>(
 
 
 pub fn déjà_vu_table_size_bound<T: Memory>(gib: f32) -> usize {
-
-    let bound = usize::from(Bytes::gibi(gib)) /
-        (mem::size_of::<SpaceTime>() + mem::size_of::<Lodestar<T>>());
-    bound
+    usize::from(Bytes::gibi(gib)) /
+        (mem::size_of::<SpaceTime>() + mem::size_of::<Lodestar<T>>())
 }
 
 
@@ -468,8 +466,7 @@ pub fn iterative_deepening_kickoff<T: 'static + Memory>(world: &WorldState, time
     (forecasts, depth-1)
 }
 
-
-#[allow(needless_pass_by_value)] // `depth_sequence`
+#[allow(clippy::needless_pass_by_value)] // `depth_sequence`
 pub fn fixed_depth_sequence_kickoff<T: 'static + Memory>(world: &WorldState, depth_sequence: Vec<u8>,
                                     nihilistically: bool, déjà_vu_bound: f32)
                                     -> Vec<(Commit, f32, T)> {
@@ -652,7 +649,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(float_cmp)]
+    #[allow(clippy::float_cmp)]
     fn concerning_fairness_of_the_initial_position() {
         // It's okay to assume this is really 0.0. Floats may be imprecise,
         // but they do have well-defined behavior.
