@@ -1,9 +1,11 @@
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+use serde::Serialize;
+
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub struct Locale {
     rank_and_file: u8,
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub struct RelaxedLocale {
     rank: u8,
     file: u8,

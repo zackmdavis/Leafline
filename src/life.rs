@@ -6,20 +6,21 @@ use space::{Locale, RelaxedLocale, Pinfield, ORANGE_FIGUREHEAD_START, BLUE_FIGUR
 use identity::{Agent, JobDescription, Team};
 use motion::{FIGUREHEAD_MOVEMENT_TABLE, PONY_MOVEMENT_TABLE};
 use ansi_term::Colour as Color;
+use serde::Serialize;
 
 static SCHOLAR_OFFSETS: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
 static COP_OFFSETS: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
 
 /// represents the movement of a figurine
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub struct Patch {
     pub star: Agent,
     pub whence: Locale,
     pub whither: Locale,
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub struct TransitPatch {
     pub star: Agent,
     pub whence: RelaxedLocale,

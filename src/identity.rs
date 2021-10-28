@@ -3,8 +3,11 @@ use std::fmt;
 use ansi_term::Colour as Color;  // this is America
 use ansi_term::Style;
 
+use serde::Serialize;
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+
+
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub enum Team {
     Orange,
     Blue,
@@ -32,7 +35,7 @@ impl Team {
     }
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub enum JobDescription {
     Servant,  // ♂
     Pony,  // ♀
@@ -42,7 +45,7 @@ pub enum JobDescription {
     Figurehead, // ♂
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub struct Agent {
     pub team: Team,
     pub job_description: JobDescription,

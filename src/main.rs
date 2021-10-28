@@ -17,10 +17,11 @@ extern crate itertools;
 extern crate log;
 extern crate lru_cache;
 extern crate parking_lot;
-extern crate rustc_serialize;
 extern crate time;
 extern crate twox_hash;
 extern crate fnv;
+extern crate serde_json;
+extern crate serde;
 
 #[macro_use]
 extern crate lazy_static;
@@ -47,7 +48,6 @@ use std::process;
 use ansi_term::Colour as Color;
 use argparse::{ArgumentParser, Print, Store, StoreOption, StoreTrue};
 use log::{LogLevelFilter, LogMetadata, LogRecord, SetLoggerError};
-use rustc_serialize::{json, Encodable};
 use time::{Duration, get_time};
 
 use identity::{Agent, Team};
@@ -55,9 +55,12 @@ use life::{Commit, Patch, TransitPatch, WorldState};
 use mind::{Variation, fixed_depth_sequence_kickoff, iterative_deepening_kickoff,
            kickoff, pagan_variation_format, Memory};
 use substrate::memory_free;
+use serde_json::to_string;
+use serde::Serialize;
 
-fn encode<T: Encodable>(object: &T) -> String {
-    json::encode(object).unwrap()
+fn encode<T>(value: &T) -> String
+    where  T: ?Sized + serde::ser::Serialize {
+    to_string(value).unwrap()
 }
 
 struct DebugLogger;
@@ -188,7 +191,7 @@ fn forecast<T: 'static + Memory>(world: WorldState, bound: LookaheadBound, déj�
 }
 
 
-#[derive(RustcEncodable, RustcDecodable)]
+#[derive(Serialize)]
 struct Postcard {
     world: String,
     patch: TransitPatch,
@@ -199,7 +202,7 @@ struct Postcard {
     rosetta_stone: String,
 }
 
-#[derive(RustcEncodable, RustcDecodable)]
+#[derive(Serialize)]
 struct LastMissive {
     the_triumphant: Option<Team>,
 }
@@ -224,12 +227,11 @@ fn correspondence(reminder: &str, bound: LookaheadBound, déjà_vu_bound: f32)
             .collect::<Vec<_>>();
         if counterreplies.is_empty() {
             if determination.tree.in_critical_endangerment(Team::Orange) {
-                return json::encode(&LastMissive {
+                return encode(&LastMissive {
                     the_triumphant: Some(Team::Blue),
                 })
-                    .unwrap();
             } else {
-                return json::encode(&LastMissive { the_triumphant: None }).unwrap();
+                return encode(&LastMissive { the_triumphant: None });
             }
         }
         let postcard = Postcard {
@@ -241,12 +243,11 @@ fn correspondence(reminder: &str, bound: LookaheadBound, déjà_vu_bound: f32)
             counterreplies,
             rosetta_stone: determination.patch.abbreviated_pagan_movement_rune(),
         };
-        json::encode(&postcard).unwrap()
+        encode(&postcard)
     } else if in_medias_res.in_critical_endangerment(Team::Blue) {
-        json::encode(&LastMissive { the_triumphant: Some(Team::Orange) })
-            .unwrap()
+        encode(&LastMissive { the_triumphant: Some(Team::Orange) })
     } else {
-        json::encode(&LastMissive { the_triumphant: None }).unwrap()
+        encode(&LastMissive { the_triumphant: None })
     }
 }
 
