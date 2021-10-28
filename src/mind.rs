@@ -21,7 +21,9 @@ use landmark::{CENTER_OF_THE_WORLD, HIGH_COLONELCY, HIGH_SEVENTH_HEAVEN,
                LOW_COLONELCY, LOW_SEVENTH_HEAVEN, FILES};
 use space::{Pinfield, Locale};
 use substrate::Bytes;
+use std::collections::hash_map::RandomState;
 
+type Cache<T> = LruCache<SpaceTime, Lodestar<T>, RandomState>;
 
 const REWARD_FOR_INITIATIVE: f32 = 0.5;
 
@@ -270,8 +272,7 @@ impl SpaceTime {
 #[allow(clippy::type_complexity)]
 pub fn α_β_negamax_search<T: Memory>(
     world: WorldState, depth: i8, mut α: f32, β: f32,
-    memory_bank: Arc<parking_lot::Mutex<LruCache<SpaceTime, Lodestar<T>,
-                                    BuildHasherDefault<XxHash>>>>,
+    memory_bank: Arc<parking_lot::Mutex<Cache<T>>>,
     intuition_bank: Arc<parking_lot::Mutex<fnv::FnvHashMap<Patch, u32>>>,
     quiet: Option<u8>)
         -> Lodestar<T> {
@@ -378,10 +379,8 @@ pub fn potentially_timebound_kickoff<T: 'static + Memory>(
     intuition_bank: Arc<parking_lot::Mutex<fnv::FnvHashMap<Patch, u32>>>,
     déjà_vu_bound: f32)
         -> Option<Vec<(Commit, f32, T)>> {
-    let déjà_vu_table: LruCache<SpaceTime, Lodestar<T>,
-                                BuildHasherDefault<XxHash>> =
-        LruCache::with_hash_state(déjà_vu_table_size_bound::<T>(déjà_vu_bound),
-                                  Default::default());
+    let déjà_vu_table: Cache<T> =
+        LruCache::new(déjà_vu_table_size_bound::<T>(déjà_vu_bound));
     let memory_bank = Arc::new(parking_lot::Mutex::new(déjà_vu_table));
     let mut premonitions = if nihilistically {
         world.reckless_lookahead()
