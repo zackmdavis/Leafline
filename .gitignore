@@ -1,6 +1,7 @@
 # editor droppings
 *.sw[po]
 *~
+.idea/*
 
 # Cargo build directory
 target/
