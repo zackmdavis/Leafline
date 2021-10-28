@@ -1133,8 +1133,10 @@ mod tests {
     use std::mem;
     use self::test::{Bencher, black_box};
     use super::{WorldState, Patch, Commit};
-    use space::Locale;
+    use space::{Locale, RelaxedLocale};
     use identity::{Team, JobDescription, Agent};
+    use encode;
+    use life::TransitPatch;
 
     // an arbitrarily chosen "complicated" looking position from a Kasparov
     // game
@@ -1687,7 +1689,28 @@ mod tests {
                    best.hospitalization);
         assert_eq!("rnbqkbnr/ppp2ppp/3Pp3/8/8/8/PPPP1PPP/RNBQKBNR b KQkq -",
                    best.tree.preserve());
+    }
+
+    #[test]
+    fn test_patch_serialization() {
+        let p = Patch {
+            star: Agent::new(Team::Blue, JobDescription::Pony),
+            whence: Locale::new(1, 2),
+            whither: Locale::new(2, 4),
+        };
+
+        assert_eq!(r#"{"star":{"team":"Blue","job_description":"Pony"},"whence":{"rank_and_file":18},"whither":{"rank_and_file":36}}"#, encode(&p));
+    }
 
 
+    #[test]
+    fn test_transit_patch_serialization() {
+        let p = TransitPatch {
+            star: Agent::new(Team::Blue, JobDescription::Pony),
+            whence: RelaxedLocale::from( Locale::new(1, 2)),
+            whither: RelaxedLocale::from( Locale::new(2, 4)),
+        };
+
+        assert_eq!(r#"{"star":{"team":"Blue","job_description":"Pony"},"whence":{"rank":1,"file":2},"whither":{"rank":2,"file":4}}"#, encode(&p));
     }
 }

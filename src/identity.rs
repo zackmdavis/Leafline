@@ -219,3 +219,58 @@ impl fmt::Display for Agent {
                    .paint(&self.to_figurine_display_rune().to_string()))
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+
+    use encode;
+    use super::Team;
+    use identity::{JobDescription, Agent};
+
+    #[test]
+    fn test_team_serialization() {
+        let o = Team::Orange;
+        assert_eq!(r#""Orange""#, encode(&o));
+
+        let b = Team::Blue;
+        assert_eq!(r#""Blue""#, encode(&b));
+    }
+
+    #[test]
+    fn test_job_description_serialization() {
+
+        let servant = JobDescription::Servant;
+        assert_eq!(r#""Servant""#, encode(&servant));
+
+
+        let pony = JobDescription::Pony;
+        assert_eq!(r#""Pony""#, encode(&pony));
+
+
+        let scholar = JobDescription::Scholar;
+        assert_eq!(r#""Scholar""#, encode(&scholar));
+
+
+        let cop = JobDescription::Cop;
+        assert_eq!(r#""Cop""#, encode(&cop));
+
+
+        let princess = JobDescription::Princess;
+        assert_eq!(r#""Princess""#, encode(&princess));
+
+
+        let figurehead = JobDescription::Figurehead;
+        assert_eq!(r#""Figurehead""#, encode(&figurehead));
+    }
+
+    #[test]
+    fn test_agent_serialization() {
+        let a = Agent {
+            team: Team::Orange,
+            job_description: JobDescription::Cop
+        };
+
+        assert_eq!( r#"{"team":"Orange","job_description":"Cop"}"#, encode(&a));
+    }
+}

@@ -47,7 +47,7 @@ use std::process;
 use ansi_term::Colour as Color;
 use argparse::{ArgumentParser, Print, Store, StoreOption, StoreTrue};
 use log::{LogLevelFilter, LogMetadata, LogRecord, SetLoggerError};
-use rustc_serialize::json;
+use rustc_serialize::{json, Encodable};
 use time::{Duration, get_time};
 
 use identity::{Agent, Team};
@@ -56,6 +56,9 @@ use mind::{Variation, fixed_depth_sequence_kickoff, iterative_deepening_kickoff,
            kickoff, pagan_variation_format, Memory};
 use substrate::memory_free;
 
+fn encode<T: Encodable>(object: &T) -> String {
+    json::encode(object).unwrap()
+}
 
 struct DebugLogger;
 
@@ -459,6 +462,11 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{LookaheadBound, correspondence};
+    use ::{Postcard, encode};
+    use life::TransitPatch;
+    use space::{RelaxedLocale, Locale};
+    use identity::{Agent, JobDescription, Team};
+    use LastMissive;
 
     #[test]
     fn concerning_correspondence_victory_conditions() {
@@ -467,5 +475,50 @@ mod tests {
                                              1.0);
         assert_eq!("{\"the_triumphant\":\"Orange\"}".to_owned(),
                    blue_concession);
+    }
+
+    #[test]
+    fn test_serialize_postcard() {
+        let p = Postcard {
+            world: "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2".to_string(),
+            patch: TransitPatch {
+                star: Agent { team: Team::Orange, job_description: JobDescription::Scholar },
+                whence: RelaxedLocale::from(Locale::new(1, 2)),
+                whither: RelaxedLocale::from(Locale::new(3, 4)),
+            },
+            hospitalization: None,
+            thinking_time: 123,
+            depth: 4,
+            counterreplies: vec![],
+            rosetta_stone: "Bd5".to_string()
+        };
+
+        assert_eq!(r#"{
+"world":"rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2",
+"patch":{
+"star":{
+"team":"Orange",
+"job_description":"Scholar"
+},
+"whence":{"rank":1,"file":2},
+"whither":{"rank":3,"file":4}
+},
+"hospitalization":null,
+"thinking_time":123,
+"depth":4,
+"counterreplies":[],
+"rosetta_stone":"Bd5"
+}"#.replace("\n", ""),
+            encode(&p)
+        );
+
+    }
+
+    #[test]
+    fn test_serialize_last_missive() {
+        let l1 = LastMissive { the_triumphant: None };
+        assert_eq!(r#"{"the_triumphant":null}"#, encode(&l1));
+        let l1 = LastMissive { the_triumphant: Some(Team::Orange) };
+        assert_eq!(r#"{"the_triumphant":"Orange"}"#, encode(&l1));
     }
 }

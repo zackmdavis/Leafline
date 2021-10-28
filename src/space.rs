@@ -228,6 +228,8 @@ mod tests {
     use std::hash::Hash;
     use std::collections::hash_map;
     use space::tests::rand::prelude::*;
+    use encode;
+    use space::RelaxedLocale;
 
     static ALGEBRAICS: [&'static str; 64] = [
         "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
@@ -446,4 +448,19 @@ mod tests {
         let stage = Pinfield::init(&starters);
         assert_eq!(3, stage.pincount());
     }
+
+    #[test]
+    fn test_locale_serialization() {
+        let l = Locale::new(1, 2);
+
+        assert_eq!(r#"{"rank_and_file":18}"#, encode(&l));
+    }
+
+    #[test]
+    fn test_relaxed_locale_serialization() {
+        let rl = RelaxedLocale::from(Locale::new(1, 2));
+        assert_eq!(r#"{"rank":1,"file":2}"#, encode(&rl));
+    }
+
+
 }
