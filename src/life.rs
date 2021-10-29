@@ -6,20 +6,21 @@ use space::{Locale, RelaxedLocale, Pinfield, ORANGE_FIGUREHEAD_START, BLUE_FIGUR
 use identity::{Agent, JobDescription, Team};
 use motion::{FIGUREHEAD_MOVEMENT_TABLE, PONY_MOVEMENT_TABLE};
 use ansi_term::Colour as Color;
+use serde::Serialize;
 
 static SCHOLAR_OFFSETS: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
 static COP_OFFSETS: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
 
 /// represents the movement of a figurine
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub struct Patch {
     pub star: Agent,
     pub whence: Locale,
     pub whither: Locale,
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub struct TransitPatch {
     pub star: Agent,
     pub whence: RelaxedLocale,
@@ -746,7 +747,7 @@ impl WorldState {
     /// where you stand, then you know where to land, and if you fall,
     /// it won't matter, because you'll know that you're right."
     ///                                   —Fiona Apple
-    pub fn servant_lookahead(&self, team: Team, nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
+    pub fn servant_lookahead(&self, team: Team, nihilistically: bool, premonitions: &mut Vec<Commit>) {
         let initial_rank;
         let standard_offset;
         let boost_offset;
@@ -772,7 +773,7 @@ impl WorldState {
             let std_destination_maybe = start_locale.displace(standard_offset);
             if let Some(destination_locale) = std_destination_maybe {
                 if self.unoccupied().query(destination_locale) {
-                    self.predict(&mut premonitions,
+                    self.predict(premonitions,
                                  Patch {
                                      star: servant_agent,
                                      whence: start_locale,
@@ -792,7 +793,7 @@ impl WorldState {
                                                        .unwrap();
                 if self.unoccupied().query(boost_destination) &&
                    self.unoccupied().query(standard_destination) {
-                    self.predict(&mut premonitions,
+                    self.predict(premonitions,
                                  Patch {
                                      star: servant_agent,
                                      whence: start_locale,
@@ -806,7 +807,7 @@ impl WorldState {
                 let stun_destination_maybe = start_locale.displace(stun_offset);
                 if let Some(stun_destination) = stun_destination_maybe {
                     if self.occupied_by(team.opposition()).query(stun_destination) {
-                        self.predict(&mut premonitions,
+                        self.predict(premonitions,
                                      Patch {
                                          star: servant_agent,
                                          whence: start_locale,
@@ -815,7 +816,7 @@ impl WorldState {
                                      nihilistically)
                     } else if let Some(passing_by_target) = self.passing_by_locale {
                         if passing_by_target == stun_destination {
-                            self.predict(&mut premonitions,
+                            self.predict(premonitions,
                                          Patch {
                                              star: servant_agent,
                                              whence: start_locale,
@@ -829,7 +830,7 @@ impl WorldState {
         }
     }
 
-    fn ponylike_lookahead(&self, agent: Agent, nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
+    fn ponylike_lookahead(&self, agent: Agent, nihilistically: bool, premonitions: &mut Vec<Commit>) {
         let positional_chart: &Pinfield = self.agent_to_pinfield_ref(agent);
         let movement_table = match agent.job_description {
             JobDescription::Pony => PONY_MOVEMENT_TABLE,
@@ -843,7 +844,7 @@ impl WorldState {
                         start_locale.pindex() as usize]))
                                    .to_locales();
             for destination in destinations {
-                self.predict(&mut premonitions,
+                self.predict(premonitions,
                              Patch {
                                  star: agent,
                                  whence: start_locale,
@@ -860,7 +861,7 @@ impl WorldState {
         job_description: JobDescription,
         start_locales: &Vec<Locale>,
         nihilistically: bool,
-        mut premonitions: &mut Vec<Commit>)
+        premonitions: &mut Vec<Commit>)
                               {
         let offsets = match job_description {
             JobDescription::Scholar => SCHOLAR_OFFSETS,
@@ -891,7 +892,7 @@ impl WorldState {
                             let friend = self.occupied_by(agent.team)
                                              .query(destination);
                             if empty || !friend {
-                                self.predict(&mut premonitions,
+                                self.predict(premonitions,
                                              Patch {
                                                  star: agent,
                                                  whence: *start_locale,
@@ -978,7 +979,7 @@ impl WorldState {
     }
 
     pub fn service_lookahead(&self, team: Team,
-                             nihilistically: bool, mut premonitions: &mut Vec<Commit>) {
+                             nihilistically: bool, premonitions: &mut Vec<Commit>) {
 
         let (east_service, west_service) = match team {
             Team::Orange => (self.orange_east_service_eligibility(),
@@ -1043,7 +1044,7 @@ impl WorldState {
                 }
                 if !locales.iter().any(
                     |l| self.is_being_leered_at_by(*l, team.opposition())) {
-                    self.predict(&mut premonitions, patch, nihilistically);
+                    self.predict(premonitions, patch, nihilistically);
                 }
             }
         }
@@ -1133,8 +1134,10 @@ mod tests {
     use std::mem;
     use self::test::{Bencher, black_box};
     use super::{WorldState, Patch, Commit};
-    use space::Locale;
+    use space::{Locale, RelaxedLocale};
     use identity::{Team, JobDescription, Agent};
+    use encode;
+    use life::TransitPatch;
 
     // an arbitrarily chosen "complicated" looking position from a Kasparov
     // game
@@ -1142,6 +1145,7 @@ mod tests {
 
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_servant_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1151,6 +1155,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_pony_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1160,6 +1165,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_scholar_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1169,6 +1175,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_cop_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1178,6 +1185,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_princess_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1187,6 +1195,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_figurehead_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| {
@@ -1196,24 +1205,28 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_new_lookahead(b: &mut Bencher) {
         let ws = WorldState::new();
         b.iter(|| ws.lookahead());
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_non_new_lookahead(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.lookahead());
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_ultimate_endangerment(b: &mut Bencher) {
         let ws = WorldState::reconstruct(VISION);
         b.iter(|| ws.in_critical_endangerment(Team::Orange));
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_apply(b: &mut Bencher) {
         let ws = WorldState::reconstruct(
             "rnbqk2r/p1pp1ppp/1p5n/8/1bPPpP2/6PP/PP1BP3/RN1QKBNR b KQkq f3 0 6",
@@ -1466,7 +1479,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(similar_names)]
+    #[allow(clippy::similar_names)]
     fn concerning_taking_turns() {
         let state1 = WorldState::new();
         let state2 = state1.lookahead()[0].tree;
@@ -1677,7 +1690,28 @@ mod tests {
                    best.hospitalization);
         assert_eq!("rnbqkbnr/ppp2ppp/3Pp3/8/8/8/PPPP1PPP/RNBQKBNR b KQkq -",
                    best.tree.preserve());
+    }
+
+    #[test]
+    fn test_patch_serialization() {
+        let p = Patch {
+            star: Agent::new(Team::Blue, JobDescription::Pony),
+            whence: Locale::new(1, 2),
+            whither: Locale::new(2, 4),
+        };
+
+        assert_eq!(r#"{"star":{"team":"Blue","job_description":"Pony"},"whence":{"rank_and_file":18},"whither":{"rank_and_file":36}}"#, encode(&p));
+    }
 
 
+    #[test]
+    fn test_transit_patch_serialization() {
+        let p = TransitPatch {
+            star: Agent::new(Team::Blue, JobDescription::Pony),
+            whence: RelaxedLocale::from( Locale::new(1, 2)),
+            whither: RelaxedLocale::from( Locale::new(2, 4)),
+        };
+
+        assert_eq!(r#"{"star":{"team":"Blue","job_description":"Pony"},"whence":{"rank":1,"file":2},"whither":{"rank":2,"file":4}}"#, encode(&p));
     }
 }

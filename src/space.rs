@@ -1,9 +1,11 @@
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+use serde::Serialize;
+
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub struct Locale {
     rank_and_file: u8,
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub struct RelaxedLocale {
     rank: u8,
     file: u8,
@@ -17,6 +19,7 @@ impl From<Locale> for RelaxedLocale {
     }
 }
 
+#[allow(clippy::identity_op)]
 pub const ORANGE_FIGUREHEAD_START: Locale = Locale { rank_and_file: (0 << 4) | 4 };
 pub const BLUE_FIGUREHEAD_START: Locale = Locale { rank_and_file: (7 << 4) | 4 };
 
@@ -227,6 +230,8 @@ mod tests {
     use std::hash::Hash;
     use std::collections::hash_map;
     use space::tests::rand::prelude::*;
+    use encode;
+    use space::RelaxedLocale;
 
     static ALGEBRAICS: [&'static str; 64] = [
         "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
@@ -240,6 +245,7 @@ mod tests {
     ];
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_tuple_fnv(b: &mut Bencher) {
         let mut hasher = fnv::FnvHasher::default();
         let t: (u8, u8) = (1, 4);
@@ -253,6 +259,7 @@ mod tests {
 
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_tuple_xx(b: &mut Bencher) {
         let mut hasher = XxHash::default();
         let t: (u8, u8) = (1, 4);
@@ -266,6 +273,7 @@ mod tests {
 
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_hashing_tuple_sip(b: &mut Bencher) {
         let mut hasher = hash_map::DefaultHasher::new();
         let t: (u8, u8) = (1, 4);
@@ -279,6 +287,7 @@ mod tests {
 
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_locale_lookup(b: &mut Bencher) {
         let mut args = Vec::with_capacity(64);
         for rank in 0..8 {
@@ -298,6 +307,7 @@ mod tests {
 
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_to_locales_servantlike(b: &mut Bencher) {
 
         let mut stage = Pinfield(0);
@@ -313,6 +323,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_to_locales_scholarlike(b: &mut Bencher) {
         let mut stage = Pinfield(0);
         stage = stage.alight(Locale::new(0, 2));
@@ -326,6 +337,7 @@ mod tests {
     }
 
     #[bench]
+    #[cfg(feature="run_benches")]
     fn benchmark_transit(b: &mut Bencher) {
         let mut stage = Pinfield(0);
         let from = Locale::new(1, 3);
@@ -438,4 +450,19 @@ mod tests {
         let stage = Pinfield::init(&starters);
         assert_eq!(3, stage.pincount());
     }
+
+    #[test]
+    fn test_locale_serialization() {
+        let l = Locale::new(1, 2);
+
+        assert_eq!(r#"{"rank_and_file":18}"#, encode(&l));
+    }
+
+    #[test]
+    fn test_relaxed_locale_serialization() {
+        let rl = RelaxedLocale::from(Locale::new(1, 2));
+        assert_eq!(r#"{"rank":1,"file":2}"#, encode(&rl));
+    }
+
+
 }

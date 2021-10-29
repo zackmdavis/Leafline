@@ -3,8 +3,11 @@ use std::fmt;
 use ansi_term::Colour as Color;  // this is America
 use ansi_term::Style;
 
+use serde::Serialize;
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+
+
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub enum Team {
     Orange,
     Blue,
@@ -32,7 +35,7 @@ impl Team {
     }
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub enum JobDescription {
     Servant,  // ♂
     Pony,  // ♀
@@ -42,7 +45,7 @@ pub enum JobDescription {
     Figurehead, // ♂
 }
 
-#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,RustcEncodable,RustcDecodable)]
+#[derive(Eq,PartialEq,Debug,Copy,Clone,Hash,Serialize)]
 pub struct Agent {
     pub team: Team,
     pub job_description: JobDescription,
@@ -104,6 +107,7 @@ static BLUE_AGENTS: [Agent; 6] = [
 ];
 
 impl Agent {
+    #![allow(clippy::wrong_self_convention)]
     pub fn new(team: Team, job_description: JobDescription) -> Self {
         Self { team, job_description }
     }
@@ -216,5 +220,60 @@ impl fmt::Display for Agent {
                self.team
                    .figurine_paintjob()
                    .paint(&self.to_figurine_display_rune().to_string()))
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+
+    use encode;
+    use super::Team;
+    use identity::{JobDescription, Agent};
+
+    #[test]
+    fn test_team_serialization() {
+        let o = Team::Orange;
+        assert_eq!(r#""Orange""#, encode(&o));
+
+        let b = Team::Blue;
+        assert_eq!(r#""Blue""#, encode(&b));
+    }
+
+    #[test]
+    fn test_job_description_serialization() {
+
+        let servant = JobDescription::Servant;
+        assert_eq!(r#""Servant""#, encode(&servant));
+
+
+        let pony = JobDescription::Pony;
+        assert_eq!(r#""Pony""#, encode(&pony));
+
+
+        let scholar = JobDescription::Scholar;
+        assert_eq!(r#""Scholar""#, encode(&scholar));
+
+
+        let cop = JobDescription::Cop;
+        assert_eq!(r#""Cop""#, encode(&cop));
+
+
+        let princess = JobDescription::Princess;
+        assert_eq!(r#""Princess""#, encode(&princess));
+
+
+        let figurehead = JobDescription::Figurehead;
+        assert_eq!(r#""Figurehead""#, encode(&figurehead));
+    }
+
+    #[test]
+    fn test_agent_serialization() {
+        let a = Agent {
+            team: Team::Orange,
+            job_description: JobDescription::Cop
+        };
+
+        assert_eq!( r#"{"team":"Orange","job_description":"Cop"}"#, encode(&a));
     }
 }

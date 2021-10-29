@@ -94,7 +94,7 @@ def main():
                     ("low colonelcy", 2),
                     ("high seventh heaven", 6),
                     ("high colonelcy", 5))]
-    #all_args.extend([("file_{}".format(f), sideways_contour(f)) for f in range(8)])
+    # all_args.extend([("file_{}".format(f), sideways_contour(f)) for f in range(8)])
 
     with open(os.path.join('src', "landmark.rs"), 'w') as landmark_rs:
         landmark_rs.write("#[allow(unreadable_literal)]\n\n")
@@ -108,6 +108,7 @@ def main():
             )
         )
     print("Wrote landmark.rs!")
+
 
 if __name__ == "__main__":
     main()
